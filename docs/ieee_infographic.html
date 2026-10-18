@@ -9,8 +9,8 @@
     
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #0b0f19;
-      color: #e2e8f0;
+      background-color: #f8fafc;
+      color: #1e293b;
     }
     .serif-title {
       font-family: 'Crimson Pro', Georgia, serif;
@@ -19,34 +19,41 @@
       font-family: 'JetBrains Mono', monospace;
     }
     .ieee-card {
-      background: #111827;
-      border: 1px solid #1f2937;
-      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     }
     .legacy-card {
-      background: linear-gradient(180deg, rgba(31, 41, 55, 0.7) 0%, rgba(17, 24, 39, 0.9) 100%);
-      border: 1px solid #374151;
+      background: #ffffff;
+      border: 1px solid #fecdd3;
+      box-shadow: 0 2px 4px rgba(244, 63, 94, 0.05);
     }
     .sota-card {
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
-      border: 1px solid #0284c7;
+      background: #ffffff;
+      border: 1px solid #bae6fd;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
     }
   </style>
 </head>
-<body class="p-6 max-w-7xl mx-auto antialiased">
+<body class="p-6 md:p-8 max-w-7xl mx-auto antialiased">
 
-  <!-- Header Banner -->
-  <div class="border-b border-gray-800 pb-5 mb-8">
-    <div class="flex justify-between items-center text-xs text-sky-400 font-mono tracking-wider uppercase mb-1">
-      <span>IEEE Transactions on Medical Imaging (TMI) &bull; Architectural Blueprint</span>
-      <span>Repository: monai-cardiac-fat-fl (v0.1.0)</span>
+  <!-- Header Banner (IEEE Journal Clean Style) -->
+  <div class="border-b-2 border-slate-900 pb-5 mb-8">
+    <div class="flex justify-between items-center text-xs text-sky-800 font-mono tracking-wider uppercase mb-1">
+      <span class="font-bold flex items-center">
+        <svg class="w-4 h-4 mr-1.5 text-blue-700 inline" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        IEEE Transactions on Medical Imaging (TMI) &bull; Architecture Infographic
+      </span>
+      <span class="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded border border-blue-200">Repository: monai-cardiac-fat-fl (v0.1.0)</span>
     </div>
-    <h1 class="serif-title text-3xl md:text-4xl font-bold text-white tracking-tight">
+    <h1 class="serif-title text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
       Modernization of Cardiac Epicardial & Pericoronary Adipose Tissue Quantification
     </h1>
-    <p class="text-sm md:text-base text-gray-400 mt-2 max-w-4xl">
+    <p class="text-sm md:text-base text-slate-600 mt-2 max-w-4xl">
       Architectural evolution from legacy single-site TensorFlow 1.14 / Python 2.7 pipeline to a high-throughput, 
-      MONAI Bundle & NVIDIA FLARE federated learning framework with strict mathematical equivalence.
+      MONAI Bundle & NVIDIA FLARE federated learning framework with strict clinical equivalence.
     </p>
   </div>
 
@@ -56,142 +63,142 @@
     <!-- Left Column: Legacy Architecture (4 cols) -->
     <div class="lg:col-span-4 legacy-card rounded-xl p-5 flex flex-col justify-between">
       <div>
-        <div class="flex items-center space-x-2 text-rose-400 font-semibold text-sm mb-3">
-          <span class="w-3 h-3 rounded-full bg-rose-500/20 border border-rose-500 inline-block"></span>
+        <div class="flex items-center space-x-2 text-rose-700 font-bold text-sm mb-2">
+          <span class="w-3 h-3 rounded-full bg-rose-100 border-2 border-rose-600 inline-block"></span>
           <span>(a) Legacy Pipeline: MGH CardiacFatQuant</span>
         </div>
-        <p class="text-xs text-gray-400 mb-4 leading-relaxed">
-          Circa 2018–2020. Constrained to single-threaded CPU or legacy CUDA 10.0 nodes, frozen Keras/TF 1.14 graphs, and fragile NRRD layouts.
+        <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+          Circa 2018–2020. Constrained to single-threaded CPU loops, legacy CUDA 10.0 nodes, frozen Keras/TF 1.14 graphs, and fragile NRRD layouts.
         </p>
 
         <!-- Legacy Stack Items -->
         <div class="space-y-3">
-          <div class="p-3 bg-gray-900/80 rounded-lg border border-gray-800 text-xs">
-            <span class="text-rose-300 font-mono font-semibold block mb-1">Input Ingestion</span>
-            <span class="text-gray-400">Fixed <code class="mono-code text-gray-300">scan.nrrd</code> folder trees only. Fails on clinical DICOM series, multi-frame PACS files, or missing coordinate headers.</span>
+          <div class="p-3 bg-rose-50/50 rounded-lg border border-rose-200/80 text-xs">
+            <span class="text-rose-900 font-mono font-bold block mb-1">Input Ingestion</span>
+            <span class="text-slate-600">Fixed <code class="mono-code text-rose-800 bg-rose-100/70 px-1 py-0.5 rounded">scan.nrrd</code> folder trees only. Fails on clinical DICOM series, multi-frame PACS files, or missing coordinate headers.</span>
           </div>
 
-          <div class="p-3 bg-gray-900/80 rounded-lg border border-gray-800 text-xs">
-            <span class="text-rose-300 font-mono font-semibold block mb-1">Segmentation Engine</span>
-            <span class="text-gray-400">DeepHeartSeg 2-stage (TF 1.14 / Keras 2.2.4). Tied to deprecated Python 2.7 environments. Prone to GPU memory allocation faults.</span>
+          <div class="p-3 bg-rose-50/50 rounded-lg border border-rose-200/80 text-xs">
+            <span class="text-rose-900 font-mono font-bold block mb-1">Segmentation Engine</span>
+            <span class="text-slate-600">DeepHeartSeg 2-stage (TF 1.14 / Keras 2.2.4). Locked to Python 2.7 environments. Prone to GPU memory allocation faults.</span>
           </div>
 
-          <div class="p-3 bg-gray-900/80 rounded-lg border border-gray-800 text-xs">
-            <span class="text-rose-300 font-mono font-semibold block mb-1">Morphological Transforms</span>
-            <span class="text-gray-400">Single-threaded CPU SciPy/SimpleITK loops for chamber Voronoi partitioning & vessel Euclidean distance transform. High runtime (>120s/patient).</span>
+          <div class="p-3 bg-rose-50/50 rounded-lg border border-rose-200/80 text-xs">
+            <span class="text-rose-900 font-mono font-bold block mb-1">Morphological Transforms</span>
+            <span class="text-slate-600">Single-threaded CPU SciPy/SimpleITK loops for chamber Voronoi partitioning & vessel distance transforms. High runtime (>120s/patient).</span>
           </div>
 
-          <div class="p-3 bg-gray-900/80 rounded-lg border border-gray-800 text-xs">
-            <span class="text-rose-300 font-mono font-semibold block mb-1">Deployment Model</span>
-            <span class="text-gray-400">Isolated workstation scripts. Zero multi-site federated aggregation or privacy-preserving cohort analysis capability.</span>
+          <div class="p-3 bg-rose-50/50 rounded-lg border border-rose-200/80 text-xs">
+            <span class="text-rose-900 font-mono font-bold block mb-1">Deployment Model</span>
+            <span class="text-slate-600">Isolated workstation scripts. Zero multi-site federated aggregation or privacy-preserving cohort analysis capability.</span>
           </div>
         </div>
       </div>
 
-      <div class="mt-6 pt-4 border-t border-gray-800 flex justify-between items-center text-[11px] text-gray-500">
+      <div class="mt-6 pt-4 border-t border-rose-200 flex justify-between items-center text-xs text-slate-500">
         <span>Throughput: ~0.4 patients/min</span>
-        <span class="text-rose-400 font-mono">Status: Deprecated</span>
+        <span class="text-rose-700 font-mono font-semibold">Status: Deprecated</span>
       </div>
     </div>
 
     <!-- Right Column: SOTA Architecture (8 cols) -->
     <div class="lg:col-span-8 sota-card rounded-xl p-5 relative overflow-hidden">
       <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-2 text-sky-400 font-semibold text-sm">
-          <span class="w-3 h-3 rounded-full bg-sky-500/20 border border-sky-400 inline-block"></span>
+        <div class="flex items-center space-x-2 text-sky-800 font-bold text-sm">
+          <span class="w-3 h-3 rounded-full bg-sky-100 border-2 border-sky-600 inline-block"></span>
           <span>(b) SOTA Pipeline: monai-cardiac-fat-fl (Modernized Framework)</span>
         </div>
-        <span class="text-xs bg-sky-950 text-sky-300 border border-sky-800 px-2.5 py-0.5 rounded-full font-mono">Python 3.12 &bull; PyTorch 2.x</span>
+        <span class="text-xs bg-sky-100 text-sky-800 border border-sky-300 px-3 py-1 rounded-full font-mono font-semibold">Python 3.12 &bull; PyTorch 2.x</span>
       </div>
 
       <!-- Modern Architecture Diagram -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
         
         <!-- Step 1: Universal Ingestion -->
-        <div class="bg-slate-900/90 border border-slate-700/80 rounded-lg p-3.5 flex flex-col justify-between">
+        <div class="bg-white border border-sky-200 rounded-lg p-3.5 flex flex-col justify-between shadow-sm">
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sky-300 font-mono text-xs font-semibold">1. Multi-Modal I/O</span>
-              <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">IO-Engine</span>
+              <span class="text-sky-900 font-mono text-xs font-bold">1. Multi-Modal I/O</span>
+              <span class="text-[10px] bg-slate-100 text-slate-700 font-semibold px-1.5 py-0.5 rounded border border-slate-200">IO-Engine</span>
             </div>
-            <p class="text-[11px] text-gray-400 mb-2">
-              Robust clinical intake with automated spatial orientation check:
+            <p class="text-[11px] text-slate-600 mb-2">
+              Universal clinical ingestion with automated orientation checks:
             </p>
-            <ul class="text-[11px] text-gray-300 space-y-1">
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span>DICOM Series (RescaleSlope / Intercept)</li>
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span>NIfTI (<code class="mono-code text-[10px]">.nii</code>, <code class="mono-code text-[10px]">.nii.gz</code>)</li>
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span>3D NRRD & MetaImage (<code class="mono-code text-[10px]">.mha</code>)</li>
+            <ul class="text-[11px] text-slate-700 space-y-1">
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span>DICOM (RescaleSlope / Intercept)</li>
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span>NIfTI (<code class="mono-code text-[10px] bg-slate-100 px-1 py-0.5 rounded">.nii</code>, <code class="mono-code text-[10px] bg-slate-100 px-1 py-0.5 rounded">.nii.gz</code>)</li>
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span>3D NRRD & MetaImage (<code class="mono-code text-[10px] bg-slate-100 px-1 py-0.5 rounded">.mha</code>)</li>
             </ul>
           </div>
-          <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-sky-400 font-mono">
-            MONAI MetaTensor &bull; LPS/RAS Affine
+          <div class="mt-3 pt-2 border-t border-slate-100 text-[10px] text-sky-800 font-mono font-medium">
+            MONAI MetaTensor &bull; LPS/RAS
           </div>
         </div>
 
         <!-- Step 2: Anatomical Engine -->
-        <div class="bg-slate-900/90 border border-slate-700/80 rounded-lg p-3.5 flex flex-col justify-between">
+        <div class="bg-white border border-sky-200 rounded-lg p-3.5 flex flex-col justify-between shadow-sm">
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sky-300 font-mono text-xs font-semibold">2. Segmentation & Fallback</span>
-              <span class="text-[10px] bg-sky-950 text-sky-300 px-1.5 py-0.5 rounded">ONNX / PyTorch</span>
+              <span class="text-sky-900 font-mono text-xs font-bold">2. Segmentation & Fallback</span>
+              <span class="text-[10px] bg-sky-100 text-sky-800 font-semibold px-1.5 py-0.5 rounded border border-sky-200">ONNX / PyTorch</span>
             </div>
-            <p class="text-[11px] text-gray-400 mb-2">
+            <p class="text-[11px] text-slate-600 mb-2">
               Unified multi-engine anatomical inference:
             </p>
-            <ul class="text-[11px] text-gray-300 space-y-1">
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span><strong>DeepHeartSeg ONNX</strong> (0.00 &Delta; vs MGH)</li>
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span>MONAI 3D SegResNet & SwinUNETR</li>
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span>TotalSegmentator v2 WholeBody support</li>
+            <ul class="text-[11px] text-slate-700 space-y-1">
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span><strong>DeepHeartSeg ONNX</strong> (0.00 &Delta; vs MGH)</li>
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span>MONAI 3D SegResNet & SwinUNETR</li>
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span>TotalSegmentator v2 WholeBody support</li>
             </ul>
           </div>
-          <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-emerald-400 font-mono">
-            Bit-level Equivalency Verified
+          <div class="mt-3 pt-2 border-t border-slate-100 text-[10px] text-emerald-700 font-mono font-bold">
+            Equivalency Verified: 0.00 &Delta;
           </div>
         </div>
 
         <!-- Step 3: GPU MapTransforms -->
-        <div class="bg-slate-900/90 border border-slate-700/80 rounded-lg p-3.5 flex flex-col justify-between">
+        <div class="bg-white border border-sky-200 rounded-lg p-3.5 flex flex-col justify-between shadow-sm">
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sky-300 font-mono text-xs font-semibold">3. 8-Compartment EAT/PVAT</span>
-              <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">MapTransforms</span>
+              <span class="text-sky-900 font-mono text-xs font-bold">3. 8-Compartment EAT/PVAT</span>
+              <span class="text-[10px] bg-slate-100 text-slate-700 font-semibold px-1.5 py-0.5 rounded border border-slate-200">MapTransforms</span>
             </div>
-            <p class="text-[11px] text-gray-400 mb-2">
+            <p class="text-[11px] text-slate-600 mb-2">
               GPU-accelerated geometric & radiodensity quantification:
             </p>
-            <ul class="text-[11px] text-gray-300 space-y-1">
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span>Window: <code class="mono-code text-[10px]">[-190.0, -30.0] HU</code></li>
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span>Voronoi Chambers: LA, LV, RA, RV</li>
-              <li class="flex items-center"><span class="text-sky-400 mr-1.5">&bull;</span>Radial Dilation: PVAT LAD, LCX, RCA</li>
+            <ul class="text-[11px] text-slate-700 space-y-1">
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span>Window: <code class="mono-code text-[10px] bg-slate-100 px-1 py-0.5 rounded">[-190.0, -30.0] HU</code></li>
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span>Voronoi Chambers: LA, LV, RA, RV</li>
+              <li class="flex items-center"><span class="text-sky-600 mr-1.5 font-bold">&bull;</span>Radial Dilation: PVAT LAD, LCX, RCA</li>
             </ul>
           </div>
-          <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-sky-400 font-mono">
-            Canonical 19-Col CSV Export
+          <div class="mt-3 pt-2 border-t border-slate-100 text-[10px] text-sky-800 font-mono font-medium">
+            19-Column Canonical CSV Export
           </div>
         </div>
 
       </div>
 
       <!-- NVIDIA FLARE Orchestration Tier -->
-      <div class="bg-gradient-to-r from-sky-950/40 via-indigo-950/40 to-slate-900/90 border border-sky-800/60 rounded-lg p-4">
+      <div class="bg-gradient-to-r from-sky-50 via-indigo-50/50 to-blue-50 border border-sky-200 rounded-lg p-4">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center space-x-2">
-            <span class="text-emerald-400 font-mono font-bold text-xs uppercase tracking-wider">NVIDIA FLARE 2.5+ Federated Learning Engine</span>
-            <span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded">Multi-Site Architecture</span>
+            <span class="text-blue-900 font-mono font-bold text-xs uppercase tracking-wider">NVIDIA FLARE 2.5+ Federated Learning Engine</span>
+            <span class="text-[10px] bg-blue-100 text-blue-800 font-semibold border border-blue-300 px-2 py-0.5 rounded">Multi-Site Architecture</span>
           </div>
-          <span class="text-[11px] text-gray-400 font-mono">ClientAlgo + FedBN + FedProx</span>
+          <span class="text-[11px] text-slate-600 font-mono font-medium">ClientAlgo + FedBN + FedProx</span>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mt-3">
-          <div class="p-2.5 bg-slate-900/80 rounded border border-slate-800">
-            <span class="text-sky-300 font-semibold block mb-1">Mode 1: Direct 8-Layer Distillation</span>
-            <p class="text-gray-400 text-[11px]">
+          <div class="p-3 bg-white rounded border border-sky-100 shadow-sm">
+            <span class="text-sky-900 font-bold block mb-1">Mode 1: Single-Stage 3D Distillation</span>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
               Trains a single-stage 3D SegResNet directly against multi-stage teacher pseudo-labels. Uses <strong>FedBN</strong> to isolate hospital-specific scanner batch norm statistics while sharing convolutional feature representations.
             </p>
           </div>
-          <div class="p-2.5 bg-slate-900/80 rounded border border-slate-800">
-            <span class="text-indigo-300 font-semibold block mb-1">Mode 2: Federated Cohort Analytics</span>
-            <p class="text-gray-400 text-[11px]">
+          <div class="p-3 bg-white rounded border border-indigo-100 shadow-sm">
+            <span class="text-indigo-900 font-bold block mb-1">Mode 2: Federated Cohort Analytics</span>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
               Aggregates global population distributions (mean volume, HU shifts, standard deviations) via privacy-preserving federated summary statistics without transferring any raw CT images across hospital firewalls.
             </p>
           </div>
@@ -204,15 +211,19 @@
 
   <!-- Bottom Panel: Clinical Equivalency Matrix & Mathematical Rigor -->
   <div class="ieee-card rounded-xl p-6">
-    <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+    <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
       <div>
-        <h3 class="serif-title text-xl font-bold text-white">Quantitative Clinical Validation: Zero-Drift Equivalency Matrix</h3>
-        <p class="text-xs text-gray-400">Evaluated on Stanford AIMI COCA cohort CT scans (ECG-gated & non-gated non-contrast cardiac CTs).</p>
+        <h3 class="serif-title text-xl font-bold text-slate-900">Quantitative Clinical Validation: Zero-Drift Equivalency Matrix</h3>
+        <p class="text-xs text-slate-500">Evaluated on Stanford AIMI COCA cohort CT scans (ECG-gated & non-gated non-contrast cardiac CTs).</p>
       </div>
-      <div class="flex items-center space-x-4 text-xs font-mono">
-        <span class="text-emerald-400 flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>Volume &Delta;: 0.00 cm&sup3;</span>
-        <span class="text-emerald-400 flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>HU &Delta;: 0.00 HU</span>
-        <span class="text-sky-400">17 / 17 Pytest Passed</span>
+      <div class="flex items-center space-x-4 text-xs font-mono font-semibold">
+        <span class="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded flex items-center">
+          <span class="w-2 h-2 rounded-full bg-emerald-600 mr-1.5"></span>Volume &Delta;: 0.00 cm&sup3;
+        </span>
+        <span class="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded flex items-center">
+          <span class="w-2 h-2 rounded-full bg-emerald-600 mr-1.5"></span>HU &Delta;: 0.00 HU
+        </span>
+        <span class="text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded">17 / 17 Pytest Passed</span>
       </div>
     </div>
 
@@ -220,99 +231,99 @@
     <div class="overflow-x-auto">
       <table class="w-full text-left text-xs font-mono">
         <thead>
-          <tr class="text-gray-400 border-b border-gray-800">
-            <th class="py-2 px-3">Anatomical Compartment</th>
-            <th class="py-2 px-3">Legacy TF 1.14 Output</th>
-            <th class="py-2 px-3">Modernized ONNX / MONAI</th>
-            <th class="py-2 px-3">Volume Difference</th>
-            <th class="py-2 px-3">Mean Attenuation &Delta;</th>
-            <th class="py-2 px-3">Equivalency Status</th>
+          <tr class="text-slate-600 border-b-2 border-slate-200 bg-slate-50/70">
+            <th class="py-2.5 px-3">Anatomical Compartment</th>
+            <th class="py-2.5 px-3">Legacy TF 1.14 Output</th>
+            <th class="py-2.5 px-3">Modernized ONNX / MONAI</th>
+            <th class="py-2.5 px-3">Volume Difference</th>
+            <th class="py-2.5 px-3">Mean Attenuation &Delta;</th>
+            <th class="py-2.5 px-3">Equivalency Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-800/60 text-gray-300">
-          <tr>
-            <td class="py-2 px-3 text-white font-semibold">EAT Total</td>
+        <tbody class="divide-y divide-slate-100 text-slate-700">
+          <tr class="bg-slate-50/30">
+            <td class="py-2 px-3 text-slate-900 font-bold">EAT Total</td>
             <td class="py-2 px-3">338.80 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">338.80 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">338.80 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
           <tr>
             <td class="py-2 px-3">EAT Left Atrium (LA)</td>
             <td class="py-2 px-3">50.18 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">50.18 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">50.18 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
-          <tr>
+          <tr class="bg-slate-50/30">
             <td class="py-2 px-3">EAT Left Ventricle (LV)</td>
             <td class="py-2 px-3">114.73 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">114.73 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">114.73 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
           <tr>
             <td class="py-2 px-3">EAT Right Atrium (RA)</td>
             <td class="py-2 px-3">129.58 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">129.58 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">129.58 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
-          <tr>
+          <tr class="bg-slate-50/30">
             <td class="py-2 px-3">EAT Right Ventricle (RV)</td>
             <td class="py-2 px-3">44.31 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">44.31 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">44.31 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
           <tr>
-            <td class="py-2 px-3 text-white font-semibold">PVAT Total (LAD | LCX | RCA)</td>
+            <td class="py-2 px-3 text-slate-900 font-bold">PVAT Total (LAD | LCX | RCA)</td>
             <td class="py-2 px-3">185.35 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">185.35 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">185.35 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
-          <tr>
+          <tr class="bg-slate-50/30">
             <td class="py-2 px-3">PVAT LAD (Left Anterior Descending)</td>
             <td class="py-2 px-3">175.76 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">175.76 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">175.76 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
           <tr>
             <td class="py-2 px-3">PVAT LCX (Left Circumflex)</td>
             <td class="py-2 px-3">9.42 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">9.42 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">9.42 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
-          <tr>
+          <tr class="bg-slate-50/30">
             <td class="py-2 px-3">PVAT RCA (Right Coronary Artery)</td>
             <td class="py-2 px-3">9.49 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-300">9.49 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-800 font-semibold">9.49 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-700 font-bold">0.00 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- IEEE Figure Caption Footer -->
-    <div class="mt-5 pt-3 border-t border-gray-800 text-[11px] text-gray-400 leading-relaxed">
-      <strong class="text-white">Fig. 1.</strong> <em>Architectural Overview and Clinical Verification.</em> 
-      Comparison of (a) the original single-node MGH <code class="mono-code text-gray-300">CardiacFatQuant</code> pipeline constrained by Python 2.7 / TensorFlow 1.14 dependencies, 
-      and (b) the modernized <code class="mono-code text-gray-300">monai-cardiac-fat-fl</code> framework supporting universal medical imaging ingestion (DICOM, NIfTI, NRRD), 
-      GPU-accelerated <code class="mono-code text-gray-300">MapTransforms</code> for 8-compartment epicardial (EAT) and pericoronary (PVAT) adipose tissue morphometry within the strict 
-      <span class="mono-code text-sky-300">[-190.0, -30.0] HU</span> attenuation window, and privacy-preserving federated aggregation via NVIDIA FLARE 2.5+. 
+    <div class="mt-5 pt-3 border-t border-slate-200 text-xs text-slate-500 leading-relaxed">
+      <strong class="text-slate-900">Fig. 1.</strong> <em>Architectural Overview and Clinical Verification.</em> 
+      Comparison of (a) the original single-node MGH <code class="mono-code text-slate-800 bg-slate-100 px-1 py-0.5 rounded">CardiacFatQuant</code> pipeline constrained by Python 2.7 / TensorFlow 1.14 dependencies, 
+      and (b) the modernized <code class="mono-code text-slate-800 bg-slate-100 px-1 py-0.5 rounded">monai-cardiac-fat-fl</code> framework supporting universal medical imaging ingestion (DICOM, NIfTI, NRRD), 
+      GPU-accelerated <code class="mono-code text-slate-800 bg-slate-100 px-1 py-0.5 rounded">MapTransforms</code> for 8-compartment epicardial (EAT) and pericoronary (PVAT) adipose tissue morphometry within the strict 
+      <span class="mono-code text-sky-800 font-bold">[-190.0, -30.0] HU</span> attenuation window, and privacy-preserving federated aggregation via NVIDIA FLARE 2.5+. 
       The lower panel presents zero-drift empirical validation across all 9 target reporting regions evaluated on patient CT scans from the Stanford AIMI COCA cohort.
     </div>
 
@@ -320,4 +331,3 @@
 
 </body>
 </html>
-
