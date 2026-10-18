@@ -47,11 +47,17 @@ models/*.onnx
 models/*.pt
 models/*.pth
 
+# Environment secrets & configuration
+.env
+*.env
+.env.*
+
 # Unpublished scientific abstracts & manuscripts (private until publication)
 *abstract*
 *manuscript*
 *.pdf
 docs/*abstract*
 docs/*.pdf
+
 
 
