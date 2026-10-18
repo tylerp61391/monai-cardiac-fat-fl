@@ -19,6 +19,11 @@ from rich.table import Table
 from cardiac_fat_fl.anatomy_segmenter import UnifiedAnatomySegmenter
 from cardiac_fat_fl.fl_client_algo import CardiacFatClientAlgo
 from cardiac_fat_fl.fl_stats_executor import CardiacFatStatsExecutor
+from cardiac_fat_fl.hardware import (
+    detect_hardware,
+    display_hardware_summary,
+    validate_worker_concurrency,
+)
 from cardiac_fat_fl.io_nrrd import (
     discover_participants,
     read_nrrd_as_metatensor,
@@ -156,10 +161,10 @@ def quantify(
         help="Optional maximum number of participants to process (useful for large cohorts).",
     ),
     workers: int = typer.Option(
-        1,
+        0,
         "--workers",
         "-w",
-        help="Number of parallel worker processes. Default 1 (serial). Set > 1 for multi-core speedup.",
+        help="Number of parallel worker processes. Default 0 (auto-detect safe concurrency based on host CPU, RAM, and GPU). Set > 0 for manual override.",
     ),
     resume: bool = typer.Option(
         True,
@@ -169,6 +174,24 @@ def quantify(
 ) -> None:
     """Execute end-to-end quantification across participants in source_dir."""
     console.print(f"[bold cyan]Scanning directory:[/bold cyan] {source_dir}")
+
+    # Step 0: Dynamic hardware inspection and safe concurrency sizing
+    profile = detect_hardware()
+    display_hardware_summary(profile, console=console)
+
+    if workers <= 0:
+        actual_workers = profile.recommended_workers
+        console.print(f"[bold green]Auto-configured safe worker concurrency: {actual_workers} worker(s)[/bold green]")
+    else:
+        actual_workers = validate_worker_concurrency(workers, profile)
+        if actual_workers < workers:
+            console.print(
+                f"[bold yellow]Safety Throttle:[/bold yellow] Requested {workers} workers exceeds host safe memory budget "
+                f"({profile.available_ram_gb:.1f} GB available). Throttling safely to {actual_workers} worker(s) "
+                f"to prevent system freeze or out-of-memory crash."
+            )
+        else:
+            console.print(f"[cyan]Using requested concurrency: {actual_workers} worker(s)[/cyan]")
 
     participants = discover_participants(source_dir)
     if not participants:
@@ -228,7 +251,7 @@ def quantify(
     all_rows = list(existing_rows)
     total_remaining = len(tasks)
 
-    if workers <= 1:
+    if actual_workers <= 1:
         with console.status("[bold green]Processing cardiac scans..."):
             for idx, task in enumerate(tasks, start=1):
                 pid = task[0]
@@ -241,8 +264,8 @@ def quantify(
                 else:
                     console.print(f"  [red]Failed {pid}: {res.get('error')}[/red]")
     else:
-        console.print(f"[bold cyan]Launching parallel processing with {workers} workers...[/bold cyan]")
-        with ProcessPoolExecutor(max_workers=workers) as executor:
+        console.print(f"[bold cyan]Launching parallel processing with {actual_workers} workers...[/bold cyan]")
+        with ProcessPoolExecutor(max_workers=actual_workers) as executor:
             future_to_pid = {
                 executor.submit(_process_one_participant, task): task[0]
                 for task in tasks
@@ -455,6 +478,13 @@ def export_ohif_cmd(
 
     dest = export_sample_to_ohif(sample_dir=sample_dir, output_dir=output_dir)
     console.print(f"[bold green]Successfully exported OHIF package to:[/bold green] {dest}")
+
+
+@app.command("hardware")
+def hardware_info() -> None:
+    """Inspect host CPUs, RAM, and CUDA GPUs to display safe concurrency recommendations."""
+    profile = detect_hardware()
+    display_hardware_summary(profile, console=console)
 
 
 if __name__ == "__main__":
