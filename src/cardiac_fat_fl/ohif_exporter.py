@@ -937,12 +937,15 @@ def export_sample_to_ohif(
 
     # 4. Check for CSV metrics or use summary_metrics
     final_metrics = summary_metrics or {}
-    csv_candidates = [
-        sample_path.parent / "cardiac_fat_measurements.csv",
-        sample_path.parent.parent / "cardiac_fat_measurements.csv",
-        sample_path.parent.parent.parent / "cardiac_fat_measurements.csv",
-        Path.cwd() / "cardiac_fat_measurements.csv",
-    ]
+    csv_candidates = [Path.cwd() / "cardiac_fat_measurements.csv"]
+    curr = sample_path
+    while curr != curr.parent:
+        candidate = curr / "cardiac_fat_measurements.csv"
+        if candidate.is_file():
+            csv_candidates.insert(0, candidate)
+            break
+        curr = curr.parent
+
     env_csv = os.getenv("CARDIAC_FAT_CSV_PATH")
     if env_csv:
         csv_candidates.insert(0, Path(env_csv))

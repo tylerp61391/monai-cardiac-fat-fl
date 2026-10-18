@@ -104,32 +104,36 @@ class UnifiedAnatomySegmenter:
 
     def _init_backend(self) -> None:
         """Initialize model backend according to configuration."""
-        if self.backend == "auto":
+        repo_root = Path(__file__).resolve().parents[2]
+        default_seg = repo_root / "models" / "deepheartseg_heart.onnx"
+        default_loc = repo_root / "models" / "deepheartseg_loc.onnx"
+
+        if self.model_path is None:
+            if default_seg.is_file():
+                self.model_path = default_seg
+            elif Path("models/deepheartseg_heart.onnx").is_file():
+                self.model_path = Path("models/deepheartseg_heart.onnx").resolve()
+
+        if self.loc_model_path is None:
+            if default_loc.is_file():
+                self.loc_model_path = default_loc
+            elif Path("models/deepheartseg_loc.onnx").is_file():
+                self.loc_model_path = Path("models/deepheartseg_loc.onnx").resolve()
+
+        if self.backend in ("auto", "onnx"):
             if self.model_path is not None and self.model_path.is_file():
                 if self.model_path.suffix.lower() == ".onnx":
                     self.backend = "onnx"
                 else:
                     self.backend = "monai"
-            else:
-                # Check if default DeepHeartSeg ONNX models exist locally
-                default_seg = Path("models/deepheartseg_heart.onnx")
-                if default_seg.is_file():
-                    self.model_path = default_seg.resolve()
-                    self.backend = "onnx"
-                else:
-                    self.backend = "heuristic"
+            elif self.backend == "auto":
+                self.backend = "heuristic"
 
         if self.backend == "onnx":
             import onnxruntime as ort
             providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if "cuda" in str(self.device) else ["CPUExecutionProvider"]
             if self.model_path is not None and self.model_path.is_file():
                 self.onnx_session = ort.InferenceSession(str(self.model_path), providers=providers)
-
-            # Auto-detect localization model if not explicitly given
-            if self.loc_model_path is None:
-                default_loc = Path("models/deepheartseg_loc.onnx")
-                if default_loc.is_file():
-                    self.loc_model_path = default_loc.resolve()
 
             if self.loc_model_path is not None and self.loc_model_path.is_file():
                 self.onnx_loc_session = ort.InferenceSession(str(self.loc_model_path), providers=providers)
@@ -307,17 +311,17 @@ class UnifiedAnatomySegmenter:
     ) -> AnatomyMasks:
         """Derive cardiac chamber and coronary vessel masks within a given pericardium."""
         shape = arr.shape
-        nx, ny, nz = shape
+        nz, ny, nx = shape  # Axis 0: Z (axial), Axis 1: Y (coronal), Axis 2: X (sagittal)
 
         indices = np.where(pericardium)
         if len(indices[0]) > 0:
-            cx = float(np.mean(indices[0]))
+            cz = float(np.mean(indices[0]))
             cy = float(np.mean(indices[1]))
-            cz = float(np.mean(indices[2]))
+            cx = float(np.mean(indices[2]))
         else:
-            cx, cy, cz = nx / 2.0, ny / 2.0, nz / 2.0
+            cz, cy, cx = nz / 2.0, ny / 2.0, nx / 2.0
 
-        grid_x, grid_y, grid_z = np.indices(shape)
+        grid_z, grid_y, grid_x = np.indices(shape)
         chamber_voxels = pericardium & (arr >= -30.0)
 
         is_left = grid_x >= cx
@@ -341,19 +345,19 @@ class UnifiedAnatomySegmenter:
         if not np.any(rv):
             rv = pericardium & is_right & is_anterior
 
-        lad_zone = pericardium & (np.abs(grid_x - cx) <= 3) & is_anterior
+        lad_zone = pericardium & (np.abs(grid_x - cx) <= 8) & is_anterior
         lad_dilated = ndi.binary_dilation(lad_zone, iterations=1)
         lad = lad_dilated & (arr >= -30.0)
         if not np.any(lad):
             lad = lad_zone
 
-        lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 3) & is_posterior
+        lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 8) & is_posterior
         lcx_dilated = ndi.binary_dilation(lcx_zone, iterations=1)
         lcx = lcx_dilated & (arr >= -30.0)
         if not np.any(lcx):
             lcx = lcx_zone
 
-        rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 3) & is_anterior
+        rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 8) & is_anterior
         rca_dilated = ndi.binary_dilation(rca_zone, iterations=1)
         rca = rca_dilated & (arr >= -30.0)
         if not np.any(rca):

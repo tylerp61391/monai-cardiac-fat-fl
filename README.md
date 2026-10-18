@@ -82,8 +82,8 @@ The repository provides full integration with the [Open Health Imaging Foundatio
 │ • Series 1: CT Axial      │ • Interactive Mouse Wheel Slice Scroll   │   - EAT LA, LV, RA, RV      │
 │   (57 slices, 0.47x3.0mm) │ • Cardiac Fat Window Preset (W:400,L:-110│   - PVAT LAD, LCX, RCA      │
 │ • Series 2: EAT/PVAT SEG  │ • Soft Tissue, Lung, and Bone Presets    │ • Exact Clinical Volume/HU: │
-│   (8 layers, 456 frames)  │ • Live Cursor HU Readout & Z-Position    │   - EAT Total: 810.72 cm³   │
-│ • 1-Click OHIF Cloud Link │ • Medical Crosshairs & Reset Tool        │   - Mean HU:   -64.79 HU    │
+│   (8 layers, 456 frames)  │ • Live Cursor HU Readout & Z-Position    │   - EAT Total: 75.79 cm³    │
+│ • 1-Click OHIF Cloud Link │ • Medical Crosshairs & Reset Tool        │   - Mean HU:   -67.28 HU    │
 └───────────────────────────┴──────────────────────────────────────────┴─────────────────────────────┘
 ```
 
