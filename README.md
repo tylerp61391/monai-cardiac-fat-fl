@@ -11,9 +11,9 @@ Production-ready, zero-placeholder **PyTorch / MONAI Bundle** and **NVIDIA FLARE
 
 This repository modernizes the legacy MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) pipeline into a modern Python 3.11+ architecture. It eliminates legacy Python 2.7 / TensorFlow 1.14 `DeepHeartSeg` dependencies, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer](https://docs.ohif.org/) via standard DICOM-SEG objects.
 
-![Interactive OHIF Medical Viewer: 3-Pane Clinical Visualization for Stanford COCA Patient 0](docs/figures/ohif_viewer_snapshot.png)
+![Interactive OHIF Medical Viewer: 3-Pane Clinical Visualization](docs/figures/ohif_viewer_snapshot.png)
 
-*Figure 1: Authentic 3-Pane OHIF Medical Web Viewer displaying Stanford COCA Patient 0 with real 3D CT slices, 8-layer DICOM-SEG color overlays, live Hounsfield Unit inspection, and quantified EAT/PVAT clinical volume/density readouts.*
+*Figure 1: Authentic 3-Pane OHIF Medical Web Viewer displaying 3D Cardiac CT with real slices, 8-layer DICOM-SEG color overlays, live Hounsfield Unit inspection, and quantified EAT/PVAT clinical volume/density readouts.*
 
 ---
 
@@ -68,22 +68,6 @@ $$\text{Volume (cm}^3\text{)} = \frac{\text{voxel\_count} \times (s_x \times s_y
 
 ---
 
-## Dataset Benchmark: Stanford AIMI COCA Cohort
-
-The pipeline was validated and benchmarked across the complete **Stanford AIMI Coronary Calcium and Chest CTs (COCA)** dataset ([Redivis Dataset: `1vm9-30b7p5srg`](https://stanford.redivis.com/datasets/1vm9-30b7p5srg)):
-
-- **Cohort Composition**: 787 ECG-gated cardiac CT scans (`Gated_release_final`) with accompanying expert coronary calcium XML annotations and de-identified non-gated chest CT series.
-- **Complete-Cohort Findings ($N = 787$)**:
-  - **100% Processing Feasibility**: All 787 ECG-gated patients successfully quantified with complete 19-column clinical metrics.
-  - **Mean EAT Volume**: $43.20 \pm 17.51\,\text{cm}^3$ (Median: $40.42\,\text{cm}^3$, IQR: $29.80 - 54.60\,\text{cm}^3$).
-  - **Mean EAT Attenuation**: $-67.24 \pm 3.48\,\text{HU}$.
-  - **Mean PVAT Volume**: $29.82 \pm 11.53\,\text{cm}^3$ (Median: $28.30\,\text{cm}^3$, IQR: $21.05 - 37.49\,\text{cm}^3$).
-  - **Mean PVAT Attenuation**: $-68.96 \pm 3.53\,\text{HU}$.
-  - **EAT vs. PVAT Coupling**: Pearson $r = 0.9632$ ($p < 10^{-15}$) for volume; Pearson $r = 0.9781$ ($p < 10^{-15}$) for attenuation.
-  - **Detailed Report**: See the full scientific abstract in [`docs/coca_cohort_abstract.md`](docs/coca_cohort_abstract.md).
-
----
-
 ## Interactive OHIF Viewer & DICOM-SEG Capability
 
 The repository provides full integration with the [Open Health Imaging Foundation (OHIF) Viewer](https://docs.ohif.org/) via standard **DICOM Segmentation Objects** (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`):
@@ -93,7 +77,7 @@ The repository provides full integration with the [Open Health Imaging Foundatio
 │       LEFT PANE           │               MIDDLE PANE                │         RIGHT PANE          │
 │    Studies Chooser        │              Real CT Images              │     Stats on EAT & PVAT     │
 ├───────────────────────────┼──────────────────────────────────────────┼─────────────────────────────┤
-│ • Study: COCA Cardiac CT  │ • Real DICOM CT Slices (Patient Scans)   │ • 8 Compartment Toggles:    │
+│ • Study: Cardiac CT       │ • Real DICOM CT Slices (Patient Scans)   │ • 8 Compartment Toggles:    │
 │ • Patient: <id>           │ • Real EAT & PVAT Segmentation Overlays  │   - EAT Total               │
 │ • Series 1: CT Axial      │ • Interactive Mouse Wheel Slice Scroll   │   - EAT LA, LV, RA, RV      │
 │   (57 slices, 0.47x3.0mm) │ • Cardiac Fat Window Preset (W:400,L:-110│   - PVAT LAD, LCX, RCA      │

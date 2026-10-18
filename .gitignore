@@ -47,3 +47,11 @@ models/*.onnx
 models/*.pt
 models/*.pth
 
+# Unpublished scientific abstracts & manuscripts (private until publication)
+*abstract*
+*manuscript*
+*.pdf
+docs/*abstract*
+docs/*.pdf
+
+
