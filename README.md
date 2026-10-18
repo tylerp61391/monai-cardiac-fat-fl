@@ -43,11 +43,11 @@ This repository modernizes and supersedes the legacy MGH [`CardiacFatQuant`](htt
 
 ---
 
-## Architectural Evolution & IEEE Publication Blueprint
+## End-to-End System Architecture Blueprint
 
-![IEEE TMI Architecture: Legacy MGH CardiacFatQuant to SOTA Federated MONAI Pipeline](docs/figures/cardiac_fat_fl_architecture_infographic.jpg)
+![System Architecture: Legacy MGH CardiacFatQuant to SOTA Federated MONAI Pipeline](docs/figures/cardiac_fat_fl_architecture_infographic.jpg)
 
-An interactive, publication-grade IEEE Transactions architecture infographic is also available in [`docs/ieee_infographic.html`](docs/ieee_infographic.html).
+An interactive, publication-grade architectural blueprint is also available in [`docs/architecture_infographic.html`](docs/architecture_infographic.html).
 
 ### Legacy vs. Modernized Pipeline Comparison
 
