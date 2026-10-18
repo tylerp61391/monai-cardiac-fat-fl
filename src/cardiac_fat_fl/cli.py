@@ -321,6 +321,51 @@ def compare_models(
     console.print(table)
 
 
+@app.command("view")
+def view_sample(
+    sample_dir: Path = typer.Argument(
+        ...,
+        help="Path to participant directory containing scan and eat_pvat.seg.nrrd.",
+        exists=True,
+        resolve_path=True,
+    ),
+    port: int = typer.Option(8000, "--port", "-p", help="Port for the local web viewer."),
+    export_only: bool = typer.Option(False, "--export-only", help="Export DICOM & DICOM-SEG without running server."),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Do not open web browser automatically."),
+) -> None:
+    """Launch the OHIF-compatible interactive viewer for a participant sample."""
+    from cardiac_fat_fl.ohif_viewer import launch_viewer
+
+    launch_viewer(
+        sample_dir=sample_dir,
+        port=port,
+        open_browser=not no_browser,
+        export_only=export_only,
+    )
+
+
+@app.command("export-ohif")
+def export_ohif_cmd(
+    sample_dir: Path = typer.Argument(
+        ...,
+        help="Path to participant directory containing scan and eat_pvat.seg.nrrd.",
+        exists=True,
+        resolve_path=True,
+    ),
+    output_dir: Optional[Path] = typer.Option(
+        None,
+        "--output-dir",
+        "-o",
+        help="Output directory for OHIF DICOM and DICOM-SEG files.",
+    ),
+) -> None:
+    """Export a participant sample into OHIF-compliant DICOM CT series and DICOM-SEG."""
+    from cardiac_fat_fl.ohif_exporter import export_sample_to_ohif
+
+    dest = export_sample_to_ohif(sample_dir=sample_dir, output_dir=output_dir)
+    console.print(f"[bold green]Successfully exported OHIF package to:[/bold green] {dest}")
+
+
 if __name__ == "__main__":
     app()
 
