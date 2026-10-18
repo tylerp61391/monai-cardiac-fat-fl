@@ -63,3 +63,4 @@ def test_deepheartseg_onnx_equivalency(synthetic_ct_fixture) -> None:
     for region in REPORTED_REGIONS:
         assert f"{region.value} Volume (cm3)" in metrics
         assert f"{region.value} Mean Attenuation (HU)" in metrics
+

@@ -16,3 +16,4 @@ Weights originate from the Harvard AIM DeepHeartSeg repository:
 
 ### ONNX Conversion
 Converted to ONNX with transposed kernel dimensions `(out_c, in_c, D, H, W)` and validated for bit-level / numerical equivalence against the original TensorFlow 1.14 inference pipeline.
+
