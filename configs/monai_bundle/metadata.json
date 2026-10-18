@@ -1,0 +1,61 @@
+{
+  "version": "0.1.0",
+  "name": "cardiac_fat_eat_pvat_seg",
+  "description": "3D SegResNet for 8-compartment Epicardial (EAT) and Pericoronary (PVAT) Adipose Tissue Segmentation from Cardiac CT",
+  "authors": "Circulatory Systems / Antigravity AI Engineering Team",
+  "copyright": "Copyright (c) 2026",
+  "data_type": "image",
+  "data_shape": [1, 96, 96, 96],
+  "channels": {
+    "input": {
+      "0": "cardiac_ct_hu"
+    },
+    "output": {
+      "0": "EAT_Total",
+      "1": "EAT_LA",
+      "2": "EAT_LV",
+      "3": "EAT_RA",
+      "4": "EAT_RV",
+      "5": "PVAT_LAD",
+      "6": "PVAT_LCX",
+      "7": "PVAT_RCA"
+    }
+  },
+  "network_data_format": {
+    "inputs": {
+      "image": {
+        "type": "image",
+        "format": "hounsfield_units",
+        "modality": "CT",
+        "num_channels": 1,
+        "spatial_shape": [-1, -1, -1],
+        "value_range": [-1000, 1000],
+        "is_patch_data": true,
+        "channel_def": {
+          "0": "CT intensity in HU"
+        }
+      }
+    },
+    "outputs": {
+      "pred": {
+        "type": "image",
+        "format": "segmentation",
+        "num_channels": 8,
+        "spatial_shape": [-1, -1, -1],
+        "value_range": [0, 1],
+        "is_patch_data": true,
+        "channel_def": {
+          "0": "EAT_Total",
+          "1": "EAT_LA",
+          "2": "EAT_LV",
+          "3": "EAT_RA",
+          "4": "EAT_RV",
+          "5": "PVAT_LAD",
+          "6": "PVAT_LCX",
+          "7": "PVAT_RCA"
+        }
+      }
+    }
+  }
+}
+
