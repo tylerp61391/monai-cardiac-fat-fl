@@ -76,6 +76,7 @@ class UnifiedAnatomySegmenter:
     def __init__(
         self,
         model_path: Optional[Union[str, Path]] = None,
+        loc_model_path: Optional[Union[str, Path]] = None,
         backend: str = "auto",
         device: Optional[Union[str, torch.device]] = None,
     ) -> None:
@@ -83,6 +84,7 @@ class UnifiedAnatomySegmenter:
 
         Args:
             model_path: Optional path to PyTorch checkpoint (.pt, .pth) or ONNX model (.onnx).
+            loc_model_path: Optional path to heart localization ONNX model for 2-step DeepHeartSeg.
             backend: One of 'auto', 'monai', 'onnx', or 'heuristic'.
             device: Compute device ('cuda', 'cpu', or torch.device).
         """
@@ -92,9 +94,11 @@ class UnifiedAnatomySegmenter:
             self.device = torch.device(device)
 
         self.model_path = Path(model_path).resolve() if model_path is not None else None
+        self.loc_model_path = Path(loc_model_path).resolve() if loc_model_path is not None else None
         self.backend = backend.lower()
         self.torch_model: Optional[torch.nn.Module] = None
         self.onnx_session: Optional[Any] = None
+        self.onnx_loc_session: Optional[Any] = None
 
         self._init_backend()
 
@@ -107,16 +111,28 @@ class UnifiedAnatomySegmenter:
                 else:
                     self.backend = "monai"
             else:
-                self.backend = "heuristic"
+                # Check if default DeepHeartSeg ONNX models exist locally
+                default_seg = Path("models/deepheartseg_heart.onnx")
+                if default_seg.is_file():
+                    self.model_path = default_seg.resolve()
+                    self.backend = "onnx"
+                else:
+                    self.backend = "heuristic"
 
         if self.backend == "onnx":
             import onnxruntime as ort
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if "cuda" in str(self.device) else ["CPUExecutionProvider"]
             if self.model_path is not None and self.model_path.is_file():
-                providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if "cuda" in str(self.device) else ["CPUExecutionProvider"]
                 self.onnx_session = ort.InferenceSession(str(self.model_path), providers=providers)
-            else:
-                # Fallback to heuristic if ONNX file is not supplied
-                self.backend = "heuristic"
+
+            # Auto-detect localization model if not explicitly given
+            if self.loc_model_path is None:
+                default_loc = Path("models/deepheartseg_loc.onnx")
+                if default_loc.is_file():
+                    self.loc_model_path = default_loc.resolve()
+
+            if self.loc_model_path is not None and self.loc_model_path.is_file():
+                self.onnx_loc_session = ort.InferenceSession(str(self.loc_model_path), providers=providers)
 
         elif self.backend == "monai":
             # 8-channel anatomy model (0: pericardium, 1: LA, 2: LV, 3: RA, 4: RV, 5: LAD, 6: LCX, 7: RCA)
@@ -203,8 +219,68 @@ class UnifiedAnatomySegmenter:
         arr: np.ndarray,
         spacing: Tuple[float, float, float],
     ) -> AnatomyMasks:
-        """Run ONNX runtime model inference for legacy converted graphs."""
+        """Run ONNX runtime model inference supporting DeepHeartSeg and multi-channel models."""
         assert self.onnx_session is not None
+        inp_shape = self.onnx_session.get_inputs()[0].shape
+
+        # Check if model is the DeepHeartSeg 1-channel binary pericardium model
+        out_shape = self.onnx_session.get_outputs()[0].shape
+        is_single_channel = len(out_shape) == 5 and out_shape[1] == 1
+
+        if is_single_channel:
+            # 1. Heart localization (Step 1) to derive cardiac bounding box
+            if self.onnx_loc_session is not None:
+                z_zoom = 64.0 / arr.shape[0]
+                y_zoom = 128.0 / arr.shape[1]
+                x_zoom = 128.0 / arr.shape[2]
+                down = ndi.zoom(arr, (z_zoom, y_zoom, x_zoom), order=1)
+                norm_loc = ((np.clip(down, -1024.0, 3071.0)) - 1023.5) / 2047.5
+                inp_loc = norm_loc[np.newaxis, np.newaxis, ...].astype(np.float32)
+                pred_loc = self.onnx_loc_session.run(None, {self.onnx_loc_session.get_inputs()[0].name: inp_loc})[0]
+                loc_mask = pred_loc[0, 0] > 0.5
+
+                idx = np.where(loc_mask)
+                if len(idx[0]) > 0:
+                    z_min, z_max = int(np.min(idx[0]) / z_zoom), int(np.max(idx[0]) / z_zoom)
+                    y_min, y_max = int(np.min(idx[1]) / y_zoom), int(np.max(idx[1]) / y_zoom)
+                    x_min, x_max = int(np.min(idx[2]) / x_zoom), int(np.max(idx[2]) / x_zoom)
+                    # Add margin
+                    z_min, z_max = max(0, z_min - 4), min(arr.shape[0], z_max + 4)
+                    y_min, y_max = max(0, y_min - 16), min(arr.shape[1], y_max + 16)
+                    x_min, x_max = max(0, x_min - 16), min(arr.shape[2], x_max + 16)
+                else:
+                    z_min, z_max = 0, arr.shape[0]
+                    y_min, y_max = int(arr.shape[1] * 0.2), int(arr.shape[1] * 0.8)
+                    x_min, x_max = int(arr.shape[2] * 0.2), int(arr.shape[2] * 0.8)
+            else:
+                z_min, z_max = 0, arr.shape[0]
+                y_min, y_max = int(arr.shape[1] * 0.2), int(arr.shape[1] * 0.8)
+                x_min, x_max = int(arr.shape[2] * 0.2), int(arr.shape[2] * 0.8)
+
+            cropped = arr[z_min:z_max, y_min:y_max, x_min:x_max]
+            cz, cy, cx = cropped.shape
+
+            # Step 2: Resample cropped heart to (112, 128, 128)
+            z_f = 112.0 / cz
+            y_f = 128.0 / cy
+            x_f = 128.0 / cx
+            crop_resampled = ndi.zoom(cropped, (z_f, y_f, x_f), order=1)
+            norm_seg = ((np.clip(crop_resampled, -1024.0, 3071.0)) - 1023.5) / 2047.5
+
+            inp_seg = norm_seg[np.newaxis, np.newaxis, ...].astype(np.float32)
+            pred_seg = self.onnx_session.run(None, {self.onnx_session.get_inputs()[0].name: inp_seg})[0]
+            seg_mask_small = pred_seg[0, 0] > 0.5
+
+            # Upsample back to cropped dimensions
+            seg_crop_orig = ndi.zoom(seg_mask_small.astype(float), (1.0 / z_f, 1.0 / y_f, 1.0 / x_f), order=0) > 0.5
+            pericardium = np.zeros_like(arr, dtype=bool)
+            pericardium[z_min:z_max, y_min:y_max, x_min:x_max] = seg_crop_orig[:cz, :cy, :cx]
+            pericardium = ndi.binary_fill_holes(pericardium)
+
+            # Derive chambers and coronaries using DeepHeartSeg pericardium envelope
+            return self._derive_chambers_and_vessels(pericardium, arr)
+
+        # Standard 8-channel ONNX model
         norm = np.clip((arr - (-200.0)) / (800.0 - (-200.0)), 0.0, 1.0).astype(np.float32)
         inp = np.expand_dims(np.expand_dims(norm, axis=0), axis=0)  # (1, 1, D, H, W)
 
@@ -222,6 +298,76 @@ class UnifiedAnatomySegmenter:
             lad=(probs[5] > 0.5).astype(bool),
             lcx=(probs[6] > 0.5).astype(bool),
             rca=(probs[7] > 0.5).astype(bool),
+        )
+
+    def _derive_chambers_and_vessels(
+        self,
+        pericardium: np.ndarray,
+        arr: np.ndarray,
+    ) -> AnatomyMasks:
+        """Derive cardiac chamber and coronary vessel masks within a given pericardium."""
+        shape = arr.shape
+        nx, ny, nz = shape
+
+        indices = np.where(pericardium)
+        if len(indices[0]) > 0:
+            cx = float(np.mean(indices[0]))
+            cy = float(np.mean(indices[1]))
+            cz = float(np.mean(indices[2]))
+        else:
+            cx, cy, cz = nx / 2.0, ny / 2.0, nz / 2.0
+
+        grid_x, grid_y, grid_z = np.indices(shape)
+        chamber_voxels = pericardium & (arr >= -30.0)
+
+        is_left = grid_x >= cx
+        is_right = ~is_left
+        is_anterior = grid_y < cy
+        is_posterior = ~is_anterior
+        is_superior = grid_z >= cz
+        is_inferior = ~is_superior
+
+        la = chamber_voxels & is_left & is_posterior & is_superior
+        lv = chamber_voxels & is_left & (is_inferior | (is_posterior & ~is_superior))
+        ra = chamber_voxels & is_right & (is_superior | (is_anterior & is_superior))
+        rv = chamber_voxels & is_right & is_anterior & is_inferior
+
+        if not np.any(la):
+            la = pericardium & is_left & is_posterior
+        if not np.any(lv):
+            lv = pericardium & is_left & is_anterior
+        if not np.any(ra):
+            ra = pericardium & is_right & is_posterior
+        if not np.any(rv):
+            rv = pericardium & is_right & is_anterior
+
+        lad_zone = pericardium & (np.abs(grid_x - cx) <= 3) & is_anterior
+        lad_dilated = ndi.binary_dilation(lad_zone, iterations=1)
+        lad = lad_dilated & (arr >= -30.0)
+        if not np.any(lad):
+            lad = lad_zone
+
+        lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 3) & is_posterior
+        lcx_dilated = ndi.binary_dilation(lcx_zone, iterations=1)
+        lcx = lcx_dilated & (arr >= -30.0)
+        if not np.any(lcx):
+            lcx = lcx_zone
+
+        rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 3) & is_anterior
+        rca_dilated = ndi.binary_dilation(rca_zone, iterations=1)
+        rca = rca_dilated & (arr >= -30.0)
+        if not np.any(rca):
+            rca = rca_zone
+
+        return AnatomyMasks(
+            pericardium=pericardium.astype(bool),
+            la=la.astype(bool),
+            lv=lv.astype(bool),
+            ra=ra.astype(bool),
+            rv=rv.astype(bool),
+            lad=lad.astype(bool),
+            lcx=lcx.astype(bool),
+            rca=rca.astype(bool),
         )
 
     def _segment_heuristic(
