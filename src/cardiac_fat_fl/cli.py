@@ -487,6 +487,78 @@ def hardware_info() -> None:
     display_hardware_summary(profile, console=console)
 
 
+@app.command("download-models")
+def download_models_cmd(
+    repo_tag: str = typer.Option(
+        "v1.0.0",
+        "--tag",
+        "-t",
+        help="Release tag version to fetch models from.",
+    ),
+    repo_url: str = typer.Option(
+        "https://github.com/circ-ml/monai-cardiac-fat-fl",
+        "--repo",
+        "-r",
+        help="GitHub repository URL.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("models"),
+        "--output-dir",
+        "-o",
+        help="Destination directory for downloaded ONNX models.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="Re-download and overwrite existing ONNX files.",
+    ),
+) -> None:
+    """Download validated DeepHeartSeg ONNX models from GitHub Release assets."""
+    import urllib.request
+    from rich.progress import (
+        BarColumn,
+        DownloadColumn,
+        Progress,
+        TextColumn,
+        TimeRemainingColumn,
+        TransferSpeedColumn,
+    )
+
+    models = ["deepheartseg_heart.onnx", "deepheartseg_loc.onnx"]
+    output_dir.mkdir(parents=True, exist_ok=True)
+    base_url = repo_url.rstrip("/") + f"/releases/download/{repo_tag}"
+
+    for model_name in models:
+        target = output_dir / model_name
+        if target.exists() and not force:
+            console.print(f"[green]Model already present:[/green] {target} (use --force to re-download)")
+            continue
+
+        url = f"{base_url}/{model_name}"
+        console.print(f"[cyan]Downloading {model_name} from:[/cyan] {url}")
+        try:
+            with Progress(
+                TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
+                BarColumn(),
+                DownloadColumn(),
+                TransferSpeedColumn(),
+                TimeRemainingColumn(),
+                console=console,
+            ) as progress:
+                task_id = progress.add_task("download", filename=model_name, total=None)
+
+                def reporthook(block_num: int, block_size: int, total_size: int) -> None:
+                    if total_size > 0:
+                        progress.update(task_id, total=total_size, completed=block_num * block_size)
+
+                urllib.request.urlretrieve(url, str(target), reporthook=reporthook)
+            console.print(f"[bold green]Successfully saved:[/bold green] {target}")
+        except Exception as e:
+            console.print(f"[yellow]Could not download {model_name} from {url}: {e}[/yellow]")
+            console.print("[dim]Note: Ensure release assets are published or specify custom --repo / --tag.[/dim]")
+
+
 if __name__ == "__main__":
     app()
 
