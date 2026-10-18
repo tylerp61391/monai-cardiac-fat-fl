@@ -11,6 +11,10 @@ Production-ready, zero-placeholder **PyTorch / MONAI Bundle** and **NVIDIA FLARE
 
 This repository modernizes the legacy MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) pipeline into a modern Python 3.11+ architecture. It eliminates legacy Python 2.7 / TensorFlow 1.14 `DeepHeartSeg` dependencies, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer](https://docs.ohif.org/) via standard DICOM-SEG objects.
 
+![Interactive OHIF Medical Viewer: 3-Pane Clinical Visualization for Stanford COCA Patient 0](docs/figures/ohif_viewer_snapshot.png)
+
+*Figure 1: Authentic 3-Pane OHIF Medical Web Viewer displaying Stanford COCA Patient 0 with real 3D CT slices, 8-layer DICOM-SEG color overlays, live Hounsfield Unit inspection, and quantified EAT/PVAT clinical volume/density readouts.*
+
 ---
 
 ## End-to-End System Architecture
