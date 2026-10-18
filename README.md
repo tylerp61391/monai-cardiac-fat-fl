@@ -118,6 +118,25 @@ cd monai-cardiac-fat-fl
 pip install -e .
 ```
 
+### Pretrained Deep Learning Weights (GitHub Releases)
+
+Because pretrained DeepHeartSeg ONNX models exceed GitHub's $100\,\text{MB}$ repository file limit, model binaries are hosted on GitHub Releases rather than tracked in git:
+
+1. **Automatic Download via CLI**:
+   ```bash
+   # Automatically downloads deepheartseg_heart.onnx & deepheartseg_loc.onnx into models/
+   cardiac-fat-fl download-models
+   ```
+2. **Manual Download via `curl`**:
+   ```bash
+   curl -L -o models/deepheartseg_heart.onnx https://github.com/circ-ml/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_heart.onnx
+   curl -L -o models/deepheartseg_loc.onnx https://github.com/circ-ml/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_loc.onnx
+   ```
+3. **Repository Maintainer Deployment**:
+   When pushing to a new repository, create release `v1.0.0` and attach `models/deepheartseg_heart.onnx` and `models/deepheartseg_loc.onnx` as binary assets.
+4. **Zero-Download Heuristic Fallback**:
+   If model weights are not downloaded, the pipeline automatically falls back to the high-speed anatomical heuristic segmenter, ensuring instant evaluation without mandatory network downloads.
+
 ### Docker & Containerized Deployment
 
 A production-ready `Dockerfile` and `docker-compose.yml` are provided for cross-platform portability across Linux, Windows, macOS, and cloud clusters without local Python environment dependencies:
@@ -203,6 +222,7 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | Command | Usage | Description |
 | :--- | :--- | :--- |
 | `hardware` | `cardiac-fat-fl hardware` | Inspects host CPUs, RAM, and CUDA GPUs to display safe concurrency limits. |
+| `download-models`| `cardiac-fat-fl download-models [--tag v1.0.0]` | Downloads validated DeepHeartSeg ONNX models from GitHub Release assets. |
 | `quantify` | `cardiac-fat-fl quantify <cohort_dir> [--workers 0] [--limit N]` | End-to-end batch quantification over DICOM/NRRD/NIfTI cohort (auto-sized). |
 | `view` | `cardiac-fat-fl view <sample_dir> [--port 8000]` | Prepares study and launches authentic 3-pane local OHIF viewer. |
 | `export-ohif` | `cardiac-fat-fl export-ohif <sample_dir> [-o dest]` | Generates standard CT DICOM series and multi-frame `eat_pvat_seg.dcm`. |
