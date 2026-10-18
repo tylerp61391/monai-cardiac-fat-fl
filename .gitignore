@@ -40,3 +40,10 @@ htmlcov/
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# Model weights
+models/*.hdf5
+models/*.onnx
+models/*.pt
+models/*.pth
+

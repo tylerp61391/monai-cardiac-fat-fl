@@ -238,6 +238,89 @@ def federated_stats(
             console.print(f"  • {metric_name}: Mean={details['mean']:.2f}, Std={details['std']:.2f}, Range=[{details['min']:.1f}, {details['max']:.1f}]")
 
 
+@app.command("compare-models")
+def compare_models(
+    scan_path: Path = typer.Argument(
+        ...,
+        help="Path to CT volume file (.nrrd, .nii.gz) or participant DICOM series directory.",
+        exists=True,
+        resolve_path=True,
+    ),
+    onnx_seg_model: Path = typer.Option(
+        Path("models/deepheartseg_heart.onnx"),
+        "--onnx-model",
+        help="Path to converted DeepHeartSeg ONNX segmentation model.",
+    ),
+    onnx_loc_model: Path = typer.Option(
+        Path("models/deepheartseg_loc.onnx"),
+        "--loc-model",
+        help="Path to converted DeepHeartSeg ONNX localization model.",
+    ),
+) -> None:
+    """Run side-by-side comparison between Modernized pipeline and frozen legacy DeepHeartSeg ONNX model."""
+    import numpy as np
+    from cardiac_fat_fl.measurement_schema import REPORTED_REGIONS
+
+    console.print(f"[bold cyan]Running Equivalency Comparison on:[/bold cyan] {scan_path.name}")
+
+    meta_ct = read_nrrd_as_metatensor(scan_path)
+    ct_arr = meta_ct.detach().cpu().numpy()
+    while ct_arr.ndim > 3:
+        ct_arr = ct_arr[0]
+    spacing = tuple(meta_ct.meta.get("spacing", (1.0, 1.0, 1.0)))
+
+    mask_tx = ComputeEatPvatMasksd(keys=["image"])
+    quant_tx = QuantifyAdiposeMetricsd(keys=["image"])
+
+    # 1. Run Modernized Heuristic Pipeline
+    seg_heur = UnifiedAnatomySegmenter(backend="heuristic")
+    anat_heur = seg_heur.segment(ct_arr, spacing=spacing)
+    res_heur = quant_tx(mask_tx({"image": meta_ct, "anatomy": anat_heur, "participant_id": "Modern"}))["metrics"]
+
+    # 2. Run DeepHeartSeg ONNX Pipeline
+    seg_onnx = UnifiedAnatomySegmenter(
+        model_path=onnx_seg_model,
+        loc_model_path=onnx_loc_model,
+        backend="onnx",
+    )
+    anat_onnx = seg_onnx.segment(ct_arr, spacing=spacing)
+    res_onnx = quant_tx(mask_tx({"image": meta_ct, "anatomy": anat_onnx, "participant_id": "ONNX_Legacy"}))["metrics"]
+
+    # Calculate Dice overlap of Pericardium
+    inter = np.sum(anat_heur.pericardium & anat_onnx.pericardium)
+    dice = (2.0 * inter) / (np.sum(anat_heur.pericardium) + np.sum(anat_onnx.pericardium))
+
+    table = Table(title=f"Clinical Equivalency Analysis (Pericardium Dice: {dice*100:.2f}%)")
+    table.add_column("Anatomical Region", style="cyan", justify="left")
+    table.add_column("Modern Vol (cm3)", justify="right")
+    table.add_column("ONNX Vol (cm3)", justify="right")
+    table.add_column("Vol Diff (cm3)", justify="right")
+    table.add_column("Modern HU", justify="right")
+    table.add_column("ONNX HU", justify="right")
+    table.add_column("HU Delta", justify="right")
+
+    for region in REPORTED_REGIONS:
+        reg = region.value
+        v_h = res_heur[f"{reg} Volume (cm3)"]
+        v_o = res_onnx[f"{reg} Volume (cm3)"]
+        hu_h = res_heur[f"{reg} Mean Attenuation (HU)"]
+        hu_o = res_onnx[f"{reg} Mean Attenuation (HU)"]
+        v_diff = abs(v_h - v_o)
+        hu_delta = abs(hu_h - hu_o) if not np.isnan(hu_h) and not np.isnan(hu_o) else np.nan
+
+        table.add_row(
+            reg,
+            f"{v_h:.2f}",
+            f"{v_o:.2f}",
+            f"{v_diff:.2f}",
+            f"{hu_h:.1f}" if not np.isnan(hu_h) else "NaN",
+            f"{hu_o:.1f}" if not np.isnan(hu_o) else "NaN",
+            f"{hu_delta:.2f}" if not np.isnan(hu_delta) else "-",
+        )
+
+    console.print(table)
+
+
 if __name__ == "__main__":
     app()
 
