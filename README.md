@@ -114,6 +114,28 @@ cd monai-cardiac-fat-fl
 pip install -e .
 ```
 
+### Docker & Containerized Deployment
+
+A production-ready `Dockerfile` and `docker-compose.yml` are provided for cross-platform portability across Linux, Windows, macOS, and cloud clusters without local Python environment dependencies:
+
+```bash
+# 1. Build the lightweight Docker image
+docker build -t monai-cardiac-fat-fl:latest .
+
+# 2. Run cohort quantification on mounted data directory
+docker run --rm -v /path/to/data:/data monai-cardiac-fat-fl \
+    quantify /data/patients -o /data/results --workers 8
+
+# 3. Launch interactive OHIF 3-Pane Viewer
+docker run --rm -p 8000:8000 -v /path/to/data:/data monai-cardiac-fat-fl \
+    view /data/sample --port 8000 --no-browser
+
+# 4. Or use Docker Compose for instant multi-service launch:
+docker compose run --rm cardiofat quantify /data/patients -o /data/results
+docker compose up viewer    # CardioFat 3-Pane Viewer at http://localhost:8000
+docker compose up -d ohif   # Official OHIF Web Platform at http://localhost:3000
+```
+
 ---
 
 ## CLI Command Reference

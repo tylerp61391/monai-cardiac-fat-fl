@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  # ----------------------------------------------------------------------------
+  # Service 1: CardioFat CLI Runner (Batch Quantification & Federated Stats)
+  # Usage: docker compose run --rm cardiofat quantify /data/patients -o /data/results --workers 8
+  # ----------------------------------------------------------------------------
+  cardiofat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: monai-cardiac-fat-fl:latest
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["--help"]
+
+  # ----------------------------------------------------------------------------
+  # Service 2: Interactive OHIF DICOM-SEG & CT 3-Pane Medical Viewer
+  # Usage: docker compose up viewer
+  # Access: http://localhost:8000
+  # ----------------------------------------------------------------------------
+  viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: monai-cardiac-fat-fl:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    command: ["view", "/data/sample", "--port", "8000", "--no-browser"]
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Service 3: Official Open Health Imaging Foundation (OHIF) Web Platform
+  # Usage: docker compose up -d ohif
+  # Access: http://localhost:3000
+  # ----------------------------------------------------------------------------
+  ohif:
+    image: ohif/app:latest
+    ports:
+      - "3000:80"
+    restart: unless-stopped
