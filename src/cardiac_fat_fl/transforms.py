@@ -102,9 +102,47 @@ class ComputeEatPvatMasksd(MapTransform):
         ra: np.ndarray,
         rv: np.ndarray,
         spacing: Tuple[float, float, float],
+        pericardium: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Compute Voronoi proximity partition among the 4 cardiac chambers."""
-        # Compute exact Euclidean distance transform to each chamber surface with physical spacing
+        if pericardium is not None and np.any(pericardium):
+            idx = np.where(pericardium)
+            z0, z1 = int(np.min(idx[0])), int(np.max(idx[0])) + 1
+            y0, y1 = int(np.min(idx[1])), int(np.max(idx[1])) + 1
+            x0, x1 = int(np.min(idx[2])), int(np.max(idx[2])) + 1
+
+            margin_z = int(np.ceil(20.0 / spacing[2]))
+            margin_y = int(np.ceil(20.0 / spacing[1]))
+            margin_x = int(np.ceil(20.0 / spacing[0]))
+
+            z0, z1 = max(0, z0 - margin_z), min(la.shape[0], z1 + margin_z)
+            y0, y1 = max(0, y0 - margin_y), min(la.shape[1], y1 + margin_y)
+            x0, x1 = max(0, x0 - margin_x), min(la.shape[2], x1 + margin_x)
+
+            sub_la = la[z0:z1, y0:y1, x0:x1]
+            sub_lv = lv[z0:z1, y0:y1, x0:x1]
+            sub_ra = ra[z0:z1, y0:y1, x0:x1]
+            sub_rv = rv[z0:z1, y0:y1, x0:x1]
+
+            d_la = ndi.distance_transform_edt(~sub_la, sampling=spacing) if np.any(sub_la) else np.full(sub_la.shape, 1e6)
+            d_lv = ndi.distance_transform_edt(~sub_lv, sampling=spacing) if np.any(sub_lv) else np.full(sub_lv.shape, 1e6)
+            d_ra = ndi.distance_transform_edt(~sub_ra, sampling=spacing) if np.any(sub_ra) else np.full(sub_ra.shape, 1e6)
+            d_rv = ndi.distance_transform_edt(~sub_rv, sampling=spacing) if np.any(sub_rv) else np.full(sub_rv.shape, 1e6)
+
+            stacked = np.stack([d_la, d_lv, d_ra, d_rv], axis=0)
+            nearest = np.argmin(stacked, axis=0)
+
+            zone_la = np.zeros_like(la, dtype=bool)
+            zone_la[z0:z1, y0:y1, x0:x1] = nearest == 0
+            zone_lv = np.zeros_like(lv, dtype=bool)
+            zone_lv[z0:z1, y0:y1, x0:x1] = nearest == 1
+            zone_ra = np.zeros_like(ra, dtype=bool)
+            zone_ra[z0:z1, y0:y1, x0:x1] = nearest == 2
+            zone_rv = np.zeros_like(rv, dtype=bool)
+            zone_rv[z0:z1, y0:y1, x0:x1] = nearest == 3
+            return zone_la, zone_lv, zone_ra, zone_rv
+
+        # Full-volume fallback if no pericardium provided
         d_la = ndi.distance_transform_edt(~la, sampling=spacing) if np.any(la) else np.full(la.shape, 1e6)
         d_lv = ndi.distance_transform_edt(~lv, sampling=spacing) if np.any(lv) else np.full(lv.shape, 1e6)
         d_ra = ndi.distance_transform_edt(~ra, sampling=spacing) if np.any(ra) else np.full(ra.shape, 1e6)
@@ -125,10 +163,36 @@ class ComputeEatPvatMasksd(MapTransform):
         vessel_mask: np.ndarray,
         spacing: Tuple[float, float, float],
         max_dist_mm: float,
+        pericardium: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """Compute radial distance envelope around a coronary vessel centerline/mask."""
         if not np.any(vessel_mask):
             return np.zeros_like(vessel_mask, dtype=bool)
+
+        if pericardium is not None and np.any(pericardium):
+            idx = np.where(pericardium)
+            z0, z1 = int(np.min(idx[0])), int(np.max(idx[0])) + 1
+            y0, y1 = int(np.min(idx[1])), int(np.max(idx[1])) + 1
+            x0, x1 = int(np.min(idx[2])), int(np.max(idx[2])) + 1
+
+            margin_z = int(np.ceil((max_dist_mm + 5.0) / spacing[2]))
+            margin_y = int(np.ceil((max_dist_mm + 5.0) / spacing[1]))
+            margin_x = int(np.ceil((max_dist_mm + 5.0) / spacing[0]))
+
+            z0, z1 = max(0, z0 - margin_z), min(vessel_mask.shape[0], z1 + margin_z)
+            y0, y1 = max(0, y0 - margin_y), min(vessel_mask.shape[1], y1 + margin_y)
+            x0, x1 = max(0, x0 - margin_x), min(vessel_mask.shape[2], x1 + margin_x)
+
+            sub_v = vessel_mask[z0:z1, y0:y1, x0:x1]
+            if not np.any(sub_v):
+                return np.zeros_like(vessel_mask, dtype=bool)
+
+            dist = ndi.distance_transform_edt(~sub_v, sampling=spacing)
+            sub_env = (dist <= max_dist_mm) & (~sub_v)
+
+            envelope = np.zeros_like(vessel_mask, dtype=bool)
+            envelope[z0:z1, y0:y1, x0:x1] = sub_env
+            return envelope
 
         dist = ndi.distance_transform_edt(~vessel_mask, sampling=spacing)
         envelope = (dist <= max_dist_mm) & (~vessel_mask)
@@ -173,7 +237,7 @@ class ComputeEatPvatMasksd(MapTransform):
 
         # 3. Chamber-specific EAT (EAT_LA, EAT_LV, EAT_RA, EAT_RV)
         zone_la, zone_lv, zone_ra, zone_rv = self._compute_chamber_voronoi(
-            anatomy.la, anatomy.lv, anatomy.ra, anatomy.rv, spacing=spacing
+            anatomy.la, anatomy.lv, anatomy.ra, anatomy.rv, spacing=spacing, pericardium=anatomy.pericardium
         )
         eat_la = eat_total & zone_la
         eat_lv = eat_total & zone_lv
@@ -182,9 +246,9 @@ class ComputeEatPvatMasksd(MapTransform):
 
         # 4. Pericoronary Adipose Tissue (PVAT_LAD, PVAT_LCX, PVAT_RCA)
         # Radial Euclidean distance dilation around vessel centerline/mask
-        envelope_lad = self._compute_pvat_envelope(anatomy.lad, spacing, self.pvat_radial_distance_mm)
-        envelope_lcx = self._compute_pvat_envelope(anatomy.lcx, spacing, self.pvat_radial_distance_mm)
-        envelope_rca = self._compute_pvat_envelope(anatomy.rca, spacing, self.pvat_radial_distance_mm)
+        envelope_lad = self._compute_pvat_envelope(anatomy.lad, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
+        envelope_lcx = self._compute_pvat_envelope(anatomy.lcx, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
+        envelope_rca = self._compute_pvat_envelope(anatomy.rca, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
 
         pvat_lad = adipose_voxels & envelope_lad
         pvat_lcx = adipose_voxels & envelope_lcx
