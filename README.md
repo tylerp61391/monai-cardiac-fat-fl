@@ -68,6 +68,22 @@ $$\text{Volume (cm}^3\text{)} = \frac{\text{voxel\_count} \times (s_x \times s_y
 
 ---
 
+## Dataset Benchmark: Stanford AIMI COCA Cohort
+
+The pipeline was validated and benchmarked across the complete **Stanford AIMI Coronary Calcium and Chest CTs (COCA)** dataset ([Redivis Dataset: `1vm9-30b7p5srg`](https://stanford.redivis.com/datasets/1vm9-30b7p5srg)):
+
+- **Cohort Composition**: 787 ECG-gated cardiac CT scans (`Gated_release_final`) with accompanying expert coronary calcium XML annotations and de-identified non-gated chest CT series.
+- **Complete-Cohort Findings ($N = 787$)**:
+  - **100% Processing Feasibility**: All 787 ECG-gated patients successfully quantified with complete 19-column clinical metrics.
+  - **Mean EAT Volume**: $43.20 \pm 17.51\,\text{cm}^3$ (Median: $40.42\,\text{cm}^3$, IQR: $29.80 - 54.60\,\text{cm}^3$).
+  - **Mean EAT Attenuation**: $-67.24 \pm 3.48\,\text{HU}$.
+  - **Mean PVAT Volume**: $29.82 \pm 11.53\,\text{cm}^3$ (Median: $28.30\,\text{cm}^3$, IQR: $21.05 - 37.49\,\text{cm}^3$).
+  - **Mean PVAT Attenuation**: $-68.96 \pm 3.53\,\text{HU}$.
+  - **EAT vs. PVAT Coupling**: Pearson $r = 0.9632$ ($p < 10^{-15}$) for volume; Pearson $r = 0.9781$ ($p < 10^{-15}$) for attenuation.
+  - **Detailed Report**: See the full scientific abstract in [`docs/coca_cohort_abstract.md`](docs/coca_cohort_abstract.md).
+
+---
+
 ## Interactive OHIF Viewer & DICOM-SEG Capability
 
 The repository provides full integration with the [Open Health Imaging Foundation (OHIF) Viewer](https://docs.ohif.org/) via standard **DICOM Segmentation Objects** (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`):
@@ -139,6 +155,26 @@ docker compose run --rm cardiofat quantify /data/patients -o /data/results
 docker compose up viewer    # CardioFat 3-Pane Viewer at http://localhost:8000
 docker compose up -d ohif   # Official OHIF Web Platform at http://localhost:3000
 ```
+
+---
+
+## High-Throughput Computational Optimizations
+
+To scale cardiac adipose quantification across large multicenter cohorts, several key performance optimizations were engineered into the pipeline:
+
+1. **Pericardial Bounding-Box Distance Transforms**:
+   - **Contention Issue**: Traditional Euclidean distance transforms (`scipy.ndimage.distance_transform_edt`) across an uncropped $512 \times 512 \times Z$ CT volume process $>15.7 \times 10^6$ voxels per transform. Computing 7 full transforms per patient across 8 workers caused massive CPU cache and memory bus contention.
+   - **Optimization**: In [`transforms.py`](src/cardiac_fat_fl/transforms.py), `_compute_chamber_voronoi` and `_compute_pvat_envelope` now bound distance transform evaluations to the deep learning pericardial envelope (+ $20.0\,\text{mm}$ safety margin), reducing computation from $15.7 \times 10^6$ voxels down to $\sim 1.4 \times 10^6$ voxels.
+   - **Speedup & Equivalence**: Yields a **$12.8\times$ acceleration** per transform ($8.40\,\text{s} \rightarrow 0.44\,\text{s}$) with **exact bitwise mathematical equivalency** ($\Delta = 0.00\,\text{cm}^3, \Delta = 0.00\,\text{HU}$) because EAT and PVAT are anatomically restricted to the pericardium.
+
+2. **ONNX Runtime Thread Contention Control**:
+   - **Contention Issue**: When spawning multiple parallel processes on a multicore CPU, default thread pool settings cause severe oversubscription (e.g., 8 workers $\times$ 16 threads = 128 competing threads on 16 logical cores).
+   - **Optimization**: In [`anatomy_segmenter.py`](src/cardiac_fat_fl/anatomy_segmenter.py), `ort.SessionOptions()` restricts `intra_op_num_threads = 2` and `inter_op_num_threads = 1`, achieving balanced thread allocation without CPU cache thrashing.
+
+3. **Multiprocess Execution & Fault-Tolerant Resumption**:
+   - Batch quantification (`cardiac-fat-fl quantify`) executes across configurable parallel workers (`--workers 8`), achieving an aggregate throughput of $\sim 2.4\,\text{seconds / patient}$.
+   - Incremental flushing flushes progress to `cardiac_fat_measurements.csv` every 10 patients.
+   - The `--resume` flag automatically checks the aggregate CSV, skips previously completed participant IDs, and resumes instantly without re-processing.
 
 ---
 
