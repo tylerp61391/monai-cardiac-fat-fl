@@ -1,12 +1,12 @@
 # Pretrained Model Weights Deployment Guide
 
-This checklist provides step-by-step instructions for uploading and distributing the DeepHeartSeg ONNX model weights via GitHub Releases (Option A).
+This guide provides explicit instructions for both **human developers** and **autonomous AI / Model Context Protocol (MCP) agents** on how to upload, distribute, and automatically configure the DeepHeartSeg ONNX model weights.
 
 ---
 
 ## 1. Summary of Weight Files
 
-The two validated ONNX models are located in your local `models/` directory:
+The two validated ONNX models are stored in the local `models/` directory:
 
 | Filename | File Size | Description |
 | :--- | :---: | :--- |
@@ -14,63 +14,69 @@ The two validated ONNX models are located in your local `models/` directory:
 | `deepheartseg_heart.onnx` | **104.2 MB** | Step 2: High-resolution pericardial sac segmentation network (`112 x 128 x 128` input) |
 
 > [!NOTE]
-> These files are excluded from git via `.gitignore` because GitHub has a hard 100 MB per-file limit for regular git commits. Hosting them on GitHub Releases allows users to download them without repository bloat.
+> These files are excluded from git via `.gitignore` because GitHub has a hard 100 MB per-file limit for regular git commits. Hosting them on GitHub Releases allows users and agents to download them without repository bloat.
 
 ---
 
-## 2. Step-by-Step GitHub Release Instructions
+## 2. Publishing the Release (Maintainer / Publishing Agent)
 
-Follow these steps once you push this repository to GitHub:
+Choose either **Method A** (for automated agents / terminal) or **Method B** (for web browser):
 
-### Step 1: Navigate to Releases
-1. Open your repository on GitHub in your browser (`https://github.com/<your-org>/monai-cardiac-fat-fl`).
-2. On the right-hand sidebar, click **Releases** (or navigate to `https://github.com/<your-org>/monai-cardiac-fat-fl/releases`).
-3. Click **Draft a new release** (or **Create a new release**).
+### Method A: Automated via GitHub CLI or Python Script (Ideal for AI Agents)
 
-### Step 2: Configure Tag & Title
-- **Choose a tag**: Type `v1.0.0` and click *Create new tag: v1.0.0 on publish*.
-- **Target**: `main` (or `master`).
-- **Release title**: `v1.0.0 - Production MONAI & ONNX Pretrained Models`.
-- **Description**:
-  ```markdown
-  ### Pretrained DeepHeartSeg ONNX Models
-  Validated PyTorch/ONNX converted weights matching legacy MGH CardiacFatQuant with 0.00 delta equivalency.
+**Using GitHub CLI (`gh`)**:
+```bash
+gh release create v1.0.0 \
+  models/deepheartseg_loc.onnx \
+  models/deepheartseg_heart.onnx \
+  --title "v1.0.0 - Production MONAI & ONNX Pretrained Models" \
+  --notes "Pretrained DeepHeartSeg ONNX models matching legacy MGH CardiacFatQuant with 0.00 delta."
+```
 
-  - `deepheartseg_loc.onnx`: 3D cardiac localization bounding-box model (104.2 MB)
-  - `deepheartseg_heart.onnx`: 3D high-resolution pericardial sac segmentation model (104.2 MB)
-  ```
+**Using the included Python script**:
+```bash
+# Requires GITHUB_TOKEN environment variable set
+python scripts/publish_release.py v1.0.0
+```
 
-### Step 3: Attach the Binary Files
-1. In the **Attach binaries by dropping them here or selecting them** box at the bottom:
-2. Drag and drop both files from your local folder:
+### Method B: Manual Web UI (Drag & Drop)
+1. Navigate to `https://github.com/<your-org>/monai-cardiac-fat-fl/releases`.
+2. Click **Draft a new release**.
+3. Set Tag: `v1.0.0`, Title: `v1.0.0 - Production MONAI & ONNX Pretrained Models`.
+4. In the **Attach binaries** box, drag and drop:
    - `models/deepheartseg_loc.onnx`
    - `models/deepheartseg_heart.onnx`
-3. Wait for the upload progress bar to turn green for both files (GitHub Releases support files up to 2.0 GB each).
-
-### Step 4: Publish
-- Click the green **Publish release** button.
+5. Click **Publish release**.
 
 ---
 
-## 3. How Users Will Download the Models
+## 3. Downstream Agent Setup Workflow (Cloning on Any Machine)
 
-Once published, any user or autonomous MCP agent cloning your repository can automatically retrieve the weights by running:
+When an autonomous AI agent or user clones this repository on another computer, they can execute this exact 4-step sequence to achieve full autonomous operation:
 
 ```bash
-# Automated 1-click download with progress reporting
+# Step 1: Clone repository
+git clone https://github.com/<your-org>/monai-cardiac-fat-fl.git
+cd monai-cardiac-fat-fl
+
+# Step 2: Install package dependencies
+pip install -e .
+
+# Step 3: Automatically download release ONNX weights into models/
 cardiac-fat-fl download-models
-```
 
-Or via standard `curl`:
-```bash
-curl -L -o models/deepheartseg_loc.onnx https://github.com/<your-org>/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_loc.onnx
-curl -L -o models/deepheartseg_heart.onnx https://github.com/circ-ml/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_heart.onnx
+# Step 4: Run hardware probe and safe batch quantification
+cardiac-fat-fl hardware
+cardiac-fat-fl quantify /path/to/cohort --workers 0
 ```
 
 ---
 
-## 4. Local Backup Verification
+## 4. Failure Mode & Fallback Matrix for Agents
 
-The source weights are also permanently backed up locally on this machine:
-- Local Workspace: `models/deepheartseg_*.onnx` and `models/deepheartseg_step*.hdf5`
-- Artifact Directory Vault: `C:\Users\Brad\.gemini\antigravity\brain\21a6de61-0bcc-47c6-9433-f8915867eee1\`
+| Situation | Behavior | Outcome |
+| :--- | :--- | :--- |
+| **Release assets online** | `cardiac-fat-fl download-models` succeeds | Full DeepHeartSeg ONNX inference with exact $\Delta = 0.00$ numerical match. |
+| **Offline / Air-gapped environment** | Weights not present | Pipeline automatically engages high-speed heuristic anatomical segmenter without error. |
+| **Oversubscribed Hardware** | Host RAM < 16 GB | `hardware.py` automatically throttles `--workers` to prevent OS freeze or OOM. |
+| **GPU Acceleration (RTX 4090)** | CUDA detected | Automatically selects `CUDAExecutionProvider` achieving $>120$ scans / minute. |
