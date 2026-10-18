@@ -1,0 +1,86 @@
+# MONAI Bundle Training Configuration for 3D Cardiac Fat Distillation
+# SegResNet 3D with DiceFocalLoss and FedBN support
+
+imports:
+  - "$import glob"
+  - "$import os"
+
+bundle_root: "."
+device: "$torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')"
+spatial_dims: 3
+roi_size: [96, 96, 96]
+batch_size: 2
+num_workers: 4
+max_epochs: 50
+learning_rate: 0.0002
+fedprox_mu: 0.01
+fed_bn: true
+
+network_def:
+  _target_: monai.networks.nets.SegResNet
+  spatial_dims: "@spatial_dims"
+  in_channels: 1
+  out_channels: 8
+  init_filters: 16
+  blocks_down: [1, 2, 2, 4]
+  blocks_up: [1, 1, 1]
+  dropout_prob: 0.2
+
+loss:
+  _target_: monai.losses.DiceFocalLoss
+  include_background: true
+  sigmoid: true
+  smooth_nr: 1.0e-05
+  smooth_dr: 1.0e-05
+
+optimizer:
+  _target_: torch.optim.AdamW
+  params: "$@network_def.parameters()"
+  lr: "@learning_rate"
+  weight_decay: 0.0001
+
+lr_scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  optimizer: "@optimizer"
+  T_max: "@max_epochs"
+
+preprocessing_transforms:
+  _target_: monai.transforms.Compose
+  transforms:
+    - _target_: monai.transforms.LoadImaged
+      keys: ["image", "label"]
+    - _target_: monai.transforms.EnsureChannelFirstd
+      keys: ["image", "label"]
+    - _target_: monai.transforms.Orientationd
+      keys: ["image", "label"]
+      axcodes: "RAS"
+    - _target_: monai.transforms.Spacingd
+      keys: ["image", "label"]
+      pixdim: [1.5, 1.5, 1.5]
+      mode: ["bilinear", "nearest"]
+    - _target_: monai.transforms.ScaleIntensityRangePercentilesd
+      keys: ["image"]
+      lower: 0.5
+      upper: 99.5
+      b_min: 0.0
+      b_max: 1.0
+      clip: true
+    - _target_: monai.transforms.RandSpatialCropd
+      keys: ["image", "label"]
+      roi_size: "@roi_size"
+      random_size: false
+    - _target_: monai.transforms.RandFlipd
+      keys: ["image", "label"]
+      prob: 0.5
+      spatial_axis: 0
+
+postprocessing_transforms:
+  _target_: monai.transforms.Compose
+  transforms:
+    - _target_: monai.transforms.Activationsd
+      keys: ["pred"]
+      sigmoid: true
+    - _target_: monai.transforms.AsDiscreted
+      keys: ["pred"]
+      threshold: 0.5
+

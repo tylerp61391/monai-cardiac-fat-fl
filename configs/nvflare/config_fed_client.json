@@ -1,0 +1,53 @@
+{
+  "format_version": 2,
+  "executors": [
+    {
+      "tasks": [
+        "train",
+        "submit_model",
+        "validate"
+      ],
+      "executor": {
+        "id": "trainer",
+        "path": "monai.fl.client.MonaiAlgo",
+        "args": {
+          "client_algo_id": "cardiac_fat_algo"
+        }
+      }
+    },
+    {
+      "tasks": [
+        "get_stats",
+        "fed_stats",
+        "statistics"
+      ],
+      "executor": {
+        "id": "stats_executor",
+        "path": "cardiac_fat_fl.fl_stats_executor.CardiacFatStatsExecutor",
+        "args": {
+          "csv_path": "cardiac_fat_measurements.csv",
+          "num_bins": 20
+        }
+      }
+    }
+  ],
+  "task_result_filters": [],
+  "task_data_filters": [],
+  "components": [
+    {
+      "id": "cardiac_fat_algo",
+      "path": "cardiac_fat_fl.fl_client_algo.CardiacFatClientAlgo",
+      "args": {
+        "model_name": "segresnet",
+        "in_channels": 1,
+        "out_channels": 8,
+        "lr": 0.0002,
+        "fedprox_mu": 0.01,
+        "fed_bn": true,
+        "epochs_per_round": 1,
+        "batch_size": 1
+      }
+    }
+  ]
+}
+
