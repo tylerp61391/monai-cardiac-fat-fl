@@ -49,6 +49,7 @@ class ComputeEatPvatMasksd(MapTransform):
         hu_max: float = ADIPOSE_HU_MAX,
         pvat_radial_distance_mm: float = DEFAULT_PVAT_RADIAL_DISTANCE_MM,
         restrict_pvat_to_pericardium: bool = True,
+        segmenter: Optional[UnifiedAnatomySegmenter] = None,
         allow_missing_keys: bool = False,
     ) -> None:
         """Initialize transform.
@@ -62,6 +63,7 @@ class ComputeEatPvatMasksd(MapTransform):
             hu_max: Upper attenuation bound (-30.0 HU).
             pvat_radial_distance_mm: Radial dilation envelope for PVAT in mm (default: 10.0mm).
             restrict_pvat_to_pericardium: Whether PVAT must lie within pericardial envelope.
+            segmenter: Optional custom UnifiedAnatomySegmenter instance.
             allow_missing_keys: If False, raises KeyError when key is missing.
         """
         super().__init__(keys, allow_missing_keys)
@@ -72,7 +74,7 @@ class ComputeEatPvatMasksd(MapTransform):
         self.hu_max = hu_max
         self.pvat_radial_distance_mm = pvat_radial_distance_mm
         self.restrict_pvat_to_pericardium = restrict_pvat_to_pericardium
-        self._segmenter = UnifiedAnatomySegmenter(backend="heuristic")
+        self._segmenter = segmenter if segmenter is not None else UnifiedAnatomySegmenter(backend="auto")
 
     def _extract_array_and_spacing(self, img_obj: Any) -> Tuple[np.ndarray, Tuple[float, float, float]]:
         """Extract 3D numpy array and voxel spacing from tensor or MetaTensor."""
