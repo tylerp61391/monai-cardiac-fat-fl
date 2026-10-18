@@ -77,16 +77,26 @@ def quantify(
         "-m",
         help="Optional path to PyTorch or ONNX model weights for anatomy segmentation.",
     ),
+    limit: Optional[int] = typer.Option(
+        None,
+        "--limit",
+        "-n",
+        help="Optional maximum number of participants to process (useful for large cohorts).",
+    ),
 ) -> None:
-    """Execute end-to-end quantification across all participants in source_dir."""
+    """Execute end-to-end quantification across participants in source_dir."""
     console.print(f"[bold cyan]Scanning directory:[/bold cyan] {source_dir}")
 
     participants = discover_participants(source_dir)
     if not participants:
-        console.print("[yellow]No participant scans found. Ensure layout is source_dir/<id>/scan.nrrd[/yellow]")
+        console.print("[yellow]No participant scans found. Ensure layout is source_dir/<id>/scan.nrrd or contains DICOM series[/yellow]")
         raise typer.Exit(code=1)
 
-    console.print(f"[green]Discovered {len(participants)} participant(s) to process.[/green]")
+    if limit is not None and limit > 0:
+        participants = participants[:limit]
+        console.print(f"[green]Processing limited subset of {len(participants)} participant(s).[/green]")
+    else:
+        console.print(f"[green]Discovered {len(participants)} participant(s) to process.[/green]")
 
     out_root = output_dir if output_dir is not None else source_dir
     out_root.mkdir(parents=True, exist_ok=True)
@@ -114,12 +124,22 @@ def quantify(
 
             # Save eat_pvat.seg.nrrd in participant directory if requested
             if save_seg:
-                seg_path = scan_path.parent / "eat_pvat.seg.nrrd"
+                if scan_path.is_dir():
+                    participant_dir = scan_path if scan_path.parent == source_dir else scan_path.parent
+                else:
+                    participant_dir = scan_path.parent
+
+                seg_path = participant_dir / "eat_pvat.seg.nrrd"
                 ref_header = meta_ct.meta.get("nrrd_header")
+                spacing = tuple(meta_ct.meta.get("spacing", (1.0, 1.0, 1.0)))
+                origin = tuple(meta_ct.meta.get("origin", (0.0, 0.0, 0.0))) if "origin" in meta_ct.meta else None
+
                 write_eat_pvat_seg_nrrd(
                     seg_data=seg_mask_8ch,
                     output_path=seg_path,
                     reference_header=ref_header,
+                    spacing=spacing,
+                    origin=origin,
                 )
                 console.print(f"  -> Saved segmentation: [dim]{seg_path}[/dim]")
 

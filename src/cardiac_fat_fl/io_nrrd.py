@@ -1,8 +1,13 @@
-"""NRRD and ITK Header-Preserving I/O and Participant Directory Discovery.
+"""Robust Medical Image I/O and Participant Directory Discovery using MONAI and SimpleITK.
 
-Provides robust reading and writing for 3D cardiac CT scans and 8-channel EAT/PVAT
-segmentations in NRRD format while strictly preserving origin, spacing, space
-directions, and coordinate system headers.
+Supports loading 3D Cardiac CT from:
+  - DICOM Series (single folder of .dcm files or nested series folders)
+  - NRRD (.nrrd)
+  - NIfTI (.nii, .nii.gz)
+  - MetaImage (.mha, .mhd)
+
+Preserves exact origin, spacing, space direction matrices, and clinical Hounsfield Units (HU)
+within MONAI MetaTensor objects.
 """
 
 from __future__ import annotations
@@ -16,65 +21,232 @@ import numpy as np
 import SimpleITK as sitk
 import torch
 from monai.data import MetaTensor
+from monai.data.image_reader import ITKReader
 
 from cardiac_fat_fl.measurement_schema import SegmentationCompartment
 
 
+def _find_dicom_series_dir(dir_path: Path) -> Optional[Path]:
+    """Check if dir_path or an immediate subdirectory contains a DICOM series."""
+    # Check current directory
+    dcm_files = list(dir_path.glob("*.dcm"))
+    if len(dcm_files) >= 5:
+        return dir_path
+
+    # Check immediate subdirectories (e.g. participant/series_name/*.dcm)
+    for sub in dir_path.iterdir():
+        if sub.is_dir():
+            sub_dcm = list(sub.glob("*.dcm"))
+            if len(sub_dcm) >= 5:
+                return sub
+
+    return None
+
+
 def discover_participants(
     source_dir: Union[str, Path],
-    scan_filename: str = "scan.nrrd",
+    scan_filename: Optional[str] = None,
     ignore_patterns: Optional[List[str]] = None,
 ) -> List[Tuple[str, Path]]:
-    """Discover participant CT scans in a source directory.
+    """Discover participant CT scans in a source directory supporting DICOM, NRRD, and NIfTI.
 
-    Expected layout: `source_dir/<participant_id>/scan.nrrd`.
-    Files matching `*.seg.nrrd` or existing segmentation masks are strictly ignored.
+    Supports multiple directory layouts:
+      1. DICOM series folders: `source_dir/<participant_id>/<series_name>/*.dcm` or `source_dir/<participant_id>/*.dcm`
+      2. 3D Volume files: `source_dir/<participant_id>/scan.nrrd` (or `*.nii.gz`, `*.mha`, etc.)
+      3. Flat volumes: `source_dir/<participant_id>.nrrd` or `source_dir/<participant_id>.nii.gz`
+
+    Files matching `*.seg.*`, `*.mask.*`, or `eat_pvat*` are strictly ignored.
 
     Args:
-        source_dir: Root directory containing participant subfolders.
-        scan_filename: Preferred filename for the CT scan (default: "scan.nrrd").
-        ignore_patterns: Suffixes/patterns to ignore when identifying CT scans.
+        source_dir: Root directory containing participant scans or subfolders.
+        scan_filename: Optional preferred filename (e.g. "scan.nrrd").
+        ignore_patterns: Substrings/patterns to ignore when identifying CT scans.
 
     Returns:
-        List of tuples: `(participant_id, path_to_scan_nrrd)` sorted by participant_id.
+        List of tuples: `(participant_id, path_to_scan_or_dicom_dir)` sorted by participant_id.
     """
     root = Path(source_dir).resolve()
     if not root.exists():
         raise FileNotFoundError(f"Source directory does not exist: {root}")
 
     if ignore_patterns is None:
-        ignore_patterns = [".seg.nrrd", "_seg.nrrd", ".mask.nrrd", "eat_pvat.seg.nrrd"]
+        ignore_patterns = [".seg.", "_seg.", ".mask.", "eat_pvat", "calcium_xml", "graphs"]
 
     participants: List[Tuple[str, Path]] = []
 
     for entry in sorted(root.iterdir()):
+        # Ignore segmentation masks and non-target directories
+        if any(pat.lower() in entry.name.lower() for pat in ignore_patterns):
+            continue
+
         if entry.is_dir():
             participant_id = entry.name
-            target_scan = entry / scan_filename
 
-            if target_scan.is_file():
-                participants.append((participant_id, target_scan))
-            else:
-                # Fallback: look for any .nrrd in directory that is not a segmentation mask
-                candidate_nrrds = [
-                    f for f in entry.glob("*.nrrd")
-                    if not any(f.name.lower().endswith(pat.lower()) for pat in ignore_patterns)
-                ]
-                if len(candidate_nrrds) == 1:
-                    participants.append((participant_id, candidate_nrrds[0]))
-                elif len(candidate_nrrds) > 1:
-                    # Prefer file containing 'scan' or 'ct' in name
-                    ranked = sorted(
-                        candidate_nrrds,
-                        key=lambda p: (
-                            "scan" not in p.name.lower(),
-                            "ct" not in p.name.lower(),
-                            len(p.name),
-                        ),
-                    )
-                    participants.append((participant_id, ranked[0]))
+            # 1. Preferred explicit filename
+            if scan_filename is not None:
+                target = entry / scan_filename
+                if target.is_file():
+                    participants.append((participant_id, target))
+                    continue
+
+            # 2. Check for DICOM series directory (direct or nested)
+            dicom_dir = _find_dicom_series_dir(entry)
+            if dicom_dir is not None:
+                participants.append((participant_id, dicom_dir))
+                continue
+
+            # 3. Look for 3D Volume files in folder (.nrrd, .nii, .nii.gz, .mha)
+            vol_candidates = [
+                f for f in entry.glob("*.*")
+                if f.suffix.lower() in [".nrrd", ".nii", ".gz", ".mha", ".mhd"]
+                and not any(pat.lower() in f.name.lower() for pat in ignore_patterns)
+            ]
+            if len(vol_candidates) == 1:
+                participants.append((participant_id, vol_candidates[0]))
+            elif len(vol_candidates) > 1:
+                ranked = sorted(
+                    vol_candidates,
+                    key=lambda p: (
+                        "scan" not in p.name.lower(),
+                        "ct" not in p.name.lower(),
+                        len(p.name),
+                    ),
+                )
+                participants.append((participant_id, ranked[0]))
+
+        elif entry.is_file():
+            # Flat file layout: source_dir/<participant_id>.nrrd or .nii.gz
+            ext = entry.suffix.lower()
+            if ext in [".nrrd", ".mha"] or entry.name.lower().endswith(".nii.gz"):
+                pid = entry.name.split(".")[0]
+                participants.append((pid, entry))
 
     return participants
+
+
+def _compute_affine_from_sitk(image: sitk.Image) -> np.ndarray:
+    """Compute 4x4 spatial affine matrix from SimpleITK image metadata."""
+    spacing = np.array(image.GetSpacing(), dtype=np.float64)
+    origin = np.array(image.GetOrigin(), dtype=np.float64)
+    direction = np.array(image.GetDirection(), dtype=np.float64)
+
+    dim = image.GetDimension()
+    affine = np.eye(4, dtype=np.float64)
+
+    if dim == 3 and len(direction) == 9:
+        dir_mat = direction.reshape(3, 3)
+        affine[:3, :3] = dir_mat * spacing
+        affine[:3, 3] = origin
+    elif dim == 3:
+        affine[0, 0] = spacing[0]
+        affine[1, 1] = spacing[1]
+        affine[2, 2] = spacing[2]
+        affine[:3, 3] = origin
+
+    return affine
+
+
+def read_medical_image_as_metatensor(path_or_dir: Union[str, Path]) -> MetaTensor:
+    """Read a medical CT scan from a DICOM directory, NRRD, NIfTI, or MetaImage into MONAI MetaTensor.
+
+    Automatically handles DICOM series loading, applies rescale slope and intercept for true HU,
+    and constructs a MONAI MetaTensor with full spatial affine matrix.
+
+    Args:
+        path_or_dir: File path or DICOM series directory.
+
+    Returns:
+        MONAI MetaTensor of shape (1, D, H, W) with complete spatial metadata.
+    """
+    p = Path(path_or_dir).resolve()
+    if not p.exists():
+        raise FileNotFoundError(f"Medical image path not found: {p}")
+
+    # Case 1: Directory containing DICOM series
+    if p.is_dir():
+        dcm_dir = _find_dicom_series_dir(p)
+        if dcm_dir is None:
+            raise ValueError(f"Directory does not contain a recognized DICOM series: {p}")
+
+        reader = sitk.ImageSeriesReader()
+        series_ids = reader.GetGDCMSeriesIDs(str(dcm_dir))
+        if not series_ids:
+            # Fallback: get all .dcm files directly
+            dcm_files = [str(f) for f in sorted(dcm_dir.glob("*.dcm"))]
+            if not dcm_files:
+                raise ValueError(f"No DICOM slices found in {dcm_dir}")
+            reader.SetFileNames(dcm_files)
+        else:
+            file_names = reader.GetGDCMSeriesFileNames(str(dcm_dir), series_ids[0])
+            reader.SetFileNames(file_names)
+
+        sitk_image = reader.Execute()
+        data_np = sitk.GetArrayFromImage(sitk_image).astype(np.float32)  # Shape (D, H, W)
+        spacing = sitk_image.GetSpacing()
+        origin = sitk_image.GetOrigin()
+        direction = sitk_image.GetDirection()
+        affine = _compute_affine_from_sitk(sitk_image)
+
+        meta: Dict[str, Any] = {
+            "spatial_shape": list(data_np.shape),
+            "spacing": [float(s) for s in spacing],
+            "origin": [float(o) for o in origin],
+            "direction": list(direction),
+            "filename_or_obj": str(p),
+            "format": "DICOM",
+        }
+
+        tensor_data = torch.from_numpy(data_np).unsqueeze(0)  # Shape (1, D, H, W)
+        return MetaTensor(tensor_data, affine=torch.from_numpy(affine), meta=meta)
+
+    # Case 2: File (.nrrd, .nii, .nii.gz, .mha)
+    if p.name.lower().endswith(".nrrd"):
+        data_np, header, spacing = read_nrrd_ct(p)
+        affine = np.eye(4, dtype=np.float64)
+        if "space directions" in header and header["space directions"] is not None:
+            dirs = np.array(header["space directions"], dtype=np.float64)
+            if dirs.shape == (3, 3):
+                affine[:3, :3] = dirs.T
+        else:
+            affine[0, 0] = spacing[0]
+            affine[1, 1] = spacing[1]
+            affine[2, 2] = spacing[2]
+
+        if "space origin" in header and header["space origin"] is not None:
+            affine[:3, 3] = np.array(header["space origin"], dtype=np.float64)
+
+        meta = {
+            "spatial_shape": list(data_np.shape),
+            "spacing": list(spacing),
+            "nrrd_header": header,
+            "filename_or_obj": str(p),
+            "format": "NRRD",
+        }
+        tensor_data = torch.from_numpy(data_np).unsqueeze(0)
+        return MetaTensor(tensor_data, affine=torch.from_numpy(affine), meta=meta)
+
+    # Fallback to SimpleITK / MONAI ITKReader for NIfTI / MetaImage / other 3D formats
+    sitk_image = sitk.ReadImage(str(p))
+    data_np = sitk.GetArrayFromImage(sitk_image).astype(np.float32)
+    spacing = sitk_image.GetSpacing()
+    origin = sitk_image.GetOrigin()
+    direction = sitk_image.GetDirection()
+    affine = _compute_affine_from_sitk(sitk_image)
+
+    meta = {
+        "spatial_shape": list(data_np.shape),
+        "spacing": [float(s) for s in spacing],
+        "origin": [float(o) for o in origin],
+        "direction": list(direction),
+        "filename_or_obj": str(p),
+        "format": p.suffix.upper(),
+    }
+    tensor_data = torch.from_numpy(data_np).unsqueeze(0)
+    return MetaTensor(tensor_data, affine=torch.from_numpy(affine), meta=meta)
+
+
+# Backward-compatible aliases
+read_nrrd_as_metatensor = read_medical_image_as_metatensor
 
 
 def read_nrrd_ct(
@@ -113,48 +285,9 @@ def read_nrrd_ct(
         raw_sp = header["spacings"]
         spacing = (float(raw_sp[0]), float(raw_sp[1]), float(raw_sp[2]))
     else:
-        # Fallback to 1.0mm isotropic if missing
         spacing = (1.0, 1.0, 1.0)
 
     return data, header, spacing
-
-
-def read_nrrd_as_metatensor(file_path: Union[str, Path]) -> MetaTensor:
-    """Read an NRRD CT file directly into a MONAI MetaTensor with affine matrix.
-
-    Args:
-        file_path: Path to input NRRD file.
-
-    Returns:
-        MetaTensor with shape (1, D, H, W) or (1, X, Y, Z), float32, and spatial affine.
-    """
-    data, header, spacing = read_nrrd_ct(file_path)
-
-    # Construct 4x4 spatial affine
-    affine = np.eye(4, dtype=np.float64)
-    if "space directions" in header and header["space directions"] is not None:
-        dirs = np.array(header["space directions"], dtype=np.float64)
-        if dirs.shape == (3, 3):
-            affine[:3, :3] = dirs.T
-    else:
-        affine[0, 0] = spacing[0]
-        affine[1, 1] = spacing[1]
-        affine[2, 2] = spacing[2]
-
-    if "space origin" in header and header["space origin"] is not None:
-        affine[:3, 3] = np.array(header["space origin"], dtype=np.float64)
-
-    # Convert to 1-channel torch tensor
-    tensor_data = torch.from_numpy(data).unsqueeze(0)  # Shape (1, X, Y, Z)
-    meta = {
-        "affine": torch.from_numpy(affine),
-        "spatial_shape": list(data.shape),
-        "spacing": list(spacing),
-        "nrrd_header": header,
-        "filename_or_obj": str(file_path),
-    }
-
-    return MetaTensor(tensor_data, affine=torch.from_numpy(affine), meta=meta)
 
 
 def write_eat_pvat_seg_nrrd(
@@ -169,18 +302,6 @@ def write_eat_pvat_seg_nrrd(
 
     Strictly preserves the reference header spatial coordinate system and tags
     the 8 compartments matching the CardiacFatQuant specification.
-
-    Args:
-        seg_data: Binary/multichannel segmentation tensor or array.
-                  Expected shape: (8, X, Y, Z) or (X, Y, Z, 8) or 3D multi-label.
-        output_path: Target path for `eat_pvat.seg.nrrd`.
-        reference_header: Optional dictionary from the input CT scan to copy spatial geometry.
-        spacing: Optional (sx, sy, sz) voxel spacing.
-        origin: Optional (ox, oy, oz) coordinate origin.
-        space_directions: Optional 3x3 direction matrix.
-
-    Returns:
-        Path to the saved NRRD segmentation file.
     """
     output_path = Path(output_path).resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -190,14 +311,10 @@ def write_eat_pvat_seg_nrrd(
     else:
         seg_np = np.asarray(seg_data)
 
-    # Cast to uint8 binary masks
     seg_np = (seg_np > 0.5).astype(np.uint8)
-
-    # Build NRRD header
     out_header: Dict[str, Any] = {}
 
     if reference_header is not None:
-        # Clone spatial keys from reference
         for key in [
             "space",
             "space dimension",
@@ -218,7 +335,6 @@ def write_eat_pvat_seg_nrrd(
     # Handle 8-channel vs 3D representation
     if seg_np.ndim == 4:
         if seg_np.shape[0] == 8:
-            # Shape is (8, X, Y, Z) -> first axis is list kind: kinds = ['list', 'domain', 'domain', 'domain']
             out_header["kinds"] = ["list", "domain", "domain", "domain"]
             if "space directions" in out_header and out_header["space directions"] is not None:
                 orig_dirs = list(out_header["space directions"])
@@ -227,6 +343,16 @@ def write_eat_pvat_seg_nrrd(
                         [[np.nan, np.nan, np.nan], orig_dirs[0], orig_dirs[1], orig_dirs[2]],
                         dtype=float,
                     )
+            elif space_directions is not None:
+                out_header["space directions"] = np.array(
+                    [[np.nan, np.nan, np.nan], space_directions[0], space_directions[1], space_directions[2]],
+                    dtype=float,
+                )
+            elif spacing is not None:
+                out_header["space directions"] = np.array(
+                    [[np.nan, np.nan, np.nan], [spacing[0], 0.0, 0.0], [0.0, spacing[1], 0.0], [0.0, 0.0, spacing[2]]],
+                    dtype=float,
+                )
         elif seg_np.shape[-1] == 8:
             out_header["kinds"] = ["domain", "domain", "domain", "list"]
             if "space directions" in out_header and out_header["space directions"] is not None:
@@ -236,6 +362,11 @@ def write_eat_pvat_seg_nrrd(
                         [orig_dirs[0], orig_dirs[1], orig_dirs[2], [np.nan, np.nan, np.nan]],
                         dtype=float,
                     )
+            elif spacing is not None:
+                out_header["space directions"] = np.array(
+                    [[spacing[0], 0.0, 0.0], [0.0, spacing[1], 0.0], [0.0, 0.0, spacing[2]], [np.nan, np.nan, np.nan]],
+                    dtype=float,
+                )
 
     elif seg_np.ndim == 3:
         out_header["kinds"] = ["domain", "domain", "domain"]
@@ -256,4 +387,3 @@ def write_eat_pvat_seg_nrrd(
     nrrd.write(str(output_path), seg_np, out_header)
 
     return output_path
-
