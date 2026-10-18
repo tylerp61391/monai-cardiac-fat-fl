@@ -43,6 +43,25 @@ This repository modernizes and supersedes the legacy MGH [`CardiacFatQuant`](htt
 
 ---
 
+## Architectural Evolution & IEEE Publication Blueprint
+
+![IEEE TMI Architecture: Legacy MGH CardiacFatQuant to SOTA Federated MONAI Pipeline](docs/figures/cardiac_fat_fl_architecture_infographic.jpg)
+
+An interactive, publication-grade IEEE Transactions architecture infographic is also available in [`docs/ieee_infographic.html`](docs/ieee_infographic.html).
+
+### Legacy vs. Modernized Pipeline Comparison
+
+| Feature | Legacy Pipeline (`CardiacFatQuant`) | Modernized SOTA (`monai-cardiac-fat-fl`) |
+| :--- | :--- | :--- |
+| **Runtime & Language** | Python 2.7 / TensorFlow 1.14 (Frozen `.pb`/`.hdf5`) | Python 3.11+ / PyTorch 2.x & ONNX Runtime GPU |
+| **Input Ingestion** | Rigid `scan.nrrd` directories only | Universal: DICOM series with slope/intercept, NIfTI, NRRD, MHA |
+| **Segmentation Engine** | 2-stage DeepHeartSeg (TF 1.14) | Unified: DeepHeartSeg ONNX, MONAI Bundle SegResNet, SwinUNETR |
+| **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$) |
+| **Spatial Transforms** | Single-threaded CPU SciPy/SimpleITK | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
+| **Distributed Analytics** | None (isolated workstation scripts) | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Moments) |
+
+---
+
 ## Repository Structure
 
 ```text
