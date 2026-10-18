@@ -160,6 +160,22 @@ Calculate privacy-preserving statistical moments across local cohort measurement
 cardiac-fat-fl federated-stats --csv-path /path/to/cardiac_fat_measurements.csv
 ```
 
+### 4. Interactive OHIF Viewer & DICOM-SEG Export
+Inspect 3D cardiac CT scans and 8-compartment segmentations for any participant sample via standard **DICOM-SEG** (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`) in the [OHIF Viewer](https://docs.ohif.org/):
+
+```bash
+# Launch interactive local medical viewer and prepare OHIF package
+cardiac-fat-fl view /path/to/participant_dir --port 8000
+
+# Or export OHIF-compliant DICOM CT series and DICOM-SEG without running a server
+cardiac-fat-fl export-ohif /path/to/participant_dir --output-dir /path/to/export
+```
+
+**Viewing in Official OHIF Viewer (`https://viewer.ohif.org/local`):**
+1. Navigate to [viewer.ohif.org/local](https://viewer.ohif.org/local).
+2. Drag and drop the generated `ohif_export/` directory into the browser.
+3. The viewer automatically loads the CT slices and displays the 8-compartment `eat_pvat_seg.dcm` multi-frame segmentation overlays with 3D MPR multiplanar reconstruction and Hounsfield Unit windowing.
+
 ---
 
 ## Verification & Testing
