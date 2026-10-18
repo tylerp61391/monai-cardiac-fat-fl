@@ -45,3 +45,4 @@ EXPOSE 8000
 # Default entrypoint to the CLI tool
 ENTRYPOINT ["cardiac-fat-fl"]
 CMD ["--help"]
+
