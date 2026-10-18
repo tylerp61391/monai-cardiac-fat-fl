@@ -132,11 +132,14 @@ class UnifiedAnatomySegmenter:
         if self.backend == "onnx":
             import onnxruntime as ort
             providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if "cuda" in str(self.device) else ["CPUExecutionProvider"]
+            sess_opts = ort.SessionOptions()
+            sess_opts.intra_op_num_threads = 2
+            sess_opts.inter_op_num_threads = 1
             if self.model_path is not None and self.model_path.is_file():
-                self.onnx_session = ort.InferenceSession(str(self.model_path), providers=providers)
+                self.onnx_session = ort.InferenceSession(str(self.model_path), sess_options=sess_opts, providers=providers)
 
             if self.loc_model_path is not None and self.loc_model_path.is_file():
-                self.onnx_loc_session = ort.InferenceSession(str(self.loc_model_path), providers=providers)
+                self.onnx_loc_session = ort.InferenceSession(str(self.loc_model_path), sess_options=sess_opts, providers=providers)
 
         elif self.backend == "monai":
             # 8-channel anatomy model (0: pericardium, 1: LA, 2: LV, 3: RA, 4: RV, 5: LAD, 6: LCX, 7: RCA)
