@@ -54,7 +54,7 @@ Saved as an 8-channel 3D binary volume matching the CT coordinate system:
 7. `PVAT_LCX` (Channel 6): Left Circumflex pericoronary fat.
 8. `PVAT_RCA` (Channel 7): Right Coronary Artery pericoronary fat.
 
-*(Note: `PVAT_Total` is computed for reporting as the spatial boolean union: $\text{PVAT\_LAD} \cup \text{PVAT\_LCX} \cup \text{PVAT\_RCA}$).*
+*(Note: `PVAT_Total` is computed for reporting as the spatial boolean union: `PVAT_LAD` ∪ `PVAT_LCX` ∪ `PVAT_RCA`).*
 
 ### 3. Canonical 19-Column CSV Schema (`cardiac_fat_measurements.csv`)
 Matches reference MGH `CardiacFatQuant` exactly:
@@ -63,7 +63,8 @@ Matches reference MGH `CardiacFatQuant` exactly:
   `EAT Total`, `EAT LA`, `EAT LV`, `EAT RA`, `EAT RV`, `PVAT Total`, `PVAT LAD`, `PVAT LCX`, `PVAT RCA`.
 
 **Volume Formula**:
-$$\text{Volume (cm}^3\text{)} = \frac{\text{voxel\_count} \times (s_x \times s_y \times s_z)}{1000.0}$$
+$$\text{Volume } (\text{cm}^3) = \frac{\text{Voxel Count} \times (s_x \times s_y \times s_z)}{1000.0}$$
+
 *Empty masks gracefully output `0.0` volume and `NaN` mean attenuation.*
 
 ---
