@@ -496,7 +496,7 @@ def download_models_cmd(
         help="Release tag version to fetch models from.",
     ),
     repo_url: str = typer.Option(
-        "https://github.com/circ-ml/monai-cardiac-fat-fl",
+        "https://github.com/tylerp61391/monai-cardiac-fat-fl",
         "--repo",
         "-r",
         help="GitHub repository URL.",

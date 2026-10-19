@@ -11,7 +11,7 @@ import requests
 
 def main() -> None:
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    repo = os.environ.get("GITHUB_REPOSITORY") or "circ-ml/monai-cardiac-fat-fl"
+    repo = os.environ.get("GITHUB_REPOSITORY") or "tylerp61391/monai-cardiac-fat-fl"
     tag = sys.argv[1] if len(sys.argv) > 1 else "v1.0.0"
 
     repo_root = Path(__file__).resolve().parents[1]
