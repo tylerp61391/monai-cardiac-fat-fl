@@ -7,9 +7,14 @@ name = "monai-cardiac-fat-fl"
 version = "0.1.0"
 description = "Modernized MONAI & NVIDIA FLARE pipeline for Epicardial and Pericoronary Adipose Tissue (EAT/PVAT) quantification from cardiac CT"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.11"
 authors = [
-    { name = "Circulatory Systems / Antigravity Engineering Team" }
+    { name = "Tyler Patay" },
+    { name = "XuCong Ruan" },
+    { name = "Shawn Newlander" },
+    { name = "George Wesbey" },
+    { name = "Borek Foldyna" }
 ]
 keywords = [
     "cardiac-ct",
@@ -24,6 +29,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Healthcare Industry",
     "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

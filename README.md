@@ -5,7 +5,7 @@
 [![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://nvflare.readthedocs.io/)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
 [![OHIF Viewer](https://img.shields.io/badge/OHIF%20Viewer-v3.8%2B%20Ready-0284c7.svg)](https://docs.ohif.org/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Production-ready, zero-placeholder **PyTorch / MONAI Bundle** and **NVIDIA FLARE (NVFLARE)** federated learning repository for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
 
@@ -40,7 +40,7 @@ This repository modernizes the legacy MGH [`CardiacFatQuant`](https://github.com
 ## Clinical & Anatomical Specifications
 
 ### 1. Adipose Attenuation Window
-Adipose tissue is quantified strictly within the clinical Hounsfield Unit (HU) window:
+Adipose tissue is quantified strictly within the clinical Hounsfield Unit (HU) window:   
 $$\text{Adipose HU} \in [-190.0, -30.0]$$
 
 ### 2. The 8 Output Segmentation Compartments (`eat_pvat.seg.nrrd`)
