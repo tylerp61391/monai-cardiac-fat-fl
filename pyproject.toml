@@ -64,6 +64,12 @@ dev = [
 [project.scripts]
 cardiac-fat-fl = "cardiac_fat_fl.cli:app"
 
+[project.urls]
+Homepage = "https://github.com/tylerp61391/monai-cardiac-fat-fl"
+Repository = "https://github.com/tylerp61391/monai-cardiac-fat-fl.git"
+Documentation = "https://github.com/tylerp61391/monai-cardiac-fat-fl#readme"
+"Bug Tracker" = "https://github.com/tylerp61391/monai-cardiac-fat-fl/issues"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
