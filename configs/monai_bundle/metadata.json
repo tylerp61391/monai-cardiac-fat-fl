@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "name": "cardiac_fat_eat_pvat_seg",
   "description": "3D SegResNet for 8-compartment Epicardial (EAT) and Pericoronary (PVAT) Adipose Tissue Segmentation from Cardiac CT",
-  "authors": "Circulatory Systems / Antigravity AI Engineering Team",
+  "authors": "Tyler Patay, XuCong Ruan, Shawn Newlander, George Wesbey, Borek Foldyna",
   "copyright": "Copyright (c) 2026",
   "data_type": "image",
   "data_shape": [1, 96, 96, 96],
