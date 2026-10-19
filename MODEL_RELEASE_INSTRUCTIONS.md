@@ -40,7 +40,7 @@ python scripts/publish_release.py v1.0.0
 ```
 
 ### Method B: Manual Web UI (Drag & Drop)
-1. Navigate to `https://github.com/<your-org>/monai-cardiac-fat-fl/releases`.
+1. Navigate to `https://github.com/tylerp61391/monai-cardiac-fat-fl/releases`.
 2. Click **Draft a new release**.
 3. Set Tag: `v1.0.0`, Title: `v1.0.0 - Production MONAI & ONNX Pretrained Models`.
 4. In the **Attach binaries** box, drag and drop:
@@ -56,7 +56,7 @@ When an autonomous AI agent or user clones this repository on another computer, 
 
 ```bash
 # Step 1: Clone repository
-git clone https://github.com/<your-org>/monai-cardiac-fat-fl.git
+git clone https://github.com/tylerp61391/monai-cardiac-fat-fl.git
 cd monai-cardiac-fat-fl
 
 # Step 2: Install package dependencies
