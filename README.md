@@ -6,7 +6,7 @@
 [![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://nvflare.readthedocs.io/)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
 [![OHIF Viewer](https://img.shields.io/badge/OHIF%20Viewer-v3.8%2B%20Ready-0284c7.svg)](https://docs.ohif.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](Dockerfile)
+[![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED.svg?logo=docker&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-fl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Production-ready, zero-placeholder **PyTorch / MONAI Bundle** and **NVIDIA FLARE (NVFLARE)** federated learning repository for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
@@ -133,8 +133,8 @@ Because pretrained DeepHeartSeg ONNX models exceed GitHub's $100\,\text{MB}$ rep
    ```
 2. **Manual Download via `curl`**:
    ```bash
-   curl -L -o models/deepheartseg_heart.onnx https://github.com/circ-ml/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_heart.onnx
-   curl -L -o models/deepheartseg_loc.onnx https://github.com/circ-ml/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_loc.onnx
+   curl -L -o models/deepheartseg_heart.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_heart.onnx
+   curl -L -o models/deepheartseg_loc.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_loc.onnx
    ```
 3. **Repository Maintainer Deployment**:
    When pushing to a new repository, create release `v1.0.0` and attach `models/deepheartseg_heart.onnx` and `models/deepheartseg_loc.onnx` as binary assets.
