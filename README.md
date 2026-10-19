@@ -9,7 +9,7 @@
 
 Production-ready, zero-placeholder **PyTorch / MONAI Bundle** and **NVIDIA FLARE (NVFLARE)** federated learning repository for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
 
-This repository modernizes the legacy MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) pipeline into a modern Python 3.11+ architecture. It eliminates legacy Python 2.7 / TensorFlow 1.14 `DeepHeartSeg` dependencies, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer](https://docs.ohif.org/) via standard DICOM-SEG objects.
+This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) research pipeline, transitioning it into a high-throughput Python 3.11+ and GPU-accelerated ecosystem. It enhances execution speed and scalability through modern PyTorch and ONNX Runtime backends, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer](https://docs.ohif.org/) via standard DICOM-SEG objects.
 
 ![Interactive OHIF Medical Viewer: 3-Pane Clinical Visualization](docs/figures/ohif_viewer_snapshot.png)
 
@@ -23,17 +23,17 @@ This repository modernizes the legacy MGH [`CardiacFatQuant`](https://github.com
 
 *An interactive, publication-grade web blueprint is also available in [`docs/architecture_infographic.html`](docs/architecture_infographic.html).*
 
-### Legacy vs. Modernized SOTA Architecture
+### Reference Architecture vs. High-Throughput Modernized Pipeline
 
-| Architectural Dimension | Legacy Pipeline (`CardiacFatQuant`) | Modernized Framework (`monai-cardiac-fat-fl`) |
+| Architectural Dimension | Reference Framework (`CardiacFatQuant`) | High-Throughput Modernized Framework (`monai-cardiac-fat-fl`) |
 | :--- | :--- | :--- |
 | **Language & Runtime** | Python 2.7 / TensorFlow 1.14 (Frozen Keras `.pb`/`.hdf5`) | Python 3.11+ / PyTorch 2.x & ONNX Runtime GPU |
-| **Image Ingestion** | Rigid `scan.nrrd` folder structure only | Universal: DICOM Series (with slope/intercept), NIfTI, NRRD, MHA |
+| **Image Ingestion** | Folder structure (`scan.nrrd`) | Universal: DICOM Series (with slope/intercept), NIfTI, NRRD, MHA |
 | **Segmentation Engine** | 2-stage DeepHeartSeg (TF 1.14) | Unified: DeepHeartSeg ONNX, MONAI Bundle SegResNet, SwinUNETR |
 | **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$, $r = 1.000$) |
-| **Spatial Transforms** | Single-threaded CPU SciPy/SimpleITK | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
-| **Distributed Orchestration** | Isolated workstation scripts | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
-| **Visualization & PACS** | None (3D Slicer manual load) | Native **OHIF Viewer v3+** 3-pane UI & standard **DICOM-SEG** export |
+| **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
+| **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
+| **Visualization & PACS** | Manual 3D Slicer import | Native **OHIF Viewer v3+** 3-pane UI & standard **DICOM-SEG** export |
 
 ---
 
@@ -57,7 +57,7 @@ Saved as an 8-channel 3D binary volume matching the CT coordinate system:
 *(Note: `PVAT_Total` is computed for reporting as the spatial boolean union: $\text{PVAT\_LAD} \cup \text{PVAT\_LCX} \cup \text{PVAT\_RCA}$).*
 
 ### 3. Canonical 19-Column CSV Schema (`cardiac_fat_measurements.csv`)
-Matches legacy MGH `CardiacFatQuant` exactly:
+Matches reference MGH `CardiacFatQuant` exactly:
 - `participant_id`
 - `<Region> Volume (cm3)` and `<Region> Mean Attenuation (HU)` for all 9 reported regions:
   `EAT Total`, `EAT LA`, `EAT LV`, `EAT RA`, `EAT RV`, `PVAT Total`, `PVAT LAD`, `PVAT LCX`, `PVAT RCA`.
@@ -346,7 +346,7 @@ pytest -v
 The test suite validates:
 - **Transform Correctness**: Strict $[-190.0, -30.0]\text{ HU}$ thresholding, Voronoi chamber partitioning, and radial vessel dilation.
 - **Header Coordinate Integrity**: Orientation preservation across NRRD and DICOM formats.
-- **Mathematical Equivalency**: $0.00\text{ cm}^3$ and $0.00\text{ HU}$ agreement against frozen legacy models.
+- **Mathematical Equivalency**: $0.00\text{ cm}^3$ and $0.00\text{ HU}$ agreement against reference baseline models.
 - **DICOM-SEG Compliance**: Proper SOP Class UID `1.2.840.10008.5.1.4.1.1.66.4` and 8 segment sequence items.
 - **NVFLARE Client Lifecycle**: Initialization, training steps, evaluation, and FedBN layer isolation.
 
