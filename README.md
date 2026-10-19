@@ -1,7 +1,7 @@
 # monai-cardiac-fat-fl
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
-[![PyPI](https://img.shields.io/pypi/v/monai-cardiac-fat-fl.svg?color=blue)](https://pypi.org/project/monai-cardiac-fat-fl/)
+[![PyPI](https://img.shields.io/pypi/v/monai-cardiac-fat-fl.svg?logo=pypi&logoColor=white&color=blue)](https://pypi.org/project/monai-cardiac-fat-fl/)
 [![MONAI](https://img.shields.io/badge/MONAI-1.4%2B-green.svg)](https://monai.io/)
 [![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://nvflare.readthedocs.io/)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
