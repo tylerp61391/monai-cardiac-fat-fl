@@ -403,7 +403,7 @@ def generate_ohif_3pane_viewer_html(
 <head>
   <meta charset="UTF-8">
   <title>OHIF Medical Imaging Viewer &bull; {participant_id}</title>
-  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
     .ohif-pane {{ background: #090d16; border-color: #1e293b; }}

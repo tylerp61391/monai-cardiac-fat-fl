@@ -353,4 +353,4 @@ The test suite validates:
 ---
 
 ## Citation & Lineage
-Modernized from the original Harvard / MGH `CardiacFatQuant` research pipeline by the Circulatory Systems ML team and DeepMind Antigravity engineering.
+Modernized from the original Harvard / MGH `CardiacFatQuant` research pipeline by Tyler Patay, XuCong Ruan, Shawn Newlander, George Wesbey, and Borek Foldyna.

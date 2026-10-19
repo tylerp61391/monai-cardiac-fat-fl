@@ -5,7 +5,7 @@
 
 FROM python:3.11-slim
 
-LABEL maintainer="Antigravity Advanced Agentic Coding"
+LABEL maintainer="Tyler Patay"
 LABEL description="Containerized MONAI & NVFLARE Cardiac Fat Quantification Pipeline"
 
 ENV PYTHONUNBUFFERED=1 \
