@@ -123,9 +123,50 @@
         </div>
       </div>
 
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 flex items-center justify-between text-xs text-slate-300">
-        <div><strong class="text-white">Standard Attenuation Threshold:</strong> Strictly <code class="text-cyan-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 font-bold">-190.0 HU &le; HU &le; -30.0 HU</code></div>
-        <div><strong class="text-white">Metric Pair per Region:</strong> Volume (cm³) + Mean Attenuation (HU)</div>
+      <!-- Landmark Trial Citations (Foldyna et al.) -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-cyan-400 flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            <span>Landmark Clinical Trial Validation (Harvard / MGH Lineage &bull; Foldyna et al.)</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono">Standard Attenuation: [-190.0, -30.0] HU</span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <a href="https://doi.org/10.1148/radiol.240473" target="_blank" class="block p-3 rounded-lg bg-slate-950 border border-slate-800 hover:border-cyan-500/60 transition group">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-rose-400 font-bold text-xs">Radiology (2025)</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-950/60 border border-rose-800/60 text-rose-300">NLST Trial</span>
+            </div>
+            <p class="text-xs text-slate-300 group-hover:text-white transition leading-snug">
+              2-year longitudinal changes in EAT volume and density independently predict cardiovascular and all-cause mortality on chest CT.
+            </p>
+            <div class="text-[10px] text-slate-500 mt-2 font-mono">Langenbach, Foldyna et al. &bull; radiol.240473</div>
+          </a>
+
+          <a href="https://doi.org/10.1016/j.jcmg.2025.10.012" target="_blank" class="block p-3 rounded-lg bg-slate-950 border border-slate-800 hover:border-cyan-500/60 transition group">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-blue-400 font-bold text-xs">JACC: CVI (2026)</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300">REPRIEVE Trial</span>
+            </div>
+            <p class="text-xs text-slate-300 group-hover:text-white transition leading-snug">
+              Statin therapy demonstrates measurable anti-inflammatory shifts on pericoronary fat attenuation (HU), establishing PVAT as a dynamic drug target.
+            </p>
+            <div class="text-[10px] text-slate-500 mt-2 font-mono">Foldyna, Hadzic et al. &bull; jcmg.2025.10.012</div>
+          </a>
+
+          <a href="https://doi.org/10.1093/ehjci/jeag222" target="_blank" class="block p-3 rounded-lg bg-slate-950 border border-slate-800 hover:border-cyan-500/60 transition group">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-emerald-400 font-bold text-xs">EHJ-CI (2025)</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300">PROMISE Trial</span>
+            </div>
+            <p class="text-xs text-slate-300 group-hover:text-white transition leading-snug">
+              Pericoronary adipose tissue on non-contrast ECG-gated CT independently predicts major adverse cardiovascular events (MACE) in stable chest pain.
+            </p>
+            <div class="text-[10px] text-slate-500 mt-2 font-mono">Langenbach, Foldyna et al. &bull; jeag222</div>
+          </a>
+        </div>
       </div>
     </div>
 
@@ -718,7 +759,7 @@
 
     const speakerNotes = {
       1: "Welcome everyone. Today I'm presenting our modernization of the Harvard / MGH CardiacFatQuant pipeline. Epicardial and pericoronary fat are direct markers of cardiac inflammation and plaque vulnerability. However, manual tracing takes 45+ minutes per patient. We built an end-to-end framework in MONAI and NVIDIA FLARE that automates this in under 15 seconds, scales across hospitals without moving patient data, and renders directly in zero-footprint web viewers.",
-      2: "Here we define the target biology. EAT is inside the pericardial sac and surrounds the myocardium; we split it into 4 chambers. PVAT is within a 10 mm radial cuff around the 3 main coronaries: LAD, LCX, RCA. We calculate volume in cm³ and mean attenuation in HU. The attenuation is critical: when fat gets inflamed, it shifts from -110 HU toward -70 HU.",
+      2: "Here we define the clinical biomarker science, anchored in landmark randomized trials led by Dr. Borek Foldyna and colleagues. In Radiology 2025 from the NLST trial, 2-year longitudinal changes in EAT volume and density were proven to predict cardiovascular and all-cause mortality. In JACC: Cardiovascular Imaging 2026 from the REPRIEVE trial, statin therapy was shown to directly alter pericoronary fat attenuation, confirming PVAT as an actionable, dynamic marker of coronary vascular inflammation. And in the European Heart Journal 2025 from the PROMISE trial, pericoronary fat attenuation on non-contrast gated CT independently predicted MACE. Our pipeline implements the exact mathematical [-190, -30] HU window and 10 mm radial dilation validated across these trials.",
       3: "The original MGH pipeline was clinically groundbreaking but trapped in legacy Python 2.7 and TensorFlow 1.14 frozen graphs. We preserved 100% of the MGH mathematical definitions and the 19-column schema, but completely rewrote the engine in PyTorch and MONAI. Furthermore, we solved the multi-hospital data sharing bottleneck using NVIDIA FLARE.",
       4: "Let's walk through the tensor lifecycle. We ingest a 3D CT volume (1, D, H, W) in Hounsfield Units, preserving all ITK geometry. The anatomy segmenter generates heart, chamber, and vessel masks. The transform thresholds the [-190, -30] HU window and constructs an 8-channel uint8 mask. Finally, we calculate the exact 19-column CSV metrics and serialize to standard DICOM-SEG.",
       5: "Two core mathematical algorithms power our transforms: First, Voronoi chamber allocation uses 3D Euclidean distance transforms from chamber walls to assign continuous fat voxels to the nearest chamber without overlap. Second, 10 mm radial dilation computes a 3D Euclidean buffer from coronary centerlines, clipped to the adipose window and outside the myocardium.",
