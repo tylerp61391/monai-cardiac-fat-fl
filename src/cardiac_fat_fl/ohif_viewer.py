@@ -82,9 +82,8 @@ class CohortHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         if (
                             "v3.13 Next" not in idx_txt
                             or "viewportsGrid" not in idx_txt
-                            or idx_txt.find("cardCor") > idx_txt.find("cardSag")
+                            or "Coronal CT" not in idx_txt
                             or "let isSpinning = true;" in idx_txt
-                            or "Lung 3.0" in idx_txt
                         ):
                             needs_export = True
                     except Exception:

@@ -1071,7 +1071,7 @@ def generate_ohif_3pane_viewer_html(
 
       <!-- 2-Column Square Thumbnail Grid (Exact OHIF layout) -->
       <div class="series-grid">
-        <!-- Tile 1: Primary CT Axial -->
+        <!-- Tile 1: Axial CT (Top-Left) -->
         <div class="series-card active" id="cardCT" onclick="selectSeriesTile('axial')">
           <div class="card-top">
             <span class="card-badge badge-ct">CT</span>
@@ -1081,12 +1081,12 @@ def generate_ohif_3pane_viewer_html(
             <img src="slices/thumbnail_ct.png" onerror="this.src='slices/ct_028.png'">
           </div>
           <div class="card-bottom">
-            <span class="card-title">Axial</span>
-            <span class="card-sub">Axial CT Primary</span>
+            <span class="card-title">Axial CT</span>
+            <span class="card-sub">Transverse View</span>
           </div>
         </div>
 
-        <!-- Tile 2: 3D Thoracic Render (Top-Right) -->
+        <!-- Tile 2: 3D Volume (Top-Right) -->
         <div class="series-card" id="card3D" onclick="selectSeriesTile('3d')">
           <div class="card-top">
             <span class="card-badge badge-vr">VR</span>
@@ -1097,11 +1097,11 @@ def generate_ohif_3pane_viewer_html(
           </div>
           <div class="card-bottom">
             <span class="card-title">3D Volume</span>
-            <span class="card-sub">Cardiac Fat Render</span>
+            <span class="card-sub">MPR Render</span>
           </div>
         </div>
 
-        <!-- Tile 3: Coronal MPR (Bottom-Left, 3D Slicer convention) -->
+        <!-- Tile 3: Coronal CT (Bottom-Left, 3D Slicer convention) -->
         <div class="series-card" id="cardCor" onclick="selectSeriesTile('coronal')">
           <div class="card-top">
             <span class="card-badge badge-ct">CT</span>
@@ -1111,12 +1111,12 @@ def generate_ohif_3pane_viewer_html(
             <img src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
           </div>
           <div class="card-bottom">
-            <span class="card-title">Coronal</span>
-            <span class="card-sub">Coronal MPR</span>
+            <span class="card-title">Coronal CT</span>
+            <span class="card-sub">Coronal View</span>
           </div>
         </div>
 
-        <!-- Tile 4: Sagittal MPR (Bottom-Right, 3D Slicer convention) -->
+        <!-- Tile 4: Sagittal CT (Bottom-Right, 3D Slicer convention) -->
         <div class="series-card" id="cardSag" onclick="selectSeriesTile('sagittal')">
           <div class="card-top">
             <span class="card-badge badge-ct">CT</span>
@@ -1126,8 +1126,8 @@ def generate_ohif_3pane_viewer_html(
             <img src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
           </div>
           <div class="card-bottom">
-            <span class="card-title">Sagittal</span>
-            <span class="card-sub">Sagittal MPR</span>
+            <span class="card-title">Sagittal CT</span>
+            <span class="card-sub">Sagittal View</span>
           </div>
         </div>
 
@@ -1162,7 +1162,7 @@ def generate_ohif_3pane_viewer_html(
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
           <div class="study-meta">22-May-2014</div>
-          <div class="series-meta" id="lblSeriesAx">Axial CT Primary</div>
+          <div class="series-meta" id="lblSeriesAx">Axial CT</div>
         </div>
         <div class="cs-overlay cs-top-right">
           <button class="vp-btn" onclick="maximizeBox('pAx', event)" title="Maximize Viewport">⛶</button>
@@ -1194,7 +1194,7 @@ def generate_ohif_3pane_viewer_html(
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
           <div class="study-meta">3D Slicer Four-Up Standard</div>
-          <div class="series-meta">3D MPR Reconstruction &bull; Volume Render</div>
+          <div class="series-meta">3D Volume &bull; MPR Render</div>
         </div>
         <div class="cs-overlay cs-top-right">
           <button class="vp-btn" id="btnSpin" onclick="toggleSpin(event)" style="background:#334155; color:#cbd5e1;">Auto-Spin</button>
@@ -1218,7 +1218,7 @@ def generate_ohif_3pane_viewer_html(
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
           <div class="study-meta">22-May-2014</div>
-          <div class="series-meta">Coronal MPR</div>
+          <div class="series-meta">Coronal CT</div>
         </div>
         <div class="cs-overlay cs-top-right">
           <button class="vp-btn" onclick="maximizeBox('pCor', event)" title="Maximize Viewport">⛶</button>
@@ -1250,7 +1250,7 @@ def generate_ohif_3pane_viewer_html(
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
           <div class="study-meta">22-May-2014</div>
-          <div class="series-meta">Sagittal MPR</div>
+          <div class="series-meta">Sagittal CT</div>
         </div>
         <div class="cs-overlay cs-top-right">
           <button class="vp-btn" onclick="maximizeBox('pSag', event)" title="Maximize Viewport">⛶</button>
