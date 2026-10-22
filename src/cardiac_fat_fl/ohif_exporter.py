@@ -1081,7 +1081,7 @@ def generate_ohif_3pane_viewer_html(
             <img src="slices/thumbnail_ct.png" onerror="this.src='slices/ct_028.png'">
           </div>
           <div class="card-bottom">
-            <span class="card-title">Body 3.0 CE</span>
+            <span class="card-title">Axial</span>
             <span class="card-sub">Axial CT Primary</span>
           </div>
         </div>
@@ -1096,7 +1096,7 @@ def generate_ohif_3pane_viewer_html(
             <img src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'">
           </div>
           <div class="card-bottom">
-            <span class="card-title">Thoracic 3D</span>
+            <span class="card-title">3D Volume</span>
             <span class="card-sub">Cardiac Fat Render</span>
           </div>
         </div>
@@ -1111,7 +1111,7 @@ def generate_ohif_3pane_viewer_html(
             <img src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
           </div>
           <div class="card-bottom">
-            <span class="card-title">Lung 3.0 CE</span>
+            <span class="card-title">Coronal</span>
             <span class="card-sub">Coronal MPR</span>
           </div>
         </div>
@@ -1126,7 +1126,7 @@ def generate_ohif_3pane_viewer_html(
             <img src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
           </div>
           <div class="card-bottom">
-            <span class="card-title">Body 4.0 CE</span>
+            <span class="card-title">Sagittal</span>
             <span class="card-sub">Sagittal MPR</span>
           </div>
         </div>
@@ -1162,7 +1162,7 @@ def generate_ohif_3pane_viewer_html(
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
           <div class="study-meta">22-May-2014</div>
-          <div class="series-meta" id="lblSeriesAx">Body 3.0 CE</div>
+          <div class="series-meta" id="lblSeriesAx">Axial CT Primary</div>
         </div>
         <div class="cs-overlay cs-top-right">
           <button class="vp-btn" onclick="maximizeBox('pAx', event)" title="Maximize Viewport">⛶</button>
@@ -1218,7 +1218,7 @@ def generate_ohif_3pane_viewer_html(
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
           <div class="study-meta">22-May-2014</div>
-          <div class="series-meta">Lung 3.0 CE (Coronal)</div>
+          <div class="series-meta">Coronal MPR</div>
         </div>
         <div class="cs-overlay cs-top-right">
           <button class="vp-btn" onclick="maximizeBox('pCor', event)" title="Maximize Viewport">⛶</button>
@@ -1250,7 +1250,7 @@ def generate_ohif_3pane_viewer_html(
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
           <div class="study-meta">22-May-2014</div>
-          <div class="series-meta">Body 4.0 CE (Sagittal)</div>
+          <div class="series-meta">Sagittal MPR</div>
         </div>
         <div class="cs-overlay cs-top-right">
           <button class="vp-btn" onclick="maximizeBox('pSag', event)" title="Maximize Viewport">⛶</button>
