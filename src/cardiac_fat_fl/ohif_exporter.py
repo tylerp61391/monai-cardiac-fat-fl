@@ -1189,7 +1189,31 @@ def generate_ohif_3pane_viewer_html(
         </div>
       </div>
 
-      <!-- Viewport 2: Sagittal MPR (Top-Right) -->
+      <!-- Viewport 2: 3D MPR Reconstruction (Top-Right, 3D Slicer Standard) -->
+      <div class="viewport-box" id="p3d" onclick="setActiveBox('p3d')">
+        <!-- Cornerstone Corner Overlays -->
+        <div class="cs-overlay cs-top-left">
+          <div class="study-meta">3D Slicer Four-Up Standard</div>
+          <div class="series-meta">3D MPR Reconstruction &bull; Volume Render</div>
+        </div>
+        <div class="cs-overlay cs-top-right">
+          <button class="vp-btn" id="btnSpin" onclick="toggleSpin(event)" style="background:#7c3aed; color:#fff;">Auto-Spin</button>
+          <button class="vp-btn" onclick="maximizeBox('p3d', event)" title="Maximize Viewport">⛶</button>
+        </div>
+        <div class="cs-overlay cs-bottom-left">Drag to rotate volume</div>
+        <div class="cs-overlay cs-bottom-right" id="i3d">Angle: 0&deg; (1/{nf})</div>
+
+        <div class="vp-canvas-wrap" id="w3D">
+          <img class="ct-plane" id="volImg" src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'" draggable="false" style="cursor:grab;">
+        </div>
+
+        <!-- Smart Scrollbar for 3D Volume -->
+        <div class="smart-scrollbar" id="smartScroll3D" onclick="onSmartScrollClick(event, '3d')" title="Smart Scrollbar: Scrub 3D Rotation">
+          <div class="smart-track" id="smartTrack3D"><div class="smart-thumb" id="smartThumb3D"></div></div>
+        </div>
+      </div>
+
+      <!-- Viewport 3: Sagittal MPR (Bottom-Left) -->
       <div class="viewport-box" id="pSag" onclick="setActiveBox('pSag')">
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
@@ -1221,7 +1245,7 @@ def generate_ohif_3pane_viewer_html(
         </div>
       </div>
 
-      <!-- Viewport 3: Coronal MPR (Bottom-Left) -->
+      <!-- Viewport 4: Coronal MPR (Bottom-Right) -->
       <div class="viewport-box" id="pCor" onclick="setActiveBox('pCor')">
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
@@ -1250,30 +1274,6 @@ def generate_ohif_3pane_viewer_html(
         <!-- Smart Scrollbar for Coronal -->
         <div class="smart-scrollbar" id="smartScrollCor" onclick="onSmartScrollClick(event, 'coronal')" title="Smart Scrollbar: Jump Coronal slice">
           <div class="smart-track" id="smartTrackCor"><div class="smart-thumb" id="smartThumbCor"></div></div>
-        </div>
-      </div>
-
-      <!-- Viewport 4: 3D Thoracic Render (Bottom-Right) -->
-      <div class="viewport-box" id="p3d" onclick="setActiveBox('p3d')">
-        <!-- Cornerstone Corner Overlays -->
-        <div class="cs-overlay cs-top-left">
-          <div class="study-meta">3D Reconstruction</div>
-          <div class="series-meta">Thoracic MIP + EAT Volume</div>
-        </div>
-        <div class="cs-overlay cs-top-right">
-          <button class="vp-btn" id="btnSpin" onclick="toggleSpin(event)" style="background:#7c3aed; color:#fff;">Auto-Spin</button>
-          <button class="vp-btn" onclick="maximizeBox('p3d', event)" title="Maximize Viewport">⛶</button>
-        </div>
-        <div class="cs-overlay cs-bottom-left">Drag to rotate volume</div>
-        <div class="cs-overlay cs-bottom-right" id="i3d">Angle: 0&deg; (1/{nf})</div>
-
-        <div class="vp-canvas-wrap" id="w3D">
-          <img class="ct-plane" id="volImg" src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'" draggable="false" style="cursor:grab;">
-        </div>
-
-        <!-- Smart Scrollbar for 3D Volume -->
-        <div class="smart-scrollbar" id="smartScroll3D" onclick="onSmartScrollClick(event, '3d')" title="Smart Scrollbar: Scrub 3D Rotation">
-          <div class="smart-track" id="smartTrack3D"><div class="smart-thumb" id="smartThumb3D"></div></div>
         </div>
       </div>
 
