@@ -3,13 +3,13 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![PyPI](https://img.shields.io/pypi/v/monai-cardiac-fat-fl.svg?logo=pypi&logoColor=white&color=blue)](https://pypi.org/project/monai-cardiac-fat-fl/)
 [![MONAI](https://img.shields.io/badge/MONAI-1.4%2B-green.svg)](https://monai.io/)
-[![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://nvflare.readthedocs.io/)
+[![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://developer.nvidia.com/flare)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
 [![OHIF Viewer](https://img.shields.io/badge/OHIF%20Viewer-v3.13%20Next-0284c7.svg)](https://ohif.org/release-notes/3p13)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED.svg?logo=docker&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-fl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**PyTorch / MONAI Bundle** and **NVIDIA FLARE (NVFLARE)** federated learning framework for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
+**PyTorch / MONAI Bundle** and [**NVIDIA FLARE (NVFLARE)**](https://developer.nvidia.com/flare) federated learning framework for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
 
 This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) research pipeline, transitioning it into a high-throughput Python 3.11+ and GPU-accelerated ecosystem. It enhances execution speed and scalability through modern PyTorch and ONNX Runtime backends, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer v3.13+](https://ohif.org/release-notes/3p13) via standard DICOM-SEG objects.
 
@@ -332,7 +332,9 @@ export_dir = export_sample_to_ohif("/path/to/participant_dir")
 launch_viewer("/path/to/participant_dir", port=8000)
 ```
 
-### 3. Federated Learning Mechanics
+### 3. Federated Learning Mechanics ([NVIDIA FLARE](https://developer.nvidia.com/flare))
+
+Built upon [NVIDIA FLARE (Federated Learning Application Runtime Environment)](https://developer.nvidia.com/flare), the architecture coordinates secure, privacy-preserving multi-center model distillation and statistical analytics across participating hospital firewalls:
 
 1. **Mode 1 (Distillation with FedBN & FedProx)**:
    - Server sends global weights $w_{\text{global}}$ to participating hospitals.
