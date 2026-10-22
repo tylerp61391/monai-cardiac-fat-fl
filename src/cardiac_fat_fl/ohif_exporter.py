@@ -416,11 +416,84 @@ def generate_ohif_3pane_viewer_html(
 <head>
   <meta charset="UTF-8">
   <title>OHIF Medical Imaging Viewer &bull; {participant_id}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    html, body {{ height: 100%; width: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #070a13; color: #f1f5f9; }}
+    svg {{ max-width: 16px; max-height: 16px; width: 16px; height: 16px; flex-shrink: 0; vertical-align: middle; }}
+    .h-full {{ height: 100%; }}
+    .flex {{ display: flex; }}
+    .flex-col {{ flex-direction: column; }}
+    .flex-1 {{ flex: 1 1 0%; }}
+    .items-center {{ align-items: center; }}
+    .justify-between {{ justify-content: space-between; }}
+    .justify-center {{ justify-content: center; }}
+    .space-x-1 > * + * {{ margin-left: 0.25rem; }}
+    .space-x-2 > * + * {{ margin-left: 0.5rem; }}
+    .space-x-3 > * + * {{ margin-left: 0.75rem; }}
+    .space-y-1 > * + * {{ margin-top: 0.25rem; }}
+    .space-y-1\\.5 > * + * {{ margin-top: 0.375rem; }}
+    .space-y-3 > * + * {{ margin-top: 0.75rem; }}
+    .overflow-hidden {{ overflow: hidden; }}
+    .overflow-y-auto {{ overflow-y: auto; }}
+    .relative {{ position: relative; }}
+    .absolute {{ position: absolute; }}
+    .shrink-0 {{ flex-shrink: 0; }}
+    .w-full {{ width: 100%; }}
+    .w-16 {{ width: 4rem; }}
+    .h-16 {{ height: 4rem; }}
+    .w-72 {{ width: 18rem; }}
+    .w-80 {{ width: 20rem; }}
+    .h-14 {{ height: 3.5rem; }}
+    .bg-slate-900 {{ background-color: #0f172a; }}
+    .bg-slate-950 {{ background-color: #020617; }}
+    .bg-black {{ background-color: #000000; }}
+    .border-slate-800 {{ border-color: #1e293b; }}
+    .border-slate-700 {{ border-color: #334155; }}
+    .border-b {{ border-bottom: 1px solid #1e293b; }}
+    .border-t {{ border-top: 1px solid #1e293b; }}
+    .border-r {{ border-right: 1px solid #1e293b; }}
+    .border-l {{ border-left: 1px solid #1e293b; }}
+    .border {{ border: 1px solid #1e293b; }}
+    .rounded {{ border-radius: 0.25rem; }}
+    .rounded-lg {{ border-radius: 0.5rem; }}
+    .rounded-full {{ border-radius: 9999px; }}
+    .p-1 {{ padding: 0.25rem; }}
+    .p-1\\.5 {{ padding: 0.375rem; }}
+    .p-2 {{ padding: 0.5rem; }}
+    .p-3 {{ padding: 0.75rem; }}
+    .p-4 {{ padding: 1rem; }}
+    .px-2 {{ padding-left: 0.5rem; padding-right: 0.5rem; }}
+    .px-3 {{ padding-left: 0.75rem; padding-right: 0.75rem; }}
+    .py-1 {{ padding-top: 0.25rem; padding-bottom: 0.25rem; }}
+    .py-1\\.5 {{ padding-top: 0.375rem; padding-bottom: 0.375rem; }}
+    .py-2 {{ padding-top: 0.5rem; padding-bottom: 0.5rem; }}
+    .text-xs {{ font-size: 0.75rem; line-height: 1rem; }}
+    .text-sm {{ font-size: 0.875rem; line-height: 1.25rem; }}
+    .font-bold {{ font-weight: 700; }}
+    .font-semibold {{ font-weight: 600; }}
+    .font-medium {{ font-weight: 500; }}
+    .font-mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }}
+    .text-white {{ color: #ffffff; }}
+    .text-slate-200 {{ color: #e2e8f0; }}
+    .text-slate-300 {{ color: #cbd5e1; }}
+    .text-slate-400 {{ color: #94a3b8; }}
+    .text-slate-500 {{ color: #64748b; }}
+    .text-sky-300 {{ color: #7dd3fc; }}
+    .text-sky-400 {{ color: #38bdf8; }}
+    .text-emerald-400 {{ color: #34d399; }}
+    .text-purple-300 {{ color: #d8b4fe; }}
+    .text-purple-400 {{ color: #c084fc; }}
+    .text-right {{ text-align: right; }}
+    .uppercase {{ text-transform: uppercase; }}
+    .tracking-wider {{ letter-spacing: 0.05em; }}
+    .tracking-tight {{ letter-spacing: -0.025em; }}
     .ohif-pane {{ background: #090d16; border-color: #1e293b; }}
     .active-series {{ border-color: #0284c7; background: rgba(2, 132, 199, 0.15); }}
+    button {{ background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; color: #cbd5e1; cursor: pointer; }}
+    button:hover {{ background: #334155; color: #ffffff; }}
+    input[type="range"] {{ accent-color: #0284c7; }}
+    table {{ border-collapse: collapse; width: 100%; }}
+    .cloud-btn {{ background: linear-gradient(135deg, #2563eb, #0284c7); color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }}
   </style>
 </head>
 <body class="h-full flex flex-col overflow-hidden select-none">
@@ -429,13 +502,13 @@ def generate_ohif_3pane_viewer_html(
   <header class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20">
     <div class="flex items-center space-x-3">
       <!-- OHIF Logo Mark -->
-      <div class="w-8 h-8 rounded bg-gradient-to-tr from-sky-600 to-blue-500 flex items-center justify-center font-bold text-white tracking-widest text-xs shadow-md">
+      <div style="width:32px;height:32px;border-radius:4px;background:linear-gradient(135deg,#0284c7,#2563eb);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;color:#fff;">
         OHIF
       </div>
       <div>
         <span class="font-bold text-sm tracking-tight text-white flex items-center">
           Open Health Imaging Foundation Viewer
-          <span class="ml-2 text-[10px] bg-sky-950 text-sky-400 border border-sky-800 px-1.5 py-0.2 rounded font-mono">v3.8 SOTA</span>
+          <span style="margin-left:8px;font-size:10px;background:#082f49;color:#38bdf8;border:1px solid #0369a1;padding:1px 6px;border-radius:4px;font-family:monospace;">v3.8 SOTA</span>
         </span>
         <div class="text-[11px] text-slate-400">
           Study: <span class="text-slate-200 font-mono font-semibold">COCA Cardiac CT</span> &bull; Participant: <span class="text-sky-300 font-mono font-bold">{participant_id}</span>
@@ -445,25 +518,25 @@ def generate_ohif_3pane_viewer_html(
 
     <!-- Center Toolset Bar -->
     <div class="flex items-center space-x-1 bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs">
-      <button id="toolPan" class="px-3 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center active-series">
-        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
+      <button id="toolPan" class="px-3 py-1.5 rounded active-series">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
         Pan
       </button>
-      <button id="toolZoom" class="px-3 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center">
-        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+      <button id="toolZoom" class="px-3 py-1.5 rounded">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
         Zoom
       </button>
-      <button id="toolWl" class="px-3 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center">
-        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <button id="toolWl" class="px-3 py-1.5 rounded">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         Window
       </button>
-      <button id="toolReset" onclick="resetViewport()" class="px-3 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white">Reset</button>
+      <button id="toolReset" onclick="resetViewport()" class="px-3 py-1.5 rounded">Reset</button>
     </div>
 
     <!-- Right External OHIF Launch -->
     <div class="flex items-center space-x-2">
-      <a href="https://viewer.ohif.org/local" target="_blank" class="bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow flex items-center transition">
-        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      <a href="https://viewer.ohif.org/local" target="_blank" class="cloud-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
         Open in OHIF Cloud
       </a>
     </div>
@@ -565,12 +638,12 @@ def generate_ohif_3pane_viewer_html(
 
         <!-- Axial Slice Scrubbing Slider -->
         <div class="flex-1 max-w-2xl flex items-center space-x-2">
-          <button onclick="stepSlice(-1)" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          <button onclick="stepSlice(-1)" class="p-1 rounded bg-slate-800 text-slate-300">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
           </button>
           <input type="range" id="sliceSlider" min="0" max="{num_slices - 1}" value="28" class="w-full accent-sky-500 cursor-ew-resize">
-          <button onclick="stepSlice(1)" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <button onclick="stepSlice(1)" class="p-1 rounded bg-slate-800 text-slate-300">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
 
@@ -596,7 +669,7 @@ def generate_ohif_3pane_viewer_html(
       <div class="p-4 border-b border-slate-800">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center">
-            <svg class="w-4 h-4 mr-1.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;color:#c084fc;"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
             8 Target Compartments
           </h2>
           <span class="text-[10px] text-purple-400 font-mono">DICOM-SEG</span>

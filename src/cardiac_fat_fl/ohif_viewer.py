@@ -24,9 +24,8 @@ class CORSHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD")
-        self.send_header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Origin")
-        self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
-        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
         super().end_headers()
 
     def do_OPTIONS(self) -> None:
