@@ -301,6 +301,103 @@ def export_segmentation_to_dicom_seg(
     return output_path
 
 
+def generate_ohif_dicom_json(
+    dest_dir: Path,
+    ct_files: List[Path],
+    seg_file: Optional[Path],
+    participant_id: str,
+) -> Path:
+    """Generates an OHIF v3.11 compliant naturalized DICOM JSON manifest (studies.json).
+
+    Conforms to the OHIF v3.11 dicomjson data source specification (https://docs.ohif.org/3.11/).
+    """
+    import json
+
+    out_file = dest_dir / "studies.json"
+    if not ct_files:
+        return out_file
+
+    ref_ct = pydicom.dcmread(str(ct_files[0]), stop_before_pixels=True)
+    study_uid = _sanitize_uid(str(getattr(ref_ct, "StudyInstanceUID", generate_uid())))
+    study_date = str(getattr(ref_ct, "StudyDate", datetime.datetime.now().strftime("%Y%m%d")))
+    study_time = str(getattr(ref_ct, "StudyTime", "120000"))
+    study_desc = str(getattr(ref_ct, "StudyDescription", f"COCA Cardiac CT (Participant {participant_id})"))
+
+    ct_series_uid = _sanitize_uid(str(getattr(ref_ct, "SeriesInstanceUID", generate_uid())))
+    ct_instances = []
+    for idx, f in enumerate(ct_files):
+        try:
+            ds = pydicom.dcmread(str(f), stop_before_pixels=True)
+            inst = {
+                "SOPInstanceUID": _sanitize_uid(str(getattr(ds, "SOPInstanceUID", generate_uid()))),
+                "InstanceNumber": int(getattr(ds, "InstanceNumber", idx + 1)),
+                "Rows": int(getattr(ds, "Rows", 512)),
+                "Columns": int(getattr(ds, "Columns", 512)),
+                "PixelSpacing": [float(x) for x in getattr(ds, "PixelSpacing", [0.47, 0.47])],
+                "ImagePositionPatient": [float(x) for x in getattr(ds, "ImagePositionPatient", [0.0, 0.0, float(idx * 3.0)])],
+                "ImageOrientationPatient": [float(x) for x in getattr(ds, "ImageOrientationPatient", [1.0, 0.0, 0.0, 0.0, 1.0, 0.0])],
+                "SliceThickness": float(getattr(ds, "SliceThickness", 3.0)),
+                "Modality": "CT",
+                "url": f"ct/{f.name}",
+            }
+            ct_instances.append(inst)
+        except Exception:
+            continue
+
+    series_list = [
+        {
+            "SeriesInstanceUID": ct_series_uid,
+            "SeriesDescription": "Primary CT Axial",
+            "SeriesNumber": 1,
+            "Modality": "CT",
+            "instances": ct_instances,
+        }
+    ]
+
+    if seg_file and seg_file.is_file():
+        try:
+            seg_ds = pydicom.dcmread(str(seg_file), stop_before_pixels=True)
+            seg_series_uid = _sanitize_uid(str(getattr(seg_ds, "SeriesInstanceUID", generate_uid())))
+            series_list.append({
+                "SeriesInstanceUID": seg_series_uid,
+                "SeriesDescription": "EAT/PVAT 8-Compartment Segmentation (OHIF 3.11 Labelmap)",
+                "SeriesNumber": 100,
+                "Modality": "SEG",
+                "instances": [
+                    {
+                        "SOPInstanceUID": _sanitize_uid(str(getattr(seg_ds, "SOPInstanceUID", generate_uid()))),
+                        "InstanceNumber": 1,
+                        "Rows": int(getattr(seg_ds, "Rows", 512)),
+                        "Columns": int(getattr(seg_ds, "Columns", 512)),
+                        "Modality": "SEG",
+                        "url": seg_file.name,
+                    }
+                ],
+            })
+        except Exception:
+            pass
+
+    manifest = {
+        "version": "3.11.0",
+        "documentation": "https://docs.ohif.org/3.11/",
+        "studies": [
+            {
+                "StudyInstanceUID": study_uid,
+                "PatientID": f"COCA-{participant_id}",
+                "PatientName": f"Participant {participant_id}",
+                "StudyDate": study_date,
+                "StudyTime": study_time,
+                "StudyDescription": study_desc,
+                "Modalities": ["CT", "SEG"],
+                "series": series_list,
+            }
+        ],
+    }
+
+    out_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return out_file
+
+
 def render_real_slice_assets(
     ct_dicom_paths: List[Path],
     seg_array: np.ndarray,
@@ -848,7 +945,7 @@ def generate_ohif_3pane_viewer_html(
       <div>
         <div class="header-info-title">
           Open Health Imaging Foundation Workstation
-          <span class="version-tag">v3.8 SOTA</span>
+          <span class="version-tag">v3.11 SOTA</span>
         </div>
         <div class="header-info-sub">
           Study: <strong style="color:#e2e8f0;">COCA Cardiac CT</strong> &bull; Patient: <strong style="color:#38bdf8;">{participant_id}</strong> &bull; Modality: <strong style="color:#34d399;">CT/SEG</strong>
@@ -881,11 +978,17 @@ def generate_ohif_3pane_viewer_html(
       <button class="tool-btn" onclick="resetAllViewports()" title="Reset All Viewports">Reset</button>
     </div>
 
-    <!-- Right Cloud OHIF Link -->
+    <!-- Right Cloud OHIF Link & Docs -->
     <div style="display:flex; align-items:center; gap:8px;">
-      <a href="https://viewer.ohif.org/local" target="_blank" class="cloud-btn">
+      <a href="studies.json" target="_blank" class="tool-btn" style="border-color:#334155; text-decoration:none;" title="View OHIF v3.11 Naturalized DICOM JSON Manifest">
+        studies.json
+      </a>
+      <a href="https://docs.ohif.org/3.11/" target="_blank" class="tool-btn" style="border-color:#334155; text-decoration:none;" title="OHIF v3.11 Documentation">
+        v3.11 Docs
+      </a>
+      <a href="https://viewer.ohif.org/local" id="btnLaunchOHIF" target="_blank" class="cloud-btn" title="Launch in official OHIF v3.11 Cloud Viewer">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-        Open in OHIF Cloud
+        Open in OHIF v3.11
       </a>
     </div>
   </header>
@@ -1691,6 +1794,15 @@ def generate_ohif_3pane_viewer_html(
     $('cardSEG').classList.toggle('active', kind === 'seg');
   }}
 
+  // Configure dynamic OHIF v3.11 Cloud Launch URL using studies.json
+  try {{
+    const studiesUrl = new URL('studies.json', window.location.href).href;
+    const launchBtn = $('btnLaunchOHIF');
+    if (launchBtn) {{
+      launchBtn.href = "https://viewer.ohif.org/viewer/dicomjson?url=" + encodeURIComponent(studiesUrl);
+    }}
+  }} catch (e) {{}}
+
   // Initial load
   updateViewports();
 </script>
@@ -1847,6 +1959,15 @@ def export_sample_to_ohif(
             output_path=dicom_seg_path,
             patient_id=participant_id,
         )
+
+    # 2b. Generate OHIF v3.11 naturalized DICOM JSON manifest (studies.json)
+    seg_file_candidate = dest_dir / "eat_pvat_seg.dcm"
+    generate_ohif_dicom_json(
+        dest_dir=dest_dir,
+        ct_files=copied_ct_paths,
+        seg_file=seg_file_candidate if seg_file_candidate.is_file() else None,
+        participant_id=participant_id,
+    )
 
     # 3. Pre-render real slices for OHIF web viewer
     if seg_data is None:

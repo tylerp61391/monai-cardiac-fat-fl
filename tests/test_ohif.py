@@ -59,3 +59,15 @@ def test_export_sample_to_ohif_synthetic(synthetic_nrrd_scan: Path) -> None:
     expected_names = SegmentationCompartment.get_names()
     actual_labels = [s.SegmentLabel for s in seg_ds.SegmentSequence]
     assert actual_labels == expected_names
+
+    # Verify OHIF v3.11 studies.json manifest
+    studies_json = result_dir / "studies.json"
+    assert studies_json.exists()
+    import json
+    manifest = json.loads(studies_json.read_text(encoding="utf-8"))
+    assert manifest["version"] == "3.11.0"
+    assert "https://docs.ohif.org/3.11/" in manifest["documentation"]
+    assert len(manifest["studies"]) > 0
+    assert len(manifest["studies"][0]["series"]) == 2
+    assert manifest["studies"][0]["series"][0]["Modality"] == "CT"
+    assert manifest["studies"][0]["series"][1]["Modality"] == "SEG"
