@@ -675,6 +675,7 @@ def generate_ohif_3pane_viewer_html(
         """
 
     participants_list = available_participants or ["0", "1", "10", "106", "108", "110", "113", "120", "121", "156", "157", "173"]
+    quick_pids = participants_list[:24] if len(participants_list) > 24 else participants_list
     participant_options = "".join(
         f'<option value="{p}" {"selected" if str(p) == str(participant_id) else ""}>Participant {p}</option>'
         for p in participants_list
@@ -944,7 +945,7 @@ def generate_ohif_3pane_viewer_html(
         <div style="margin-top:10px;">
           <div class="pane-heading"><span>COCA Cohort List</span><span style="color:#34d399;">{len(participants_list)} Cases</span></div>
           <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
-            {''.join(f'<button class="vp-btn {"active" if str(p) == str(participant_id) else ""}" style="font-size:10px; padding:3px 6px;" onclick="switchParticipant(\'{p}\')">P{p}</button>' for p in participants_list)}
+            {''.join(f'<button class="vp-btn {"active" if str(p) == str(participant_id) else ""}" style="font-size:10px; padding:3px 6px;" onclick="switchParticipant(\'{p}\')">P{p}</button>' for p in quick_pids)}
           </div>
         </div>
       </div>
@@ -1673,8 +1674,16 @@ def generate_ohif_3pane_viewer_html(
     }}
   }}
 
+  const currentParticipantId = "{participant_id}";
+
   function switchParticipant(pid) {{
-    alert('Switching to Participant ' + pid + '. Please run: cardiac-fat-fl view <patient_dir> or reload.');
+    if (String(pid) === String(currentParticipantId)) return;
+    try {{
+      if (typeof event !== 'undefined' && event && event.target && event.target.tagName === 'BUTTON') {{
+        event.target.textContent = '...';
+      }}
+    }} catch (e) {{}}
+    window.location.href = `/patient/${{pid}}/`;
   }}
 
   function selectSeries(kind) {{
@@ -1696,6 +1705,7 @@ def export_sample_to_ohif(
     sample_dir: Path | str,
     output_dir: Optional[Path | str] = None,
     summary_metrics: Optional[Dict[str, float]] = None,
+    available_participants: Optional[List[str]] = None,
 ) -> Path:
     """Exports a sample participant folder to a complete OHIF-compatible study package.
 
@@ -1891,12 +1901,26 @@ def export_sample_to_ohif(
             except Exception:
                 pass
 
-    # 5. Generate authentic OHIF 3-pane web viewer with 4-box center viewport
+    # 5. Discover cohort participants if not provided
+    if available_participants is None:
+        cohort_dir = sample_path.parent
+        if cohort_dir.is_dir():
+            found = [
+                d.name for d in cohort_dir.iterdir()
+                if d.is_dir() and not d.name.startswith(".") and d.name != "ohif_export"
+                and ((d / "eat_pvat.seg.nrrd").is_file() or (d / "ohif_export").is_dir() or any(f.name.endswith(".nrrd") for f in d.iterdir()))
+            ]
+            if found:
+                found.sort(key=lambda x: int(x) if x.isdigit() else str(x))
+                available_participants = found
+
+    # 6. Generate authentic OHIF 3-pane web viewer with 4-box center viewport
     generate_ohif_3pane_viewer_html(
         participant_id=participant_id,
         output_dir=dest_dir,
         num_slices=num_rendered,
         summary_metrics=final_metrics,
+        available_participants=available_participants,
         mpr_info=mpr_info,
     )
 
