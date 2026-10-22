@@ -54,6 +54,9 @@ COMPARTMENT_PALETTE: Dict[str, Dict[str, Any]] = {
 }
 
 
+_UID_MAP: Dict[str, str] = {}
+
+
 def _sanitize_uid(raw_uid: str) -> str:
     """Ensure a DICOM UID is strictly compliant with DICOM PS 3.5.
 
@@ -62,6 +65,9 @@ def _sanitize_uid(raw_uid: str) -> str:
     """
     if not raw_uid:
         return generate_uid()
+    if raw_uid in _UID_MAP:
+        return _UID_MAP[raw_uid]
+
     # Check leading zeros in components
     parts = raw_uid.split(".")
     is_valid = True
@@ -70,8 +76,14 @@ def _sanitize_uid(raw_uid: str) -> str:
             is_valid = False
             break
     if is_valid and len(raw_uid) <= 64:
+        _UID_MAP[raw_uid] = raw_uid
         return raw_uid
-    return generate_uid()
+
+    import hashlib
+    h_int = int(hashlib.sha256(raw_uid.encode("utf-8")).hexdigest()[:16], 16)
+    new_uid = f"1.2.826.0.1.3680043.8.498.{h_int}"
+    _UID_MAP[raw_uid] = new_uid
+    return new_uid
 
 
 def export_ct_to_dicom_series(
@@ -199,8 +211,8 @@ def export_segmentation_to_dicom_seg(
     ds.SeriesInstanceUID = series_instance_uid
     ds.FrameOfReferenceUID = frame_of_ref_uid
     ds.Modality = "SEG"
-    ds.PatientID = patient_id
-    ds.PatientName = patient_id
+    ds.PatientID = str(getattr(ref_ct, "PatientID", f"COCA-{patient_id}"))
+    ds.PatientName = str(getattr(ref_ct, "PatientName", f"Participant {patient_id}"))
     ds.StudyDate = getattr(ref_ct, "StudyDate", date_str)
     ds.StudyTime = getattr(ref_ct, "StudyTime", time_str)
     ds.SeriesDate = date_str
@@ -208,7 +220,8 @@ def export_segmentation_to_dicom_seg(
     ds.SeriesNumber = 100
     ds.InstanceNumber = 1
     ds.Manufacturer = "MONAI-CardiacFat-FL"
-    ds.SeriesDescription = "EAT/PVAT Adipose Quantification Segmentation"
+    ds.StudyDescription = getattr(ref_ct, "StudyDescription", f"COCA Cardiac CT (Participant {patient_id})")
+    ds.SeriesDescription = "EAT/PVAT 8-Compartment Segmentation"
 
     # Multi-frame image pixel format
     ds.SegmentationType = "BINARY"
@@ -845,6 +858,13 @@ def export_sample_to_ohif(
             continue
 
     if dcm_candidates:
+        # Clear existing .dcm in ct_dest_dir to avoid mixing old/duplicate exports
+        for old_f in ct_dest_dir.glob("*.dcm"):
+            try:
+                old_f.unlink()
+            except Exception:
+                pass
+
         # Sort by ImagePositionPatient[2] or InstanceNumber
         def _slice_key(p: Path) -> float:
             try:
@@ -856,17 +876,34 @@ def export_sample_to_ohif(
                 return 0.0
 
         dcm_candidates.sort(key=_slice_key)
+
+        # Unify Study and Series UIDs across all slices of this scan
+        ref_ds = pydicom.dcmread(str(dcm_candidates[0]), stop_before_pixels=True)
+        unified_study_uid = _sanitize_uid(str(getattr(ref_ds, "StudyInstanceUID", "")))
+        unified_series_uid = _sanitize_uid(str(getattr(ref_ds, "SeriesInstanceUID", "")))
+        unified_frame_of_ref_uid = _sanitize_uid(str(getattr(ref_ds, "FrameOfReferenceUID", generate_uid())))
+
         copied_ct_paths: List[Path] = []
         for idx, dcm_file in enumerate(dcm_candidates):
             target = ct_dest_dir / f"ct_{idx:04d}.dcm"
-            # Read and sanitize UIDs to make 100% compliant with OHIF
             try:
                 ds = pydicom.dcmread(str(dcm_file))
-                ds.StudyInstanceUID = _sanitize_uid(str(getattr(ds, "StudyInstanceUID", "")))
-                ds.SeriesInstanceUID = _sanitize_uid(str(getattr(ds, "SeriesInstanceUID", "")))
-                ds.SOPInstanceUID = _sanitize_uid(str(getattr(ds, "SOPInstanceUID", "")))
+                ds.StudyInstanceUID = unified_study_uid
+                ds.SeriesInstanceUID = unified_series_uid
+                ds.FrameOfReferenceUID = unified_frame_of_ref_uid
+                ds.SOPInstanceUID = _sanitize_uid(str(getattr(ds, "SOPInstanceUID", ""))) or generate_uid()
+                ds.InstanceNumber = idx + 1
+
+                # Clean patient and study descriptors for OHIF study list
+                ds.PatientID = f"COCA-{participant_id}"
+                ds.PatientName = f"Participant {participant_id}"
+                ds.StudyDate = "20261021"
+                ds.StudyDescription = f"COCA Cardiac CT (Participant {participant_id})"
+                ds.SeriesDescription = "Cardiac CT Axial Slices"
+
                 if hasattr(ds, "file_meta") and ds.file_meta:
                     ds.file_meta.MediaStorageSOPInstanceUID = ds.SOPInstanceUID
+                    ds.file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
                 ds.save_as(str(target), write_like_original=False)
             except Exception:
                 shutil.copy2(dcm_file, target)
