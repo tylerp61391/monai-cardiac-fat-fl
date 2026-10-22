@@ -733,10 +733,10 @@ def generate_ohif_3pane_viewer_html(
     available_participants: Optional[List[str]] = None,
     mpr_info: Optional[Dict[str, Any]] = None,
 ) -> Path:
-    """Generates the authentic OHIF 3-Pane Medical Web Viewer with a 4-box center viewport."""
+    """Generates an authentic OHIF v3.13 Medical Workstation with Cornerstone v5 Corner Overlays,
+    Smart Scrollbars on EVERY Viewport, a 2-Column Studies Browser, and Collapsible Panels."""
     html_path = output_dir / "index.html"
 
-    # Default to known participant 0 numbers if none provided
     metrics = summary_metrics or {
         "EAT Total Volume (cm3)": 75.79,
         "EAT Total Mean Attenuation (HU)": -67.28,
@@ -777,6 +777,11 @@ def generate_ohif_3pane_viewer_html(
         f'<option value="{p}" {"selected" if str(p) == str(participant_id) else ""}>Participant {p}</option>'
         for p in participants_list
     )
+    chip_items = []
+    for p in quick_pids:
+        active_cls = " active" if str(p) == str(participant_id) else ""
+        chip_items.append('<button class="cohort-chip' + active_cls + '" onclick="switchParticipant(\'' + str(p) + '\')">P' + str(p) + '</button>')
+    cohort_chips_html = "".join(chip_items)
 
     info = mpr_info or {
         "axial_count": num_slices,
@@ -799,137 +804,163 @@ def generate_ohif_3pane_viewer_html(
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OHIF Medical Imaging Workstation &bull; Participant {participant_id}</title>
+  <title>OHIF Medical Imaging Workstation v3.13 &bull; Participant {participant_id}</title>
   <style>
-    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    html, body {{ height: 100%; width: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #050811; color: #f1f5f9; }}
-    svg {{ max-width: 14px; max-height: 14px; width: 14px; height: 14px; flex-shrink: 0; vertical-align: middle; }}
-    
-    /* Layout */
+    * {{ box-sizing: border-box; margin: 0; padding: 0; user-select: none; }}
+    html, body {{ height: 100%; width: 100%; overflow: hidden; background-color: #000000; color: #cbd5e1; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; }}
+    svg {{ width: 16px; height: 16px; flex-shrink: 0; vertical-align: middle; }}
+
+    /* Layout Structure */
     .app-root {{ display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }}
-    
-    /* Top Header */
-    header.top-header {{ height: 48px; background: #0b1120; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; flex-shrink: 0; z-index: 30; }}
-    .brand-section {{ display: flex; align-items: center; gap: 10px; }}
-    .ohif-logo {{ width: 28px; height: 28px; border-radius: 4px; background: linear-gradient(135deg, #0284c7, #2563eb); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; color: #fff; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35); }}
-    .header-info-title {{ font-size: 12px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 6px; }}
-    .version-tag {{ font-size: 9px; background: #082f49; color: #38bdf8; border: 1px solid #0369a1; padding: 1px 5px; border-radius: 3px; font-family: monospace; }}
-    .header-info-sub {{ font-size: 11px; color: #94a3b8; }}
-    
-    /* Toolbar */
-    .toolbar {{ display: flex; align-items: center; gap: 4px; background: #020617; border: 1px solid #1e293b; border-radius: 6px; padding: 2px 4px; }}
-    .tool-btn {{ background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 8px; color: #cbd5e1; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s; }}
-    .tool-btn:hover {{ background: #1e293b; color: #ffffff; }}
+
+    /* Top App Bar */
+    header.top-header {{ height: 44px; background: #090c15; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; z-index: 50; flex-shrink: 0; }}
+    .header-left {{ display: flex; align-items: center; gap: 8px; }}
+    .drawer-toggle-btn {{ background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 4px 6px; color: #94a3b8; cursor: pointer; display: flex; align-items: center; }}
+    .drawer-toggle-btn:hover {{ background: #1e293b; color: #fff; }}
+    .ohif-logo-box {{ width: 24px; height: 24px; border-radius: 4px; background: linear-gradient(135deg, #0284c7, #2563eb); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 9px; color: #fff; letter-spacing: 0.5px; box-shadow: 0 1px 4px rgba(2, 132, 199, 0.4); }}
+    .brand-col {{ display: flex; flex-direction: column; line-height: 1.15; }}
+    .brand-main {{ font-size: 11px; font-weight: 700; color: #f8fafc; letter-spacing: 0.2px; }}
+    .brand-sub {{ font-size: 9px; color: #64748b; display: flex; align-items: center; gap: 5px; }}
+    .version-tag {{ background: #082f49; color: #38bdf8; border: 1px solid #0369a1; padding: 0 4px; border-radius: 3px; font-size: 8.5px; font-family: monospace; }}
+
+    /* Center Toolbar */
+    .toolbar-group {{ display: flex; align-items: center; gap: 3px; background: #020617; border: 1px solid #1e293b; border-radius: 6px; padding: 2px 4px; }}
+    .tool-btn {{ background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 7px; color: #94a3b8; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.12s; }}
+    .tool-btn:hover {{ background: #1e293b; color: #f8fafc; }}
     .tool-btn.active {{ background: rgba(2, 132, 199, 0.25); border-color: #0284c7; color: #38bdf8; }}
-    .cloud-btn {{ background: linear-gradient(135deg, #2563eb, #0284c7); color: white; padding: 5px 11px; border-radius: 5px; text-decoration: none; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3); }}
+    .tool-select {{ background: #0f172a; border: 1px solid #334155; color: #e2e8f0; font-size: 11px; border-radius: 4px; padding: 2px 5px; outline: none; cursor: pointer; }}
+
+    /* Header Right Section */
+    .header-right {{ display: flex; align-items: center; gap: 8px; }}
+    .patient-switcher-wrap {{ display: flex; align-items: center; gap: 4px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 2px 6px; font-size: 11px; }}
+    .patient-step-btn {{ background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 13px; font-weight: bold; padding: 0 3px; }}
+    .patient-step-btn:hover {{ color: #38bdf8; }}
+    .patient-nav-select {{ background: transparent; border: none; color: #38bdf8; font-weight: 600; font-size: 11px; outline: none; cursor: pointer; }}
+    .patient-nav-select option {{ background: #0f172a; color: #fff; }}
+    .cloud-btn {{ background: linear-gradient(135deg, #2563eb, #0284c7); color: #fff; padding: 4px 9px; border-radius: 4px; text-decoration: none; font-size: 10.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35); }}
     .cloud-btn:hover {{ opacity: 0.92; }}
+    .badge-link {{ color: #cbd5e1; background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 3px 6px; font-size: 10px; text-decoration: none; font-family: monospace; }}
+    .badge-link:hover {{ background: #1e293b; color: #38bdf8; border-color: #38bdf8; }}
+    
+    /* Panel Toggle Buttons (Matching official OHIF circular buttons) */
+    .side-toggle-btn {{ width: 28px; height: 28px; border-radius: 50%; background: #0f172a; border: 1px solid #334155; color: #94a3b8; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }}
+    .side-toggle-btn:hover {{ background: #1e293b; color: #fff; border-color: #38bdf8; }}
+    .side-toggle-btn.active {{ background: #0369a1; border-color: #38bdf8; color: #ffffff; box-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }}
 
-    /* Main 3-Pane Body */
-    main.three-pane-body {{ display: flex; flex: 1; height: calc(100vh - 48px); overflow: hidden; }}
+    /* Main Body */
+    main.main-body {{ display: flex; flex: 1; height: calc(100vh - 44px); overflow: hidden; background: #000; position: relative; }}
 
-    /* LEFT PANE: Studies & Series Chooser */
-    aside.left-pane {{ width: 250px; flex-shrink: 0; background: #080d1a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; z-index: 20; }}
-    .pane-block {{ padding: 12px; border-bottom: 1px solid #1e293b; }}
-    .pane-heading {{ font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; margin-bottom: 8px; }}
-    .select-dropdown {{ width: 100%; background: #0f172a; border: 1px solid #334155; color: #ffffff; font-size: 11px; border-radius: 4px; padding: 6px 8px; outline: none; }}
-    .patient-card {{ margin-top: 8px; background: rgba(15, 23, 42, 0.5); border: 1px solid #1e293b; border-radius: 6px; padding: 8px; font-size: 11px; color: #94a3b8; display: flex; flex-direction: column; gap: 3px; }}
-    .patient-card-row {{ display: flex; justify-content: space-between; }}
-    .patient-card-row strong {{ color: #e2e8f0; font-family: monospace; }}
-    .series-list {{ padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }}
-    .series-card {{ display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; border: 1px solid #1e293b; background: rgba(15, 23, 42, 0.5); cursor: pointer; transition: all 0.15s; }}
+    /* ========================================================= */
+    /* LEFT DRAWER: 2-Column Square Studies Browser (Official OHIF) */
+    /* ========================================================= */
+    aside.studies-drawer {{ width: 250px; background: #050811; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; transition: margin-left 0.2s ease, width 0.2s ease; z-index: 30; overflow-y: auto; }}
+    aside.studies-drawer.collapsed {{ margin-left: -250px; }}
+    .drawer-title-bar {{ padding: 8px 10px; background: #0b1120; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; }}
+    .drawer-heading {{ font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }}
+    .study-accordion {{ padding: 8px; border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.4); }}
+    .study-accordion-title {{ font-size: 11px; font-weight: 700; color: #f1f5f9; }}
+    .study-accordion-meta {{ font-size: 10px; color: #38bdf8; font-family: monospace; }}
+
+    /* 2-Column Square Thumbnail Grid */
+    .series-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; }}
+    .series-card {{ aspect-ratio: 1 / 1; background: #000000; border: 1px solid #1e293b; border-radius: 4px; padding: 4px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; position: relative; overflow: hidden; transition: all 0.15s; }}
     .series-card:hover {{ border-color: #38bdf8; }}
-    .series-card.active {{ border-color: #0284c7; background: rgba(2, 132, 199, 0.12); }}
-    .series-thumb {{ width: 48px; height: 48px; border-radius: 4px; object-fit: cover; background: #000; border: 1px solid #334155; flex-shrink: 0; }}
-    .seg-badge-box {{ width: 48px; height: 48px; border-radius: 4px; border: 1px solid #7c3aed; background: rgba(88, 28, 135, 0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #d8b4fe; font-size: 10px; font-weight: bold; flex-shrink: 0; }}
-    .series-details {{ flex: 1; overflow: hidden; }}
-    .series-title {{ font-size: 11px; font-weight: 600; color: #ffffff; display: block; }}
-    .series-sub {{ font-size: 10px; color: #94a3b8; display: block; }}
-    .series-meta {{ font-size: 9px; color: #38bdf8; font-family: monospace; display: block; }}
+    .series-card.active {{ border-color: #0284c7; box-shadow: 0 0 0 1px #0284c7 inset; }}
+    .card-top {{ display: flex; align-items: center; justify-content: space-between; font-size: 9px; font-family: monospace; z-index: 5; pointer-events: none; }}
+    .card-badge {{ font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 2px; }}
+    .badge-ct {{ background: #082f49; color: #38bdf8; border: 1px solid #0369a1; }}
+    .badge-seg {{ background: #3b0764; color: #c084fc; border: 1px solid #9333ea; }}
+    .badge-vr {{ background: #431407; color: #fb923c; border: 1px solid #ea580c; }}
+    .card-count {{ color: #94a3b8; }}
+    .card-thumb-wrap {{ flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 2px 0; }}
+    .card-thumb-wrap img {{ width: 100%; height: 100%; object-fit: contain; pointer-events: none; }}
+    .card-seg-badge {{ width: 44px; height: 44px; border-radius: 4px; background: rgba(88, 28, 135, 0.4); border: 1px solid #7c3aed; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #d8b4fe; font-size: 11px; font-weight: 800; }}
+    .card-bottom {{ z-index: 5; pointer-events: none; }}
+    .card-title {{ font-size: 10px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }}
+    .card-sub {{ font-size: 8.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }}
 
-    /* CENTER PANE: Four-Box 2x2 Viewport */
-    section.center-pane {{ flex: 1; background: #000000; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }}
-    
-    /* 2x2 MPR Grid */
-    .mpr-grid {{ flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; background: #1e293b; overflow: hidden; position: relative; }}
-    .mpr-grid.maximized {{ grid-template-columns: 1fr; grid-template-rows: 1fr; }}
-    .viewport-box {{ position: relative; background: #000000; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: crosshair; border: 1.5px solid transparent; padding: 26px 8px; }}
-    .viewport-box.active-box {{ border-color: #0284c7; }}
+    /* Cohort Chips */
+    .cohort-section {{ padding: 8px; border-top: 1px solid #1e293b; }}
+    .cohort-chips {{ display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }}
+    .cohort-chip {{ font-size: 9.5px; background: #0f172a; border: 1px solid #334155; color: #94a3b8; border-radius: 3px; padding: 2px 5px; cursor: pointer; }}
+    .cohort-chip:hover {{ color: #fff; border-color: #38bdf8; }}
+    .cohort-chip.active {{ background: #0284c7; color: #fff; border-color: #38bdf8; }}
+
+    /* ========================================================= */
+    /* CENTER VIEWPORTS: 2x2 Grid (100% Height, No Clunky Bottom Bar!) */
+    /* ========================================================= */
+    section.center-viewports {{ flex: 1; height: 100%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; background: #0b1120; overflow: hidden; position: relative; }}
+    section.center-viewports.maximized {{ grid-template-columns: 1fr; grid-template-rows: 1fr; }}
+
+    .viewport-box {{ position: relative; background: #000000; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: crosshair; border: 1.5px solid #1e293b; }}
+    .viewport-box.active-box {{ border-color: #0284c7 !important; }}
     .viewport-box.hidden {{ display: none !important; }}
-    
-    /* Viewport Headers & Overlays */
-    .vp-header {{ position: absolute; top: 0; left: 0; right: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; font-size: 11px; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%); }}
-    .vp-tag {{ display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: 10px; letter-spacing: 0.5px; padding: 1px 6px; border-radius: 3px; font-family: monospace; }}
-    .tag-axial {{ background: #082f49; color: #38bdf8; border: 1px solid #0284c7; }}
-    .tag-sagittal {{ background: #064e3b; color: #34d399; border: 1px solid #059669; }}
-    .tag-coronal {{ background: #431407; color: #fb923c; border: 1px solid #ea580c; }}
-    .tag-3d {{ background: #3b0764; color: #c084fc; border: 1px solid #9333ea; }}
-    .vp-actions {{ pointer-events: auto; display: flex; gap: 4px; }}
-    .vp-btn {{ background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 3px; color: #cbd5e1; font-size: 10px; padding: 2px 5px; cursor: pointer; }}
-    .vp-btn:hover {{ background: #334155; color: #fff; }}
 
-    /* OHIF v3.13 Smart Scrollbar */
-    .smart-scrollbar {{ position: absolute; right: 6px; top: 32px; bottom: 28px; width: 6px; background: rgba(15, 23, 42, 0.7); border-radius: 3px; z-index: 25; cursor: pointer; border: 1px solid rgba(51, 65, 85, 0.6); display: flex; flex-direction: column; overflow: hidden; }}
-    .smart-track {{ flex: 1; position: relative; width: 100%; }}
-    .smart-thumb {{ position: absolute; left: 0; right: 0; height: 10px; background: #38bdf8; border-radius: 2px; box-shadow: 0 0 6px rgba(56, 189, 248, 0.8); pointer-events: none; transition: top 0.05s ease-out; }}
-    .smart-scrollbar:hover {{ width: 8px; border-color: #38bdf8; }}
-    
-    /* Viewport Orientation Labels */
-    .orient {{ position: absolute; z-index: 12; font-family: monospace; font-size: 11px; font-weight: 700; color: #facc15; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }}
-    .orient.top {{ top: 26px; left: 50%; transform: translateX(-50%); }}
-    .orient.bottom {{ bottom: 26px; left: 50%; transform: translateX(-50%); }}
-    .orient.left {{ left: 8px; top: 50%; transform: translateY(-50%); }}
-    .orient.right {{ right: 8px; top: 50%; transform: translateY(-50%); }}
+    /* True Cornerstone Corner Annotations (Clean Medical Overlay) */
+    .cs-overlay {{ position: absolute; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: #cbd5e1; z-index: 15; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.95); line-height: 1.25; }}
+    .cs-top-left {{ top: 8px; left: 10px; }}
+    .cs-top-left .study-meta {{ font-weight: 700; color: #f8fafc; }}
+    .cs-top-left .series-meta {{ color: #94a3b8; font-size: 10.5px; }}
+    .cs-top-right {{ top: 8px; right: 24px; pointer-events: auto; display: flex; gap: 4px; }}
+    .cs-bottom-left {{ bottom: 8px; left: 10px; font-family: monospace; font-size: 10px; color: #94a3b8; }}
+    .cs-bottom-right {{ bottom: 8px; right: 24px; font-family: monospace; font-size: 10px; color: #94a3b8; text-align: right; }}
 
-    /* Viewport Canvas & Images */
-    .vp-wrap {{ position: relative; display: inline-block; line-height: 0; height: 100%; max-width: 100%; max-height: 100%; }}
+    /* Anatomical Orientation Markers (Clean Muted Gray Sans-Serif, NOT Yellow!) */
+    .orient {{ position: absolute; z-index: 12; font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; color: #94a3b8; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }}
+    .orient.top {{ top: 10px; left: 50%; transform: translateX(-50%); }}
+    .orient.bottom {{ bottom: 10px; left: 50%; transform: translateX(-50%); }}
+    .orient.left {{ left: 10px; top: 50%; transform: translateY(-50%); }}
+    .orient.right {{ right: 22px; top: 50%; transform: translateY(-50%); }}
+
+    /* Viewport Image Wrap */
+    .vp-canvas-wrap {{ position: relative; display: inline-block; line-height: 0; height: 100%; max-width: 100%; max-height: 100%; }}
     #wAx, #w3D {{ aspect-ratio: 1 / 1; }}
     #wSag {{ aspect-ratio: {sag_w} / {sag_h}; }}
     #wCor {{ aspect-ratio: {cor_w} / {cor_h}; }}
-    .vp-wrap img.ct-plane {{ width: 100%; height: 100%; object-fit: fill; display: block; }}
-    .vp-wrap img.seg-plane, .vp-wrap canvas.seg-plane {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.85; }}
-    .solo-btn {{ background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 3px; font-size: 9px; font-weight: 600; padding: 1px 5px; cursor: pointer; transition: all 0.15s; }}
-    .solo-btn:hover {{ background: #0284c7; color: #fff; border-color: #38bdf8; }}
-    .solo-btn.active {{ background: #0284c7; color: #fff; border-color: #38bdf8; }}
-    
+    .vp-canvas-wrap img.ct-plane {{ width: 100%; height: 100%; object-fit: fill; display: block; }}
+    .vp-canvas-wrap canvas.seg-plane {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.85; }}
+
     /* Crosshairs */
     .xh {{ position: absolute; pointer-events: none; z-index: 10; }}
     .xh.v {{ top: 0; bottom: 0; width: 1px; }}
     .xh.h {{ left: 0; right: 0; height: 1px; }}
 
-    /* Viewport Footers */
-    .vp-footer {{ position: absolute; bottom: 0; left: 0; right: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; font-size: 10px; font-family: monospace; pointer-events: none; background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%); color: #94a3b8; }}
+    /* OHIF v3.13 Smart Scrollbar on EVERY Viewport */
+    .smart-scrollbar {{ position: absolute; right: 4px; top: 28px; bottom: 28px; width: 8px; background: rgba(15, 23, 42, 0.7); border-radius: 4px; z-index: 25; cursor: pointer; border: 1px solid rgba(51, 65, 85, 0.5); display: flex; flex-direction: column; overflow: hidden; }}
+    .smart-track {{ flex: 1; position: relative; width: 100%; }}
+    .smart-thumb {{ position: absolute; left: 1px; right: 1px; height: 12px; background: #38bdf8; border-radius: 3px; box-shadow: 0 0 6px rgba(56, 189, 248, 0.85); pointer-events: none; transition: top 0.04s ease-out; }}
+    .smart-scrollbar:hover {{ width: 10px; border-color: #38bdf8; }}
 
-    /* Center Bottom Bar */
-    .bottom-bar {{ height: 50px; background: #090e1c; border-top: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; gap: 12px; flex-shrink: 0; z-index: 20; }}
-    .slider-container {{ flex: 1; max-width: 520px; display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: monospace; color: #94a3b8; }}
-    .slider-step-btn {{ width: 24px; height: 24px; border-radius: 4px; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: pointer; }}
-    .slider-step-btn:hover {{ background: #334155; color: #fff; }}
-    input[type="range"] {{ flex: 1; accent-color: #0284c7; cursor: pointer; }}
-    .preset-selector {{ display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; }}
+    /* Maximize Action Button */
+    .vp-btn {{ background: rgba(30, 41, 59, 0.75); border: 1px solid #334155; border-radius: 3px; color: #cbd5e1; font-size: 10px; padding: 2px 5px; cursor: pointer; }}
+    .vp-btn:hover {{ background: #334155; color: #fff; }}
 
-    /* Mode Navigation Pills */
-    .mode-pills {{ display: flex; gap: 4px; }}
-    .mode-pill {{ font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 12px; background: #0f172a; border: 1px solid #1e293b; color: #94a3b8; cursor: pointer; }}
-    .mode-pill:hover {{ color: #ffffff; border-color: #38bdf8; }}
-    .mode-pill.active {{ background: #0284c7; border-color: #0284c7; color: #ffffff; }}
+    /* ========================================================= */
+    /* RIGHT DRAWER: Segmentations & Measurements Slide-Out Panel */
+    /* ========================================================= */
+    aside.right-drawer {{ width: 310px; background: #050811; border-left: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; transition: margin-right 0.2s ease, width 0.2s ease; z-index: 30; overflow-y: auto; }}
+    aside.right-drawer.collapsed {{ margin-right: -310px; display: none; }}
+    .drawer-tab-bar {{ display: flex; border-bottom: 1px solid #1e293b; background: #090c15; }}
+    .drawer-tab-btn {{ flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 600; text-align: center; color: #94a3b8; background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; }}
+    .drawer-tab-btn.active {{ color: #38bdf8; border-bottom-color: #0284c7; background: rgba(2, 132, 199, 0.08); }}
+    .drawer-close-btn {{ width: 32px; background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; }}
+    .drawer-close-btn:hover {{ color: #fff; }}
 
-    /* RIGHT PANE: Measurements & Adipose Stats */
-    aside.right-pane {{ width: 320px; flex-shrink: 0; background: #080d1a; border-left: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; z-index: 20; }}
-    .tab-header {{ display: flex; border-bottom: 1px solid #1e293b; background: #050811; }}
-    .tab-btn {{ flex: 1; padding: 9px 6px; font-size: 11px; font-weight: 600; text-align: center; color: #94a3b8; background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; }}
-    .tab-btn.active {{ color: #38bdf8; border-bottom-color: #0284c7; background: rgba(2, 132, 199, 0.08); }}
-    
-    .compartment-list {{ padding: 12px; display: flex; flex-direction: column; gap: 5px; }}
+    .compartment-list {{ padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; }}
     .compartment-row {{ display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.4); border: 1px solid #1e293b; font-size: 11px; }}
     .comp-info {{ display: flex; align-items: center; gap: 7px; }}
     .color-dot {{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }}
-    
+    .solo-btn {{ background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 3px; font-size: 9px; font-weight: 600; padding: 1px 5px; cursor: pointer; transition: all 0.15s; }}
+    .solo-btn:hover {{ background: #0284c7; color: #fff; border-color: #38bdf8; }}
+    .solo-btn.active {{ background: #0284c7; color: #fff; border-color: #38bdf8; }}
+
     .opacity-box {{ padding: 0 12px 10px 12px; }}
     .opacity-header {{ display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-bottom: 4px; }}
-    
+    input[type="range"] {{ width: 100%; accent-color: #0284c7; cursor: pointer; }}
+
     /* Metrics Table */
-    .metrics-section {{ padding: 10px 12px; border-top: 1px solid #1e293b; flex: 1; overflow-y: auto; }}
-    .metrics-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }}
+    .metrics-section {{ padding: 10px 12px; flex: 1; overflow-y: auto; }}
     .metrics-table {{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }}
     .metrics-table th {{ padding: 4px 6px; color: #64748b; font-weight: 600; border-bottom: 1px solid #1e293b; font-size: 10px; }}
     .metrics-row td {{ padding: 4px 6px; border-bottom: 1px solid #0f172a; }}
@@ -946,289 +977,328 @@ def generate_ohif_3pane_viewer_html(
 
   <!-- Top OHIF Header -->
   <header class="top-header">
-    <div class="brand-section">
-      <div class="ohif-logo">OHIF</div>
-      <div>
-        <div class="header-info-title">
-          Open Health Imaging Foundation Workstation
-          <span class="version-tag">v3.13 Next</span>
-        </div>
-        <div class="header-info-sub">
-          Study: <strong style="color:#e2e8f0;">COCA Cardiac CT</strong> &bull; Patient: <strong style="color:#38bdf8;">{participant_id}</strong> &bull; Modality: <strong style="color:#34d399;">CT/SEG</strong>
-        </div>
+    <div class="header-left">
+      <button class="drawer-toggle-btn" onclick="toggleLeftDrawer()" title="Toggle Studies Browser">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="ohif-logo-box">OHIF</div>
+      <div class="brand-col">
+        <span class="brand-main">Open Health Imaging Foundation</span>
+        <span class="brand-sub">Medical Viewer <span class="version-tag">v3.13 Next</span> &bull; COCA Cardiac CT</span>
       </div>
     </div>
 
-    <!-- Center OHIF Toolset -->
-    <div class="toolbar">
-      <button class="tool-btn active" id="btnCrosshair" onclick="setTool('crosshair')" title="Linked Orthogonal Crosshairs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3"/></svg>
-        Crosshairs
+    <!-- Center OHIF Minimalist Toolset -->
+    <div class="toolbar-group">
+      <button class="tool-btn" id="btnLength" onclick="setTool('length')" title="Length / Measurement">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.17 6.83l-4-4a2 2 0 0 0-2.83 0L3 14.17V21h6.83l11.34-11.34a2 2 0 0 0 0-2.83zM14 5l4 4"/></svg>
       </button>
-      <button class="tool-btn" id="btnPan" onclick="setTool('pan')" title="Pan Viewport">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
-        Pan
+      <button class="tool-btn" id="btnAngle" onclick="setTool('angle')" title="Angle Measurement">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16M4 20L18 6"/></svg>
       </button>
       <button class="tool-btn" id="btnZoom" onclick="setTool('zoom')" title="Zoom Viewport">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
-        Zoom
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/></svg>
       </button>
-      <button class="tool-btn" id="btnWl" onclick="setTool('wl')" title="Window / Level Preset">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        Window
+      <button class="tool-btn" id="btnPan" onclick="setTool('pan')" title="Pan Viewport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v7M10 10.5V6a2 2 0 0 0-4 0v8a7 7 0 0 0 14 0v-3a2 2 0 0 0-4 0"/></svg>
+      </button>
+      <div style="display:flex; align-items:center; gap:3px;">
+        <button class="tool-btn" id="btnWl" title="Window / Level Presets">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20a10 10 0 0 0 0-20z" fill="currentColor"/></svg>
+        </button>
+        <select id="presetSelect" class="tool-select" onchange="applyWindowPreset(this.value)">
+          <option value="fat">Cardiac Fat (W:400 L:-110)</option>
+          <option value="soft">Soft Tissue (W:350 L:40)</option>
+          <option value="lung">Chest / Lung (W:1500 L:-600)</option>
+          <option value="bone">Bone / Calcium (W:1500 L:300)</option>
+        </select>
+      </div>
+      <button class="tool-btn active" id="btnCrosshair" onclick="setTool('crosshair')" title="Linked Orthogonal Crosshairs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>
       </button>
       <button class="tool-btn" id="btnLayout" onclick="toggleGridLayout()" title="Toggle 2x2 Grid / 1x1 Focus">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
-        2x2 Grid
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       </button>
-      <button class="tool-btn" onclick="resetAllViewports()" title="Reset All Viewports">Reset</button>
+      <button class="tool-btn" onclick="resetAllViewports()" title="Reset All Viewports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
     </div>
 
-    <!-- Right Cloud OHIF Link & Docs -->
-    <div style="display:flex; align-items:center; gap:8px;">
-      <a href="studies.json" target="_blank" class="tool-btn" style="border-color:#334155; text-decoration:none;" title="View OHIF v3.13 Naturalized DICOM JSON Manifest">
-        studies.json
-      </a>
-      <a href="https://ohif.org/release-notes/3p13" target="_blank" class="tool-btn" style="border-color:#334155; text-decoration:none;" title="OHIF v3.13 Release Notes">
-        v3.13 Notes
-      </a>
+    <!-- Header Right Section -->
+    <div class="header-right">
+      <div class="patient-switcher-wrap">
+        <span style="color:#94a3b8; font-size:10px;">Patient</span>
+        <button class="patient-step-btn" onclick="stepPatient(-1)" title="Previous Patient">&lsaquo;</button>
+        <select class="patient-nav-select" id="patientSelector" onchange="switchParticipant(this.value)">
+          {participant_options}
+        </select>
+        <button class="patient-step-btn" onclick="stepPatient(1)" title="Next Patient">&rsaquo;</button>
+      </div>
+
+      <a href="studies.json" target="_blank" class="badge-link" title="OHIF v3.13 Naturalized DICOM JSON Manifest">studies.json</a>
+      <a href="https://ohif.org/release-notes/3p13" target="_blank" class="badge-link" title="OHIF v3.13 Release Notes">v3.13 Notes</a>
       <a href="https://viewer.ohif.org/local" id="btnLaunchOHIF" target="_blank" class="cloud-btn" title="Launch in official OHIF v3.13 Cloud Viewer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-        Open in OHIF v3.13
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        <span>Open in OHIF</span>
       </a>
+
+      <!-- Circular Side-Panel Toggles -->
+      <button class="side-toggle-btn active" id="btnToggleSeg" onclick="toggleRightPanel('seg')" title="Toggle Segmentations Panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      </button>
+      <button class="side-toggle-btn" id="btnToggleMeas" onclick="toggleRightPanel('meas')" title="Toggle Measurements Panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </button>
     </div>
   </header>
 
-  <!-- 3-Pane Body -->
-  <main class="three-pane-body">
+  <!-- Main Workstation Body -->
+  <main class="main-body">
 
     <!-- ============================================== -->
-    <!-- LEFT PANE: Studies & Series Chooser (Pick DICOM)-->
+    <!-- LEFT DRAWER: 2-Column Square Studies Browser   -->
     <!-- ============================================== -->
-    <aside class="left-pane" id="leftPane">
-      <div class="pane-block">
-        <div class="pane-heading">
-          <span>Studies Chooser</span>
-          <span style="color:#38bdf8; font-family:monospace;">DICOM</span>
+    <aside class="studies-drawer" id="leftDrawer">
+      <div class="drawer-title-bar">
+        <span class="drawer-heading">Studies</span>
+        <span class="version-tag">1 Study</span>
+      </div>
+
+      <div class="study-accordion">
+        <div class="study-accordion-title">COCA Gated CT &bull; P{participant_id}</div>
+        <div class="study-accordion-meta">22-May-2014 &bull; {sx:.2f} &times; {sy:.2f} &times; {sz:.2f} mm</div>
+      </div>
+
+      <!-- 2-Column Square Thumbnail Grid (Exact OHIF layout) -->
+      <div class="series-grid">
+        <!-- Tile 1: Primary CT Axial -->
+        <div class="series-card active" id="cardCT" onclick="selectSeriesTile('axial')">
+          <div class="card-top">
+            <span class="card-badge badge-ct">CT</span>
+            <span class="card-count">s:1 i:{nz}</span>
+          </div>
+          <div class="card-thumb-wrap">
+            <img src="slices/thumbnail_ct.png" onerror="this.src='slices/ct_028.png'">
+          </div>
+          <div class="card-bottom">
+            <span class="card-title">Body 3.0 CE</span>
+            <span class="card-sub">Axial CT Primary</span>
+          </div>
         </div>
-        <select id="participantSelector" class="select-dropdown" onchange="switchParticipant(this.value)">
-          {participant_options}
-        </select>
-        
-        <div class="patient-card">
-          <div class="patient-card-row"><span>Patient ID:</span><strong>COCA-{participant_id}</strong></div>
-          <div class="patient-card-row"><span>Modality:</span><strong style="color:#38bdf8;">CT &bull; Gated</strong></div>
-          <div class="patient-card-row"><span>Series:</span><strong>2 Active</strong></div>
-          <div class="patient-card-row"><span>Spacing:</span><strong>{sx:.2f} &times; {sy:.2f} &times; {sz:.2f} mm</strong></div>
+
+        <!-- Tile 2: Sagittal MPR -->
+        <div class="series-card" id="cardSag" onclick="selectSeriesTile('sagittal')">
+          <div class="card-top">
+            <span class="card-badge badge-ct">CT</span>
+            <span class="card-count">s:2 i:{ns}</span>
+          </div>
+          <div class="card-thumb-wrap">
+            <img src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
+          </div>
+          <div class="card-bottom">
+            <span class="card-title">Body 4.0 CE</span>
+            <span class="card-sub">Sagittal MPR</span>
+          </div>
+        </div>
+
+        <!-- Tile 3: Coronal MPR -->
+        <div class="series-card" id="cardCor" onclick="selectSeriesTile('coronal')">
+          <div class="card-top">
+            <span class="card-badge badge-ct">CT</span>
+            <span class="card-count">s:3 i:{nc}</span>
+          </div>
+          <div class="card-thumb-wrap">
+            <img src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
+          </div>
+          <div class="card-bottom">
+            <span class="card-title">Lung 3.0 CE</span>
+            <span class="card-sub">Coronal MPR</span>
+          </div>
+        </div>
+
+        <!-- Tile 4: 3D Thoracic Render -->
+        <div class="series-card" id="card3D" onclick="selectSeriesTile('3d')">
+          <div class="card-top">
+            <span class="card-badge badge-vr">VR</span>
+            <span class="card-count">s:4 i:{nf}</span>
+          </div>
+          <div class="card-thumb-wrap">
+            <img src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'">
+          </div>
+          <div class="card-bottom">
+            <span class="card-title">Thoracic 3D</span>
+            <span class="card-sub">Cardiac Fat Render</span>
+          </div>
+        </div>
+
+        <!-- Tile 5: DICOM-SEG -->
+        <div class="series-card" id="cardSEG" onclick="selectSeriesTile('seg')" style="grid-column: span 2; aspect-ratio: auto; padding: 6px 8px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="card-seg-badge">8L</div>
+            <div>
+              <span class="card-title" style="color:#d8b4fe;">EAT/PVAT DICOM-SEG</span>
+              <span class="card-sub">eat_pvat_seg.dcm &bull; SOP: 1.2.840...66.4</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Series List -->
-      <div class="series-list">
-        <div class="pane-heading"><span>Series Chooser</span><span style="color:#94a3b8;">2 Series</span></div>
-
-        <!-- Series 1: Primary CT Slices -->
-        <div class="series-card active" id="cardCT" onclick="selectSeries('ct')">
-          <img src="slices/thumbnail_ct.png" class="series-thumb" onerror="this.src='slices/ct_028.png'">
-          <div class="series-details">
-            <span class="series-title">Primary CT Axial</span>
-            <span class="series-sub">{nz} Axial Slices</span>
-            <span class="series-meta">{sx:.2f} x {sy:.2f} x {sz:.2f} mm</span>
-          </div>
+      <!-- Cohort Quick Navigation Chips -->
+      <div class="cohort-section">
+        <div class="drawer-heading">COCA Cohort ({len(participants_list)})</div>
+        <div class="cohort-chips">
+          {cohort_chips_html}
         </div>
-
-        <!-- Series 2: EAT/PVAT DICOM-SEG -->
-        <div class="series-card" id="cardSEG" onclick="selectSeries('seg')">
-          <div class="seg-badge-box">
-            <span>SEG</span>
-            <span style="font-size:9px;">8 Layers</span>
-          </div>
-          <div class="series-details">
-            <span class="series-title">EAT/PVAT DICOM-SEG</span>
-            <span class="series-sub">eat_pvat_seg.dcm</span>
-            <span class="series-meta" style="color:#a855f7;">SOP: 1.2.840...66.4</span>
-          </div>
-        </div>
-
-        <!-- Cohort Quick Navigation -->
-        <div style="margin-top:10px;">
-          <div class="pane-heading"><span>COCA Cohort List</span><span style="color:#34d399;">{len(participants_list)} Cases</span></div>
-          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
-            {''.join(f'<button class="vp-btn {"active" if str(p) == str(participant_id) else ""}" style="font-size:10px; padding:3px 6px;" onclick="switchParticipant(\'{p}\')">P{p}</button>' for p in quick_pids)}
-          </div>
-        </div>
-      </div>
-
-      <div class="pane-block" style="border-top:1px solid #1e293b; border-bottom:none;">
-        <span style="font-size:10px; color:#64748b;">OHIF PACS Client &bull; 0-Loss HU Fidelity</span>
       </div>
     </aside>
 
     <!-- ============================================== -->
-    <!-- CENTER PANE: Four-Box Viewport Grid (2x2)      -->
+    <!-- CENTER VIEWPORTS: 2x2 Grid (100% Height!)       -->
     <!-- ============================================== -->
-    <section class="center-pane">
-      
-      <!-- 2x2 Viewport Grid -->
-      <div class="mpr-grid" id="mprGrid">
-        
-        <!-- Box 1: Axial (Top-Left) -->
-        <div class="viewport-box active-box" id="pAx" onclick="setActiveBox('pAx')">
-          <div class="vp-header">
-            <span class="vp-tag tag-axial">AXIAL</span>
-            <span style="color:#94a3b8; font-size:11px;">Body 3.0 CE</span>
-            <div class="vp-actions">
-              <button class="vp-btn" onclick="maximizeBox('pAx', event)" title="Maximize Viewport">⛶</button>
-            </div>
-          </div>
-          <span class="orient top">A</span>
-          <span class="orient bottom">P</span>
-          <span class="orient left">R</span>
-          <span class="orient right">L</span>
-          <div class="vp-wrap" id="wAx">
-            <img class="ct-plane" id="axCt" src="slices/ct_028.png">
-            <canvas class="seg-plane" id="axCanvas" width="512" height="512"></canvas>
-            <div class="xh v" id="axV" style="background:#34d399;"></div>
-            <div class="xh h" id="axH" style="background:#fb923c;"></div>
-          </div>
-          <div class="vp-footer">
-            <span id="hudWindow">W: 400 L: -110</span>
-            <span id="iAx">Slice 28 / {nz - 1}</span>
-          </div>
-          <!-- OHIF v3.13 Smart Scrollbar -->
-          <div class="smart-scrollbar" id="smartScrollAx" onclick="onSmartScrollClick(event, 'axial')" title="OHIF v3.13 Smart Scrollbar: Click to jump slice">
-            <div class="smart-track" id="smartTrackAx">
-              <div class="smart-thumb" id="smartThumbAx"></div>
-            </div>
-          </div>
+    <section class="center-viewports" id="viewportsGrid">
+
+      <!-- Viewport 1: Axial Primary CT (Top-Left) -->
+      <div class="viewport-box active-box" id="pAx" onclick="setActiveBox('pAx')">
+        <!-- Cornerstone Corner Overlays -->
+        <div class="cs-overlay cs-top-left">
+          <div class="study-meta">22-May-2014</div>
+          <div class="series-meta" id="lblSeriesAx">Body 3.0 CE</div>
+        </div>
+        <div class="cs-overlay cs-top-right">
+          <button class="vp-btn" onclick="maximizeBox('pAx', event)" title="Maximize Viewport">⛶</button>
+        </div>
+        <div class="cs-overlay cs-bottom-left" id="hudWindowAx">W: 400 L: -110</div>
+        <div class="cs-overlay cs-bottom-right" id="iAx">I: 29 (29/{nz})</div>
+
+        <!-- Anatomical Markers (Subdued Gray Sans-Serif) -->
+        <span class="orient top">A</span>
+        <span class="orient bottom">P</span>
+        <span class="orient left">R</span>
+        <span class="orient right">L</span>
+
+        <div class="vp-canvas-wrap" id="wAx">
+          <img class="ct-plane" id="axCt" src="slices/ct_028.png">
+          <canvas class="seg-plane" id="axCanvas" width="512" height="512"></canvas>
+          <div class="xh v" id="axV" style="background:#22c55e;"></div>
+          <div class="xh h" id="axH" style="background:#f97316;"></div>
         </div>
 
-        <!-- Box 2: Sagittal (Top-Right) -->
-        <div class="viewport-box" id="pSag" onclick="setActiveBox('pSag')">
-          <div class="vp-header">
-            <span class="vp-tag tag-sagittal">SAGITTAL</span>
-            <span style="color:#94a3b8; font-size:11px;">Body 4.0 CE</span>
-            <div class="vp-actions">
-              <button class="vp-btn" onclick="maximizeBox('pSag', event)" title="Maximize Viewport">⛶</button>
-            </div>
-          </div>
-          <span class="orient top">H</span>
-          <span class="orient bottom">F</span>
-          <span class="orient left">A</span>
-          <span class="orient right">P</span>
-          <div class="vp-wrap" id="wSag">
-            <img class="ct-plane" id="sagCt" src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
-            <canvas class="seg-plane" id="sagCanvas" width="{sag_w}" height="{sag_h}"></canvas>
-            <div class="xh v" id="sagV" style="background:#fb923c;"></div>
-            <div class="xh h" id="sagH" style="background:#38bdf8;"></div>
-          </div>
-          <div class="vp-footer">
-            <span>W: 400 L: -110</span>
-            <span id="iSag">Slice {ns // 2} / {ns - 1}</span>
-          </div>
+        <!-- Smart Scrollbar for Axial -->
+        <div class="smart-scrollbar" id="smartScrollAx" onclick="onSmartScrollClick(event, 'axial')" title="Smart Scrollbar: Jump Axial slice">
+          <div class="smart-track" id="smartTrackAx"><div class="smart-thumb" id="smartThumbAx"></div></div>
         </div>
-
-        <!-- Box 3: Coronal (Bottom-Left) -->
-        <div class="viewport-box" id="pCor" onclick="setActiveBox('pCor')">
-          <div class="vp-header">
-            <span class="vp-tag tag-coronal">CORONAL</span>
-            <span style="color:#94a3b8; font-size:11px;">Body 4.0 CE</span>
-            <div class="vp-actions">
-              <button class="vp-btn" onclick="maximizeBox('pCor', event)" title="Maximize Viewport">⛶</button>
-            </div>
-          </div>
-          <span class="orient top">H</span>
-          <span class="orient bottom">F</span>
-          <span class="orient left">R</span>
-          <span class="orient right">L</span>
-          <div class="vp-wrap" id="wCor">
-            <img class="ct-plane" id="corCt" src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
-            <canvas class="seg-plane" id="corCanvas" width="{cor_w}" height="{cor_h}"></canvas>
-            <div class="xh v" id="corV" style="background:#34d399;"></div>
-            <div class="xh h" id="corH" style="background:#38bdf8;"></div>
-          </div>
-          <div class="vp-footer">
-            <span>W: 400 L: -110</span>
-            <span id="iCor">Slice {nc // 2} / {nc - 1}</span>
-          </div>
-        </div>
-
-        <!-- Box 4: 3D Volume (Bottom-Right) -->
-        <div class="viewport-box" id="p3d" onclick="setActiveBox('p3d')">
-          <div class="vp-header">
-            <span class="vp-tag tag-3d">3D VOLUME</span>
-            <span style="color:#c084fc; font-size:11px;">EAT / PVAT Render</span>
-            <div class="vp-actions">
-              <button class="vp-btn" id="btnSpin" onclick="toggleSpin(event)" style="background:#7c3aed; color:#fff;">Auto-Spin</button>
-              <button class="vp-btn" onclick="maximizeBox('p3d', event)" title="Maximize Viewport">⛶</button>
-            </div>
-          </div>
-          <div class="vp-wrap" id="w3D">
-            <img class="ct-plane" id="volImg" src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'" draggable="false" style="cursor:grab;">
-          </div>
-          <div class="vp-footer">
-            <span>Thoracic MIP + Colored Fat Volume</span>
-            <span id="i3d">Drag mouse to spin</span>
-          </div>
-        </div>
-
       </div>
 
-      <!-- Center Bottom Bar -->
-      <div class="bottom-bar">
-        
-        <!-- Scrubber Slider for Active Plane -->
-        <div class="slider-container">
-          <button class="slider-step-btn" onclick="stepActiveSlice(-1)">&larr;</button>
-          <span id="activePlaneName" style="color:#38bdf8; font-weight:bold;">AXIAL:</span>
-          <input type="range" id="activeSlider" min="0" max="{nz - 1}" value="{nz // 2}">
-          <button class="slider-step-btn" onclick="stepActiveSlice(1)">&rarr;</button>
-          <span id="activeSliceReadout">28/{nz - 1}</span>
+      <!-- Viewport 2: Sagittal MPR (Top-Right) -->
+      <div class="viewport-box" id="pSag" onclick="setActiveBox('pSag')">
+        <!-- Cornerstone Corner Overlays -->
+        <div class="cs-overlay cs-top-left">
+          <div class="study-meta">22-May-2014</div>
+          <div class="series-meta">Body 4.0 CE (Sagittal)</div>
+        </div>
+        <div class="cs-overlay cs-top-right">
+          <button class="vp-btn" onclick="maximizeBox('pSag', event)" title="Maximize Viewport">⛶</button>
+        </div>
+        <div class="cs-overlay cs-bottom-left" id="hudWindowSag">W: 400 L: -110</div>
+        <div class="cs-overlay cs-bottom-right" id="iSag">I: {ns // 2 + 1} ({ns // 2 + 1}/{ns})</div>
+
+        <!-- Anatomical Markers -->
+        <span class="orient top">H</span>
+        <span class="orient bottom">F</span>
+        <span class="orient left">A</span>
+        <span class="orient right">P</span>
+
+        <div class="vp-canvas-wrap" id="wSag">
+          <img class="ct-plane" id="sagCt" src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
+          <canvas class="seg-plane" id="sagCanvas" width="{sag_w}" height="{sag_h}"></canvas>
+          <div class="xh v" id="sagV" style="background:#f97316;"></div>
+          <div class="xh h" id="sagH" style="background:#38bdf8;"></div>
         </div>
 
-        <!-- Window Presets -->
-        <div class="preset-selector">
-          <span>Preset:</span>
-          <select id="presetSelect" class="select-dropdown" style="width:160px; padding:3px 6px;" onchange="applyWindowPreset(this.value)">
-            <option value="fat">Cardiac Fat (W:400 L:-110)</option>
-            <option value="soft">Soft Tissue (W:350 L:40)</option>
-            <option value="lung">Chest / Lung (W:1500 L:-600)</option>
-            <option value="bone">Bone / Calcium (W:1500 L:300)</option>
-          </select>
+        <!-- Smart Scrollbar for Sagittal -->
+        <div class="smart-scrollbar" id="smartScrollSag" onclick="onSmartScrollClick(event, 'sagittal')" title="Smart Scrollbar: Jump Sagittal slice">
+          <div class="smart-track" id="smartTrackSag"><div class="smart-thumb" id="smartThumbSag"></div></div>
+        </div>
+      </div>
+
+      <!-- Viewport 3: Coronal MPR (Bottom-Left) -->
+      <div class="viewport-box" id="pCor" onclick="setActiveBox('pCor')">
+        <!-- Cornerstone Corner Overlays -->
+        <div class="cs-overlay cs-top-left">
+          <div class="study-meta">22-May-2014</div>
+          <div class="series-meta">Lung 3.0 CE (Coronal)</div>
+        </div>
+        <div class="cs-overlay cs-top-right">
+          <button class="vp-btn" onclick="maximizeBox('pCor', event)" title="Maximize Viewport">⛶</button>
+        </div>
+        <div class="cs-overlay cs-bottom-left" id="hudWindowCor">W: 400 L: -110</div>
+        <div class="cs-overlay cs-bottom-right" id="iCor">I: {nc // 2 + 1} ({nc // 2 + 1}/{nc})</div>
+
+        <!-- Anatomical Markers -->
+        <span class="orient top">H</span>
+        <span class="orient bottom">F</span>
+        <span class="orient left">R</span>
+        <span class="orient right">L</span>
+
+        <div class="vp-canvas-wrap" id="wCor">
+          <img class="ct-plane" id="corCt" src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
+          <canvas class="seg-plane" id="corCanvas" width="{cor_w}" height="{cor_h}"></canvas>
+          <div class="xh v" id="corV" style="background:#22c55e;"></div>
+          <div class="xh h" id="corH" style="background:#38bdf8;"></div>
         </div>
 
-        <!-- OHIF Authentic Mode Pills -->
-        <div class="mode-pills">
-          <div class="mode-pill active">Segmentation</div>
-          <div class="mode-pill">Volume</div>
-          <div class="mode-pill">4D</div>
-          <div class="mode-pill">Annotations</div>
+        <!-- Smart Scrollbar for Coronal -->
+        <div class="smart-scrollbar" id="smartScrollCor" onclick="onSmartScrollClick(event, 'coronal')" title="Smart Scrollbar: Jump Coronal slice">
+          <div class="smart-track" id="smartTrackCor"><div class="smart-thumb" id="smartThumbCor"></div></div>
+        </div>
+      </div>
+
+      <!-- Viewport 4: 3D Thoracic Render (Bottom-Right) -->
+      <div class="viewport-box" id="p3d" onclick="setActiveBox('p3d')">
+        <!-- Cornerstone Corner Overlays -->
+        <div class="cs-overlay cs-top-left">
+          <div class="study-meta">3D Reconstruction</div>
+          <div class="series-meta">Thoracic MIP + EAT Volume</div>
+        </div>
+        <div class="cs-overlay cs-top-right">
+          <button class="vp-btn" id="btnSpin" onclick="toggleSpin(event)" style="background:#7c3aed; color:#fff;">Auto-Spin</button>
+          <button class="vp-btn" onclick="maximizeBox('p3d', event)" title="Maximize Viewport">⛶</button>
+        </div>
+        <div class="cs-overlay cs-bottom-left">Drag to rotate volume</div>
+        <div class="cs-overlay cs-bottom-right" id="i3d">Angle: 0&deg; (1/{nf})</div>
+
+        <div class="vp-canvas-wrap" id="w3D">
+          <img class="ct-plane" id="volImg" src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'" draggable="false" style="cursor:grab;">
+        </div>
+
+        <!-- Smart Scrollbar for 3D Volume -->
+        <div class="smart-scrollbar" id="smartScroll3D" onclick="onSmartScrollClick(event, '3d')" title="Smart Scrollbar: Scrub 3D Rotation">
+          <div class="smart-track" id="smartTrack3D"><div class="smart-thumb" id="smartThumb3D"></div></div>
         </div>
       </div>
 
     </section>
 
     <!-- ============================================== -->
-    <!-- RIGHT PANE: Measurements & Adipose Stats Panel  -->
+    <!-- RIGHT DRAWER: Segmentations & Measurements     -->
     <!-- ============================================== -->
-    <aside class="right-pane" id="rightPane">
-      
-      <!-- Top Tabs -->
-      <div class="tab-header">
-        <button class="tab-btn active" id="tabSeg" onclick="switchRightTab('seg')">Segmentation (8)</button>
-        <button class="tab-btn" id="tabMeas" onclick="switchRightTab('meas')">Measurements (19)</button>
+    <aside class="right-drawer" id="rightDrawer">
+      <div class="drawer-tab-bar">
+        <button class="drawer-tab-btn active" id="tabSeg" onclick="switchRightTab('seg')">Segmentations (8)</button>
+        <button class="drawer-tab-btn" id="tabMeas" onclick="switchRightTab('meas')">Measurements (19)</button>
+        <button class="drawer-close-btn" onclick="toggleRightPanel(null)" title="Close Panel">&times;</button>
       </div>
 
-      <!-- Tab Content: Segmentation Compartments -->
+      <!-- Panel: Segmentations -->
       <div id="panelSeg">
         <div class="compartment-list">
-          <div class="pane-heading">
-            <span>8 Target Compartments</span>
-            <span style="color:#c084fc; font-family:monospace;">DICOM-SEG</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span class="drawer-heading">8 Target Layers</span>
+            <span style="color:#c084fc; font-family:monospace; font-size:10px;">DICOM-SEG</span>
           </div>
 
           <!-- Quick Actions: Show / Hide All -->
-          <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <div style="display:flex; gap:6px; margin-bottom:6px;">
             <button class="vp-btn" onclick="setAllCompartments(true)" style="flex:1; padding:3px 6px;">Show All</button>
             <button class="vp-btn" onclick="setAllCompartments(false)" style="flex:1; padding:3px 6px;">Hide All</button>
           </div>
@@ -1291,7 +1361,7 @@ def generate_ohif_3pane_viewer_html(
           <div class="compartment-row" id="row_PVAT_LAD">
             <div class="comp-info">
               <span class="color-dot" style="background:#f97316;"></span>
-              <strong style="color:#fff;">PVAT LAD</strong>
+              <span>PVAT LAD</span>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
               <button class="solo-btn" onclick="isolateCompartment('PVAT_LAD')" title="Isolate this compartment">Solo</button>
@@ -1332,10 +1402,10 @@ def generate_ohif_3pane_viewer_html(
         </div>
       </div>
 
-      <!-- Tab Content: Measurements Table -->
-      <div class="metrics-section" id="panelMeas">
-        <div class="metrics-header">
-          <span style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase;">Clinical Measurements</span>
+      <!-- Panel: Measurements -->
+      <div class="metrics-section" id="panelMeas" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span class="drawer-heading">Clinical Measurements</span>
           <span style="font-size:9px; color:#38bdf8; font-family:monospace;">19-Col MGH Schema</span>
         </div>
         <table class="metrics-table">
@@ -1350,28 +1420,27 @@ def generate_ohif_3pane_viewer_html(
             {metrics_rows}
           </tbody>
         </table>
-      </div>
 
-      <!-- Adipose Status Card -->
-      <div class="status-card">
-        <div style="display:flex; justify-content:space-between;">
-          <span>Adipose Attenuation Window:</span>
-          <strong style="color:#38bdf8;">[-190.0, -30.0] HU</strong>
-        </div>
-        <div style="display:flex; justify-content:space-between;">
-          <span>Pericoronary Radial Distance:</span>
-          <strong style="color:#fb923c;">10.0 mm</strong>
-        </div>
-        <div style="display:flex; justify-content:space-between;">
-          <span>Total EAT Adipose Volume:</span>
-          <strong style="color:#34d399;">{metrics.get('EAT Total Volume (cm3)', 75.79):.2f} cm³</strong>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:3px; padding-top:3px; border-top:1px dashed #1e293b;">
-          <span>OHIF Architecture:</span>
-          <strong style="color:#38bdf8;"><a href="https://ohif.org/release-notes/3p13" target="_blank" style="color:#38bdf8; text-decoration:none;">v3.13 Next (Cornerstone v5)</a></strong>
+        <!-- Status Card -->
+        <div class="status-card" style="margin:12px 0 0 0;">
+          <div style="display:flex; justify-content:space-between;">
+            <span>Adipose Attenuation Window:</span>
+            <strong style="color:#38bdf8;">[-190.0, -30.0] HU</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Pericoronary Radial Distance:</span>
+            <strong style="color:#fb923c;">10.0 mm</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Total EAT Adipose Volume:</span>
+            <strong style="color:#34d399;">{metrics.get('EAT Total Volume (cm3)', 75.79):.2f} cm³</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:3px; padding-top:3px; border-top:1px dashed #1e293b;">
+            <span>OHIF Architecture:</span>
+            <strong style="color:#38bdf8;"><a href="https://ohif.org/release-notes/3p13" target="_blank" style="color:#38bdf8; text-decoration:none;">v3.13 Next (Cornerstone v5)</a></strong>
+          </div>
         </div>
       </div>
-
     </aside>
 
   </main>
@@ -1381,7 +1450,7 @@ def generate_ohif_3pane_viewer_html(
 <script>
   const NZ = {nz}, NS = {ns}, NC = {nc}, NF = {nf};
   const pad = n => String(n).padStart(3, '0');
-  
+
   let z = Math.floor(NZ / 2);
   let s = Math.floor(NS / 2);
   let c = Math.floor(NC / 2);
@@ -1472,81 +1541,137 @@ def generate_ohif_3pane_viewer_html(
     ctx.putImageData(imgData, 0, 0);
   }}
 
+  // Update All Viewports & Linked Overlays
   function updateViewports() {{
     // 1. Axial
     $('axCt').src = `slices/ct_${{pad(z)}}.png`;
     drawFilteredSeg('axCanvas', `slices/seg_${{pad(z)}}.png`);
-    $('iAx').textContent = `Slice ${{z}} / ${{NZ - 1}}`;
+    $('iAx').textContent = `I: ${{z + 1}} (${{z + 1}}/${{NZ}})`;
 
     // 2. Sagittal
     $('sagCt').src = `sagittal/ct_${{pad(s)}}.png`;
     drawFilteredSeg('sagCanvas', `sagittal/seg_${{pad(s)}}.png`);
-    $('iSag').textContent = `Slice ${{s}} / ${{NS - 1}}`;
+    $('iSag').textContent = `I: ${{s + 1}} (${{s + 1}}/${{NS}})`;
 
     // 3. Coronal
     $('corCt').src = `coronal/ct_${{pad(c)}}.png`;
     drawFilteredSeg('corCanvas', `coronal/seg_${{pad(c)}}.png`);
-    $('iCor').textContent = `Slice ${{c}} / ${{NC - 1}}`;
+    $('iCor').textContent = `I: ${{c + 1}} (${{c + 1}}/${{NC}})`;
 
     // Crosshair positioning
-    const u = s / (NS - 1);
-    const v = c / (NC - 1);
-    const w = 1 - (z / (NZ - 1));
+    const u = s / Math.max(1, NS - 1);
+    const v = c / Math.max(1, NC - 1);
+    const w = 1 - (z / Math.max(1, NZ - 1));
 
     $('axV').style.left = (u * 100) + '%';
     $('axH').style.top = (v * 100) + '%';
-    
+
     $('sagV').style.left = (v * 100) + '%';
     $('sagH').style.top = (w * 100) + '%';
 
     $('corV').style.left = (u * 100) + '%';
     $('corH').style.top = (w * 100) + '%';
 
-    // Update bottom slider according to active plane
-    syncBottomSlider();
-
-    // Update OHIF v3.13 Smart Scrollbar position
-    updateSmartScrollbar();
+    // Update OHIF v3.13 Smart Scrollbars on ALL Viewports
+    updateAllSmartScrollbars();
   }}
 
-  function syncBottomSlider() {{
-    const slider = $('activeSlider');
-    const readout = $('activeSliceReadout');
-    const label = $('activePlaneName');
+  // Smart Scrollbar Updating for All Viewports
+  function updateAllSmartScrollbars() {{
+    updateScrollThumb('smartTrackAx', 'smartThumbAx', z, NZ);
+    updateScrollThumb('smartTrackSag', 'smartThumbSag', s, NS);
+    updateScrollThumb('smartTrackCor', 'smartThumbCor', c, NC);
+    updateScrollThumb('smartTrack3D', 'smartThumb3D', f, NF);
+  }}
 
-    if (activePlane === 'axial') {{
-      label.textContent = 'AXIAL:';
-      label.style.color = '#38bdf8';
-      slider.max = NZ - 1;
-      slider.value = z;
-      readout.textContent = `${{z}}/${{NZ - 1}}`;
-    }} else if (activePlane === 'sagittal') {{
-      label.textContent = 'SAGITTAL:';
-      label.style.color = '#34d399';
-      slider.max = NS - 1;
-      slider.value = s;
-      readout.textContent = `${{s}}/${{NS - 1}}`;
-    }} else if (activePlane === 'coronal') {{
-      label.textContent = 'CORONAL:';
-      label.style.color = '#fb923c';
-      slider.max = NC - 1;
-      slider.value = c;
-      readout.textContent = `${{c}}/${{NC - 1}}`;
+  function updateScrollThumb(trackId, thumbId, currentIdx, maxCount) {{
+    const track = $(trackId);
+    const thumb = $(thumbId);
+    if (!track || !thumb || maxCount <= 1) return;
+    const trackH = track.clientHeight - thumb.clientHeight;
+    if (trackH > 0) {{
+      const pos = Math.round((currentIdx / (maxCount - 1)) * trackH);
+      thumb.style.top = pos + 'px';
     }}
   }}
 
-  $('activeSlider').addEventListener('input', (e) => {{
-    const val = parseInt(e.target.value);
-    if (activePlane === 'axial') z = val;
-    else if (activePlane === 'sagittal') s = val;
-    else if (activePlane === 'coronal') c = val;
+  function onSmartScrollClick(e, plane) {{
+    e.stopPropagation();
+    const track = e.currentTarget.querySelector('.smart-track');
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.min(1.0, Math.max(0.0, (e.clientY - rect.top) / rect.height));
+
+    if (plane === 'axial') {{
+      setActiveBox('pAx');
+      z = Math.round(ratio * (NZ - 1));
+    }} else if (plane === 'sagittal') {{
+      setActiveBox('pSag');
+      s = Math.round(ratio * (NS - 1));
+    }} else if (plane === 'coronal') {{
+      setActiveBox('pCor');
+      c = Math.round(ratio * (NC - 1));
+    }} else if (plane === '3d') {{
+      setActiveBox('p3d');
+      f = Math.round(ratio * (NF - 1));
+      $('volImg').src = frames3d[f].src;
+      $('i3d').textContent = `Angle: ${{Math.round((f / NF) * 360)}}deg (${{f + 1}}/${{NF}})`;
+      return;
+    }}
+    updateViewports();
+  }}
+
+  // Mouse Wheel Handling on EVERY Viewport
+  $('pAx').addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    setActiveBox('pAx');
+    z = clamp(z + (e.deltaY > 0 ? -1 : 1), 0, NZ - 1);
     updateViewports();
   }});
 
-  function stepActiveSlice(delta) {{
+  $('pSag').addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    setActiveBox('pSag');
+    s = clamp(s + (e.deltaY > 0 ? 1 : -1), 0, NS - 1);
+    updateViewports();
+  }});
+
+  $('pCor').addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    setActiveBox('pCor');
+    c = clamp(c + (e.deltaY > 0 ? 1 : -1), 0, NC - 1);
+    updateViewports();
+  }});
+
+  $('p3d').addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    setActiveBox('p3d');
+    isSpinning = false;
+    $('btnSpin').style.background = '#334155';
+    f = (f + (e.deltaY > 0 ? 1 : NF - 1)) % NF;
+    $('volImg').src = frames3d[f].src;
+    $('i3d').textContent = `Angle: ${{Math.round((f / NF) * 360)}}deg (${{f + 1}}/${{NF}})`;
+    updateAllSmartScrollbars();
+  }});
+
+  // Keyboard Navigation (Arrow Keys)
+  window.addEventListener('keydown', (e) => {{
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {{
+      stepActivePlane(1);
+    }} else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {{
+      stepActivePlane(-1);
+    }}
+  }});
+
+  function stepActivePlane(delta) {{
     if (activePlane === 'axial') z = clamp(z + delta, 0, NZ - 1);
     else if (activePlane === 'sagittal') s = clamp(s + delta, 0, NS - 1);
     else if (activePlane === 'coronal') c = clamp(c + delta, 0, NC - 1);
+    else if (activePlane === '3d') {{
+      f = (f + (delta > 0 ? 1 : NF - 1)) % NF;
+      $('volImg').src = frames3d[f].src;
+      $('i3d').textContent = `Angle: ${{Math.round((f / NF) * 360)}}deg (${{f + 1}}/${{NF}})`;
+    }}
     updateViewports();
   }}
 
@@ -1584,28 +1709,6 @@ def generate_ohif_3pane_viewer_html(
     updateViewports();
   }});
 
-  // Mouse Wheel Scrolling per Viewport
-  $('pAx').addEventListener('wheel', (e) => {{
-    e.preventDefault();
-    setActiveBox('pAx');
-    z = clamp(z + (e.deltaY > 0 ? -1 : 1), 0, NZ - 1);
-    updateViewports();
-  }});
-
-  $('pSag').addEventListener('wheel', (e) => {{
-    e.preventDefault();
-    setActiveBox('pSag');
-    s = clamp(s + (e.deltaY > 0 ? 1 : -1), 0, NS - 1);
-    updateViewports();
-  }});
-
-  $('pCor').addEventListener('wheel', (e) => {{
-    e.preventDefault();
-    setActiveBox('pCor');
-    c = clamp(c + (e.deltaY > 0 ? 1 : -1), 0, NC - 1);
-    updateViewports();
-  }});
-
   // 3D Volume Drag-to-Rotate
   let dragX = null;
   $('volImg').addEventListener('mousedown', (e) => {{
@@ -1617,10 +1720,12 @@ def generate_ohif_3pane_viewer_html(
   window.addEventListener('mousemove', (e) => {{
     if (dragX === null) return;
     const delta = e.clientX - dragX;
-    if (Math.abs(delta) > 6) {{
+    if (Math.abs(delta) > 5) {{
       f = (f + (delta > 0 ? 1 : NF - 1)) % NF;
       dragX = e.clientX;
       $('volImg').src = frames3d[f].src;
+      $('i3d').textContent = `Angle: ${{Math.round((f / NF) * 360)}}deg (${{f + 1}}/${{NF}})`;
+      updateAllSmartScrollbars();
     }}
   }});
 
@@ -1628,6 +1733,8 @@ def generate_ohif_3pane_viewer_html(
     if (isSpinning && frames3d.length > 0) {{
       f = (f + 1) % NF;
       $('volImg').src = frames3d[f].src;
+      $('i3d').textContent = `Angle: ${{Math.round((f / NF) * 360)}}deg (${{f + 1}}/${{NF}})`;
+      updateAllSmartScrollbars();
     }}
   }}, 110);
 
@@ -1645,21 +1752,19 @@ def generate_ohif_3pane_viewer_html(
     if (id === 'pAx') activePlane = 'axial';
     else if (id === 'pSag') activePlane = 'sagittal';
     else if (id === 'pCor') activePlane = 'coronal';
-    syncBottomSlider();
+    else if (id === 'p3d') activePlane = '3d';
   }}
 
   // Maximize / Restore Viewports
   function maximizeBox(id, e) {{
     if (e) e.stopPropagation();
-    const grid = $('mprGrid');
+    const grid = $('viewportsGrid');
     if (isGridMaximized && maximizedBoxId === id) {{
-      // Restore 2x2
       document.querySelectorAll('.viewport-box').forEach(b => b.classList.remove('hidden'));
       grid.classList.remove('maximized');
       isGridMaximized = false;
       maximizedBoxId = null;
     }} else {{
-      // Maximize target
       document.querySelectorAll('.viewport-box').forEach(b => {{
         if (b.id === id) b.classList.remove('hidden');
         else b.classList.add('hidden');
@@ -1668,6 +1773,7 @@ def generate_ohif_3pane_viewer_html(
       isGridMaximized = true;
       maximizedBoxId = id;
     }}
+    setTimeout(updateAllSmartScrollbars, 50);
   }}
 
   function toggleGridLayout() {{
@@ -1681,27 +1787,28 @@ def generate_ohif_3pane_viewer_html(
   // Window Presets
   function applyWindowPreset(p) {{
     const ctImages = document.querySelectorAll('img.ct-plane');
-    const hud = $('hudWindow');
+    const hudLabels = [$('hudWindowAx'), $('hudWindowSag'), $('hudWindowCor')];
+    let wlText = 'W: 400 L: -110';
     if (p === 'fat') {{
       ctImages.forEach(im => im.style.filter = 'contrast(1.2) brightness(1.0)');
-      if (hud) hud.textContent = 'W: 400 L: -110';
+      wlText = 'W: 400 L: -110';
     }} else if (p === 'soft') {{
       ctImages.forEach(im => im.style.filter = 'contrast(1.0) brightness(1.2)');
-      if (hud) hud.textContent = 'W: 350 L: 40';
+      wlText = 'W: 350 L: 40';
     }} else if (p === 'lung') {{
       ctImages.forEach(im => im.style.filter = 'contrast(0.7) brightness(1.5)');
-      if (hud) hud.textContent = 'W: 1500 L: -600';
+      wlText = 'W: 1500 L: -600';
     }} else if (p === 'bone') {{
       ctImages.forEach(im => im.style.filter = 'contrast(1.6) brightness(0.8)');
-      if (hud) hud.textContent = 'W: 1500 L: 300';
+      wlText = 'W: 1500 L: 300';
     }}
+    hudLabels.forEach(h => {{ if (h) h.textContent = wlText; }});
   }}
 
   let soloCompartmentId = null;
 
   function isolateCompartment(id) {{
     if (soloCompartmentId === id) {{
-      // Restore all
       soloCompartmentId = null;
       COMP_DEFS.forEach(c => {{
         const chk = $('chk_' + c.id);
@@ -1752,20 +1859,22 @@ def generate_ohif_3pane_viewer_html(
     updateViewports();
   }}
 
-  // Opacity Control
   function setOpacity(val) {{
-    const alpha = val / 100.0;
-    $('opacityVal').textContent = val + '%';
-    document.querySelectorAll('.seg-plane').forEach(cv => cv.style.opacity = alpha);
+    const opacity = val / 100.0;
+    $('opacityVal').textContent = `${{val}}%`;
+    document.querySelectorAll('canvas.seg-plane').forEach(el => {{
+      el.style.opacity = opacity;
+    }});
   }}
 
   function setTool(tool) {{
     currentTool = tool;
-    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
     if (tool === 'crosshair') $('btnCrosshair').classList.add('active');
     else if (tool === 'pan') $('btnPan').classList.add('active');
     else if (tool === 'zoom') $('btnZoom').classList.add('active');
-    else if (tool === 'wl') $('btnWl').classList.add('active');
+    else if (tool === 'length') $('btnLength').classList.add('active');
+    else if (tool === 'angle') $('btnAngle').classList.add('active');
   }}
 
   function resetAllViewports() {{
@@ -1773,26 +1882,55 @@ def generate_ohif_3pane_viewer_html(
     s = Math.floor(NS / 2);
     c = Math.floor(NC / 2);
     f = 0;
-    applyWindowPreset('fat');
-    setOpacity(85);
     $('opacitySlider').value = 85;
-    $('presetSelect').value = 'fat';
-    isGridMaximized = false;
-    maximizedBoxId = null;
-    document.querySelectorAll('.viewport-box').forEach(b => b.classList.remove('hidden'));
-    $('mprGrid').classList.remove('maximized');
-    setTool('crosshair');
+    setOpacity(85);
+    applyWindowPreset('fat');
     setAllCompartments(true);
+    if (isGridMaximized) toggleGridLayout();
+  }}
+
+  // Drawer Toggling
+  function toggleLeftDrawer() {{
+    $('leftDrawer').classList.toggle('collapsed');
+    setTimeout(updateAllSmartScrollbars, 220);
+  }}
+
+  let activeRightPanel = 'seg';
+  function toggleRightPanel(panel) {{
+    const drawer = $('rightDrawer');
+    const btnSeg = $('btnToggleSeg');
+    const btnMeas = $('btnToggleMeas');
+
+    if (panel === null || (drawer.style.display !== 'none' && activeRightPanel === panel)) {{
+      drawer.style.display = 'none';
+      btnSeg.classList.remove('active');
+      btnMeas.classList.remove('active');
+    }} else {{
+      drawer.style.display = 'flex';
+      switchRightTab(panel);
+    }}
+    setTimeout(updateAllSmartScrollbars, 220);
   }}
 
   function switchRightTab(tab) {{
+    activeRightPanel = tab;
+    const btnSeg = $('btnToggleSeg');
+    const btnMeas = $('btnToggleMeas');
+
     if (tab === 'seg') {{
       $('tabSeg').classList.add('active');
       $('tabMeas').classList.remove('active');
       $('panelSeg').style.display = 'block';
+      $('panelMeas').style.display = 'none';
+      btnSeg.classList.add('active');
+      btnMeas.classList.remove('active');
     }} else {{
       $('tabMeas').classList.add('active');
       $('tabSeg').classList.remove('active');
+      $('panelSeg').style.display = 'none';
+      $('panelMeas').style.display = 'block';
+      btnMeas.classList.add('active');
+      btnSeg.classList.remove('active');
     }}
   }}
 
@@ -1800,40 +1938,35 @@ def generate_ohif_3pane_viewer_html(
 
   function switchParticipant(pid) {{
     if (String(pid) === String(currentParticipantId)) return;
-    try {{
-      if (typeof event !== 'undefined' && event && event.target && event.target.tagName === 'BUTTON') {{
-        event.target.textContent = '...';
-      }}
-    }} catch (e) {{}}
     window.location.href = `/patient/${{pid}}/`;
   }}
 
-  function selectSeries(kind) {{
-    $('cardCT').classList.toggle('active', kind === 'ct');
-    $('cardSEG').classList.toggle('active', kind === 'seg');
-  }}
-
-  // OHIF v3.13 Smart Scrollbar Navigation & Read-Tracking
-  function updateSmartScrollbar() {{
-    const thumb = $('smartThumbAx');
-    const track = $('smartTrackAx');
-    if (!thumb || !track) return;
-    const trackHeight = track.clientHeight - 10;
-    if (trackHeight > 0) {{
-      const topPos = Math.round((z / Math.max(1, NZ - 1)) * trackHeight);
-      thumb.style.top = topPos + 'px';
+  function stepPatient(delta) {{
+    const sel = $('patientSelector');
+    if (!sel) return;
+    const nextIdx = clamp(sel.selectedIndex + delta, 0, sel.options.length - 1);
+    if (nextIdx !== sel.selectedIndex) {{
+      switchParticipant(sel.options[nextIdx].value);
     }}
   }}
 
-  function onSmartScrollClick(e, plane) {{
-    const track = $('smartTrackAx');
-    if (!track) return;
-    const rect = track.getBoundingClientRect();
-    const clickY = e.clientY - rect.top;
-    const ratio = Math.min(1.0, Math.max(0.0, clickY / rect.height));
+  function selectSeriesTile(plane) {{
+    document.querySelectorAll('.series-card').forEach(c => c.classList.remove('active'));
     if (plane === 'axial') {{
-      z = Math.round(ratio * (NZ - 1));
-      updateViewports();
+      $('cardCT').classList.add('active');
+      setActiveBox('pAx');
+    }} else if (plane === 'sagittal') {{
+      $('cardSag').classList.add('active');
+      setActiveBox('pSag');
+    }} else if (plane === 'coronal') {{
+      $('cardCor').classList.add('active');
+      setActiveBox('pCor');
+    }} else if (plane === '3d') {{
+      $('card3D').classList.add('active');
+      setActiveBox('p3d');
+    }} else if (plane === 'seg') {{
+      $('cardSEG').classList.add('active');
+      toggleRightPanel('seg');
     }}
   }}
 
@@ -1846,6 +1979,11 @@ def generate_ohif_3pane_viewer_html(
     }}
   }} catch (e) {{}}
 
+  // Window resize tracking
+  window.addEventListener('resize', () => {{
+    updateAllSmartScrollbars();
+  }});
+
   // Initial load
   updateViewports();
 </script>
@@ -1854,6 +1992,7 @@ def generate_ohif_3pane_viewer_html(
 """
     html_path.write_text(html_content, encoding="utf-8")
     return html_path
+
 
 
 def export_sample_to_ohif(
