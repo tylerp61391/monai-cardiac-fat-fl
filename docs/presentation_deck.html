@@ -26,7 +26,7 @@
     
     <div class="flex items-center space-x-4">
       <div class="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700" id="slideIndicator">
-        Slide 1 / 8
+        Slide 1 / 9
       </div>
       <button id="toggleNotesBtn" onclick="toggleNotes()" class="text-xs font-medium px-3 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 transition">
         Speaker Notes [N]
@@ -381,8 +381,74 @@
       </div>
     </div>
 
-    <!-- SLIDE 8: Summary & Key Takeaways -->
+    <!-- SLIDE 8: Zero-Code Clinician & Agent Experience -->
     <div class="slide flex-col justify-center space-y-6" data-slide="8">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Cardiologist Experience</span>
+        <span class="text-xs text-slate-500">Autonomous Agent Workflow</span>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white">Zero-Code Workflow: From Natural Language to OHIF</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Left Column: The Prompt & What Agent Executes -->
+        <div class="bg-slate-900/80 border border-cyan-900/40 rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-cyan-400 uppercase mb-2 flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              <span>1. The Clinician's Single Prompt</span>
+            </div>
+            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 text-xs text-slate-200 font-mono mb-4 leading-relaxed">
+              <span class="text-slate-500"># Prompt to Antigravity, Claude Code, or Cursor:</span><br>
+              &ldquo;Use this repo <span class="text-cyan-300">github.com/.../monai-cardiac-fat-fl</span> on this CT at <span class="text-amber-300">[scan_path]</span> to tell me EAT &amp; PVAT and show me the results&rdquo;
+            </div>
+
+            <div class="text-xs font-bold text-blue-400 uppercase mb-2">2. What the Agent Executes Automatically (via AGENTS.md)</div>
+            <ol class="text-xs text-slate-300 space-y-2 list-decimal list-inside">
+              <li><strong class="text-white">Reads AGENTS.md:</strong> Detects Recipe 1 instructions and clinical invariants.</li>
+              <li><strong class="text-white">Quantification:</strong> Runs <code class="text-cyan-300">cardiac-fat-fl quantify</code> to compute 8-compartment masks.</li>
+              <li><strong class="text-white">Launches Viewer:</strong> Starts background OHIF server on <code class="text-cyan-300">port 8000</code>.</li>
+            </ol>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+            &bull; Requires <strong class="text-white">zero terminal knowledge</strong>, Python scripting, or deep learning debugging from the clinician.
+          </div>
+        </div>
+
+        <!-- Right Column: What the Clinician Receives -->
+        <div class="bg-slate-900/80 border border-emerald-900/40 rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-emerald-400 uppercase mb-2 flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>3. Immediate Diagnostic Deliverables</span>
+            </div>
+
+            <div class="space-y-3">
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-xs font-bold text-white block mb-1">Interactive Diagnostic URL</span>
+                <p class="text-xs text-slate-400 mb-1">Clickable link opens instantly in any browser:</p>
+                <code class="text-xs text-emerald-300 font-mono font-bold">http://127.0.0.1:8000/patient/0/</code>
+              </div>
+
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs">
+                <span class="font-bold text-white block mb-1">Standardized 19-Column Metric Preview</span>
+                <div class="text-slate-300 space-y-0.5 font-mono text-[11px]">
+                  <div>&bull; EAT Total Volume: <span class="text-cyan-300 font-bold">112.4 cm&sup3;</span> (-88.2 HU)</div>
+                  <div>&bull; PVAT LAD Volume: <span class="text-amber-300 font-bold">7.8 cm&sup3;</span> (-71.3 HU &rarr; High Inflam.)</div>
+                  <div>&bull; PVAT Total: <span class="text-emerald-300 font-bold">21.1 cm&sup3;</span> (-77.2 HU)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+            <strong class="text-white">Clinical Impact:</strong> Bridges the gap between complex research code and busy cardiologists evaluating ischemic risk.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: Summary & Key Takeaways -->
+    <div class="slide flex-col justify-center space-y-6" data-slide="9">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Summary</span>
         <span class="text-xs text-slate-500">15-Minute Takeaway</span>
@@ -454,7 +520,8 @@
       5: "Two core mathematical algorithms power our transforms: First, Voronoi chamber allocation uses 3D Euclidean distance transforms from chamber walls to assign continuous fat voxels to the nearest chamber without overlap. Second, 10 mm radial dilation computes a 3D Euclidean buffer from coronary centerlines, clipped to the adipose window and outside the myocardium.",
       6: "For federated deployment with NVIDIA FLARE, we have two operational modes: Mode 1 distills a unified 3D SegResNet using FedProx proximal loss and FedBN, which keeps normalization layers local to adapt to scanner variations. Mode 2 uses parallel Welford aggregation to compute multi-site statistical moments with 100% mathematical equivalence to pooled data and zero scan transfer.",
       7: "Instead of requiring clinicians to install desktop software like 3D Slicer, we embed OHIF v3.13. It opens directly in the browser with standard 4-quadrant MPR (Axial, Sagittal, Coronal, and 3D rendering). Segmentations are standard DICOM-SEG SOP Class .66.4, ensuring complete PACS compatibility.",
-      8: "In summary, monai-cardiac-fat-fl delivers a complete, production-ready, zero-placeholder medical AI engine. It honors the clinical lineage of the original Harvard/MGH research while bringing it into the modern era of PyTorch, MONAI, federated learning, and zero-footprint web visualization. Thank you, and I welcome any questions."
+      8: "Here is the key clinical breakthrough in workflow: a cardiologist with zero AI or Python experience can simply tell an agent: 'Use this repo on my CT at path X to tell me EAT and PVAT and show the results.' The agent reads AGENTS.md, runs the quantification to segment the 8 compartments, launches the local OHIF server, and returns an interactive link with the clinical metrics. No terminal, no code, no DevOps required.",
+      9: "In summary, monai-cardiac-fat-fl delivers a complete, production-ready, zero-placeholder medical AI engine. It honors the clinical lineage of the original Harvard/MGH research while bringing it into the modern era of PyTorch, MONAI, federated learning, and zero-footprint web visualization. Thank you, and I welcome any questions."
     };
 
     function updateSlide() {
