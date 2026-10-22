@@ -360,6 +360,262 @@ def render_real_slice_assets(
     return num_slices
 
 
+def _load_hu_volume(ct_dicom_paths: List[Path]) -> Tuple[np.ndarray, Tuple[float, float, float]]:
+    """Loads sorted CT DICOM slices into a (D, H, W) HU volume and returns (sz, sy, sx) spacing in mm."""
+    slices: List[np.ndarray] = []
+    z_positions: List[float] = []
+    sy, sx = 1.0, 1.0
+    for p in ct_dicom_paths:
+        ds = pydicom.dcmread(str(p))
+        pix = np.squeeze(ds.pixel_array)
+        if pix.ndim > 2:
+            pix = pix[0]
+        slope = float(getattr(ds, "RescaleSlope", 1.0))
+        intercept = float(getattr(ds, "RescaleIntercept", 0.0))
+        slices.append(pix.astype(np.float32) * slope + intercept)
+        if hasattr(ds, "PixelSpacing"):
+            sy, sx = float(ds.PixelSpacing[0]), float(ds.PixelSpacing[1])
+        if hasattr(ds, "ImagePositionPatient"):
+            z_positions.append(float(ds.ImagePositionPatient[2]))
+    vol = np.stack(slices, axis=0)
+    if len(z_positions) > 1:
+        sz = float(np.median(np.abs(np.diff(z_positions)))) or 1.0
+    else:
+        sz = float(getattr(pydicom.dcmread(str(ct_dicom_paths[0]), stop_before_pixels=True), "SliceThickness", 1.0))
+    return vol, (sz, sy, sx)
+
+
+def _colorize_seg_plane(seg_plane: np.ndarray, alpha: int = 190) -> np.ndarray:
+    """Converts an (8, A, B) binary compartment plane into an RGBA overlay."""
+    _, a, b = seg_plane.shape
+    rgba = np.zeros((a, b, 4), dtype=np.uint8)
+    for comp_idx in range(seg_plane.shape[0]):
+        comp_name = SegmentationCompartment(comp_idx).name
+        rgb = COMPARTMENT_PALETTE.get(comp_name, {"rgb": [255, 255, 255]})["rgb"]
+        mask = seg_plane[comp_idx] > 0
+        if np.any(mask):
+            rgba[mask, 0], rgba[mask, 1], rgba[mask, 2], rgba[mask, 3] = rgb[0], rgb[1], rgb[2], alpha
+    return rgba
+
+
+def render_mpr_assets(
+    ct_dicom_paths: List[Path],
+    seg_array: np.ndarray,
+    output_dir: Path,
+    inplane_step: int = 2,
+    num_3d_frames: int = 36,
+) -> Dict[str, Any]:
+    """Pre-renders sagittal, coronal, and rotating 3D projection assets for the MPR viewer.
+
+    Sagittal/coronal planes are resampled to physical aspect ratio (mm) so anisotropic
+    slice spacing (e.g. 0.47 x 0.47 x 3.0 mm) is displayed without distortion. The 3D view
+    is a rotating volumetric projection: average-intensity CT context, bone/calcium MIP,
+    and thickness-weighted EAT/PVAT compartment projections.
+    """
+    import scipy.ndimage as ndi
+
+    sag_dir = output_dir / "sagittal"
+    cor_dir = output_dir / "coronal"
+    vol_dir = output_dir / "volume3d"
+    for d in (sag_dir, cor_dir, vol_dir):
+        d.mkdir(parents=True, exist_ok=True)
+
+    vol, (sz, sy, sx) = _load_hu_volume(ct_dicom_paths)
+    depth, height, width = vol.shape
+    seg = (seg_array[:, :depth, :height, :width] > 0).astype(np.uint8)
+
+    fat_min, fat_max = -310.0, 90.0
+    vol_u8 = (np.clip((vol - fat_min) / (fat_max - fat_min), 0.0, 1.0) * 255.0).astype(np.uint8)
+
+    # Physical display size for reformatted planes (superior at top)
+    sag_w = height // inplane_step
+    cor_w = width // inplane_step
+    sag_h = max(1, int(round(depth * sz / (sy * inplane_step))))
+    cor_h = max(1, int(round(depth * sz / (sx * inplane_step))))
+
+    sag_indices = list(range(0, width, inplane_step))
+    cor_indices = list(range(0, height, inplane_step))
+
+    for i, x in enumerate(sag_indices):
+        ct_plane = vol_u8[::-1, :, x]
+        Image.fromarray(ct_plane).resize((sag_w, sag_h), Image.BILINEAR).save(sag_dir / f"ct_{i:03d}.png")
+        rgba = _colorize_seg_plane(seg[:, ::-1, :, x])
+        Image.fromarray(rgba, mode="RGBA").resize((sag_w, sag_h), Image.NEAREST).save(sag_dir / f"seg_{i:03d}.png")
+
+    for i, y in enumerate(cor_indices):
+        ct_plane = vol_u8[::-1, y, :]
+        Image.fromarray(ct_plane).resize((cor_w, cor_h), Image.BILINEAR).save(cor_dir / f"ct_{i:03d}.png")
+        rgba = _colorize_seg_plane(seg[:, ::-1, y, :])
+        Image.fromarray(rgba, mode="RGBA").resize((cor_w, cor_h), Image.NEAREST).save(cor_dir / f"seg_{i:03d}.png")
+
+    # 3D rotating projection on a downsampled, near-isotropic grid
+    target_xy = 160
+    zoom_xy = target_xy / max(height, width)
+    iso_mm = sx / zoom_xy
+    zoom_z = sz / iso_mm
+    small_ct = ndi.zoom(vol, (zoom_z, zoom_xy, zoom_xy), order=1)
+    label_vol = np.zeros(seg.shape[1:], dtype=np.uint8)
+    for comp_idx in range(seg.shape[0]):  # later compartments (PVAT) take priority
+        label_vol[seg[comp_idx] > 0] = comp_idx + 1
+    small_lbl = ndi.zoom(label_vol, (zoom_z, zoom_xy, zoom_xy), order=0)
+
+    body = small_ct > -500.0
+    tissue = np.where(body, np.clip((small_ct + 200.0) / 400.0, 0.0, 1.0), 0.0).astype(np.float32)
+    bone = np.clip((small_ct - 150.0) / 800.0, 0.0, 1.0).astype(np.float32)
+
+    for f in range(num_3d_frames):
+        angle = 360.0 * f / num_3d_frames
+        if angle:
+            t_rot = ndi.rotate(tissue, angle, axes=(1, 2), reshape=False, order=1)
+            b_rot = ndi.rotate(bone, angle, axes=(1, 2), reshape=False, order=1)
+            l_rot = ndi.rotate(small_lbl, angle, axes=(1, 2), reshape=False, order=0)
+        else:
+            t_rot, b_rot, l_rot = tissue, bone, small_lbl
+
+        # Project along anterior-posterior axis (axis=1) -> coronal-like view, superior at top
+        aip = t_rot.mean(axis=1)[::-1]
+        mip = b_rot.max(axis=1)[::-1]
+        base = np.clip(0.55 * aip / (aip.max() + 1e-6) + 0.75 * mip, 0.0, 1.0)
+        rgb = np.stack([base, base, base], axis=-1) * 0.85
+
+        for comp_idx in range(seg.shape[0]):
+            thickness = (l_rot == comp_idx + 1).sum(axis=1)[::-1].astype(np.float32)
+            if thickness.max() <= 0:
+                continue
+            alpha = np.clip(thickness / 6.0, 0.0, 0.9)[..., None]
+            color = np.array(COMPARTMENT_PALETTE[SegmentationCompartment(comp_idx).name]["rgb"], dtype=np.float32) / 255.0
+            rgb = rgb * (1.0 - alpha) + color * alpha
+
+        img = Image.fromarray((np.clip(rgb, 0.0, 1.0) * 255).astype(np.uint8), mode="RGB")
+        img = img.resize((img.width * 3, img.height * 3), Image.BICUBIC)
+        img.save(vol_dir / f"frame_{f:03d}.png")
+
+    return {
+        "axial_count": depth,
+        "sag_count": len(sag_indices),
+        "cor_count": len(cor_indices),
+        "vol_frames": num_3d_frames,
+        "spacing_mm": [sz, sy, sx],
+    }
+
+
+def generate_mpr_viewer_html(participant_id: str, output_dir: Path, mpr_info: Dict[str, Any]) -> Path:
+    """Generates a self-contained 2x2 MPR viewer (Axial / Sagittal / Coronal / 3D) with linked crosshairs."""
+    html_path = output_dir / "mpr.html"
+    sz, sy, sx = mpr_info["spacing_mm"]
+    html = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<title>MPR &amp; 3D Viewer &bull; Participant {participant_id}</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  html, body {{ height: 100%; background: #05070d; color: #e2e8f0; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; overflow: hidden; }}
+  header {{ height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; background: #0f172a; border-bottom: 1px solid #1e293b; font-size: 13px; }}
+  header a, header button {{ color: #cbd5e1; background: #1e293b; border: 1px solid #334155; border-radius: 5px; padding: 5px 10px; font-size: 12px; text-decoration: none; cursor: pointer; margin-left: 6px; }}
+  header button.on {{ background: #0369a1; color: #fff; border-color: #0284c7; }}
+  .grid {{ display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; height: calc(100% - 48px); background: #1e293b; }}
+  .pane {{ position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }}
+  .label {{ position: absolute; top: 6px; left: 8px; font-size: 12px; font-weight: 700; z-index: 5; pointer-events: none; }}
+  .info {{ position: absolute; bottom: 6px; left: 8px; font-size: 11px; color: #94a3b8; font-family: monospace; z-index: 5; pointer-events: none; }}
+  .orient {{ position: absolute; font-size: 11px; color: #facc15; font-family: monospace; z-index: 5; pointer-events: none; }}
+  .wrap {{ position: relative; display: inline-block; line-height: 0; cursor: crosshair; }}
+  .wrap img.ct {{ max-width: calc(50vw - 24px); max-height: calc(50vh - 44px); display: block; image-rendering: auto; }}
+  .wrap img.seg {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.6; }}
+  .xh {{ position: absolute; pointer-events: none; z-index: 4; }}
+  .xh.v {{ top: 0; bottom: 0; width: 1px; }}
+  .xh.h {{ left: 0; right: 0; height: 1px; }}
+  #vol {{ max-width: calc(50vw - 24px); max-height: calc(50vh - 44px); cursor: grab; }}
+  .legend {{ display: flex; gap: 10px; font-size: 11px; }}
+  .legend span i {{ display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }}
+</style></head>
+<body>
+<header>
+  <div><b>MPR &amp; 3D</b> &nbsp;&bull;&nbsp; Participant {participant_id} &nbsp;&bull;&nbsp;
+    <span style="color:#38bdf8;font-family:monospace">{sx:.2f} x {sy:.2f} x {sz:.2f} mm</span></div>
+  <div class="legend">
+    <span><i style="background:#9333ea"></i>EAT</span><span><i style="background:#3b82f6"></i>LA</span>
+    <span><i style="background:#06b6d4"></i>LV</span><span><i style="background:#10b981"></i>RA</span>
+    <span><i style="background:#eab308"></i>RV</span><span><i style="background:#f97316"></i>LAD</span>
+    <span><i style="background:#ef4444"></i>LCX</span><span><i style="background:#ec4899"></i>RCA</span>
+  </div>
+  <div>
+    <label style="font-size:12px;color:#94a3b8">Overlay <input type="range" id="op" min="0" max="100" value="60" style="vertical-align:middle;width:90px"></label>
+    <button id="spin" class="on">Auto-rotate 3D</button>
+    <a href="index.html">&larr; Axial viewer</a>
+  </div>
+</header>
+<div class="grid">
+  <div class="pane" id="pAx"><div class="label" style="color:#38bdf8">AXIAL</div>
+    <div class="wrap" id="wAx"><img class="ct" id="axCt"><img class="seg" id="axSeg">
+      <div class="xh v" id="axV" style="background:#22c55e"></div><div class="xh h" id="axH" style="background:#f97316"></div></div>
+    <div class="info" id="iAx"></div></div>
+  <div class="pane" id="pSag"><div class="label" style="color:#22c55e">SAGITTAL</div>
+    <span class="orient" style="top:6px;left:50%">S</span><span class="orient" style="left:6px;top:50%">A</span><span class="orient" style="right:6px;top:50%">P</span>
+    <div class="wrap" id="wSag"><img class="ct" id="sagCt"><img class="seg" id="sagSeg">
+      <div class="xh v" id="sagV" style="background:#f97316"></div><div class="xh h" id="sagH" style="background:#38bdf8"></div></div>
+    <div class="info" id="iSag"></div></div>
+  <div class="pane" id="pCor"><div class="label" style="color:#f97316">CORONAL</div>
+    <span class="orient" style="top:6px;left:50%">S</span><span class="orient" style="left:6px;top:50%">R</span><span class="orient" style="right:6px;top:50%">L</span>
+    <div class="wrap" id="wCor"><img class="ct" id="corCt"><img class="seg" id="corSeg">
+      <div class="xh v" id="corV" style="background:#22c55e"></div><div class="xh h" id="corH" style="background:#38bdf8"></div></div>
+    <div class="info" id="iCor"></div></div>
+  <div class="pane" id="p3d"><div class="label" style="color:#c084fc">3D VOLUME (EAT / PVAT projection)</div>
+    <img id="vol" draggable="false"><div class="info" id="i3d">Drag to rotate</div></div>
+</div>
+<script>
+  const NZ = {mpr_info["axial_count"]}, NS = {mpr_info["sag_count"]}, NC = {mpr_info["cor_count"]}, NF = {mpr_info["vol_frames"]};
+  const pad = n => String(n).padStart(3, '0');
+  let z = Math.floor(NZ / 2), s = Math.floor(NS / 2), c = Math.floor(NC / 2), f = 0, spinning = true;
+  const $ = id => document.getElementById(id);
+  const clamp = (v, n) => Math.max(0, Math.min(n - 1, Math.round(v)));
+
+  // Preload 3D frames for smooth rotation
+  const frames = []; for (let i = 0; i < NF; i++) {{ const im = new Image(); im.src = `volume3d/frame_${{pad(i)}}.png`; frames.push(im); }}
+
+  function render() {{
+    $('axCt').src = `slices/ct_${{pad(z)}}.png`;   $('axSeg').src = `slices/seg_${{pad(z)}}.png`;
+    $('sagCt').src = `sagittal/ct_${{pad(s)}}.png`; $('sagSeg').src = `sagittal/seg_${{pad(s)}}.png`;
+    $('corCt').src = `coronal/ct_${{pad(c)}}.png`;  $('corSeg').src = `coronal/seg_${{pad(c)}}.png`;
+    const u = s / (NS - 1), v = c / (NC - 1), w = 1 - z / (NZ - 1);
+    $('axV').style.left = (u * 100) + '%';  $('axH').style.top = (v * 100) + '%';
+    $('sagV').style.left = (v * 100) + '%'; $('sagH').style.top = (w * 100) + '%';
+    $('corV').style.left = (u * 100) + '%'; $('corH').style.top = (w * 100) + '%';
+    $('iAx').textContent = `Slice ${{z}} / ${{NZ - 1}}  (scroll to move)`;
+    $('iSag').textContent = `Slice ${{s}} / ${{NS - 1}}`;
+    $('iCor').textContent = `Slice ${{c}} / ${{NC - 1}}`;
+  }}
+  function frac(e, el) {{ const r = el.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; }}
+
+  // Click to re-center crosshairs (linked navigation across all planes)
+  $('wAx').addEventListener('mousedown', e => {{ const [a, b] = frac(e, $('wAx')); s = clamp(a * (NS - 1), NS); c = clamp(b * (NC - 1), NC); render(); }});
+  $('wSag').addEventListener('mousedown', e => {{ const [a, b] = frac(e, $('wSag')); c = clamp(a * (NC - 1), NC); z = clamp((1 - b) * (NZ - 1), NZ); render(); }});
+  $('wCor').addEventListener('mousedown', e => {{ const [a, b] = frac(e, $('wCor')); s = clamp(a * (NS - 1), NS); z = clamp((1 - b) * (NZ - 1), NZ); render(); }});
+
+  // Mouse wheel scrolls through the plane under the cursor
+  $('pAx').addEventListener('wheel', e => {{ e.preventDefault(); z = clamp(z + (e.deltaY > 0 ? -1 : 1), NZ); render(); }});
+  $('pSag').addEventListener('wheel', e => {{ e.preventDefault(); s = clamp(s + (e.deltaY > 0 ? 1 : -1), NS); render(); }});
+  $('pCor').addEventListener('wheel', e => {{ e.preventDefault(); c = clamp(c + (e.deltaY > 0 ? 1 : -1), NC); render(); }});
+
+  // Overlay opacity
+  $('op').addEventListener('input', e => document.querySelectorAll('img.seg').forEach(i => i.style.opacity = e.target.value / 100));
+
+  // 3D rotation: auto-spin + drag
+  function show3d() {{ $('vol').src = frames[f].src; }}
+  setInterval(() => {{ if (spinning) {{ f = (f + 1) % NF; show3d(); }} }}, 120);
+  $('spin').onclick = () => {{ spinning = !spinning; $('spin').classList.toggle('on', spinning); }};
+  let dragX = null;
+  $('vol').addEventListener('mousedown', e => {{ dragX = e.clientX; spinning = false; $('spin').classList.remove('on'); }});
+  window.addEventListener('mouseup', () => dragX = null);
+  window.addEventListener('mousemove', e => {{ if (dragX === null) return; const d = e.clientX - dragX;
+    if (Math.abs(d) > 8) {{ f = (f + (d > 0 ? 1 : NF - 1)) % NF; dragX = e.clientX; show3d(); }} }});
+
+  render(); show3d();
+</script>
+</body></html>
+"""
+    html_path.write_text(html, encoding="utf-8")
+    return html_path
+
+
 def generate_ohif_3pane_viewer_html(
     participant_id: str,
     output_dir: Path,
@@ -535,6 +791,9 @@ def generate_ohif_3pane_viewer_html(
 
     <!-- Right External OHIF Launch -->
     <div class="flex items-center space-x-2">
+      <a href="mpr.html" class="cloud-btn" style="background:linear-gradient(135deg,#7c3aed,#c026d3);">
+        MPR / 3D View
+      </a>
       <a href="https://viewer.ohif.org/local" target="_blank" class="cloud-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
         Open in OHIF Cloud
@@ -1044,6 +1303,17 @@ def export_sample_to_ohif(
         seg_array=seg_data,
         slices_dir=slices_dir,
     )
+
+    # 3b. Pre-render sagittal, coronal, and rotating 3D assets for the MPR viewer
+    try:
+        mpr_info = render_mpr_assets(
+            ct_dicom_paths=copied_ct_paths,
+            seg_array=seg_data,
+            output_dir=dest_dir,
+        )
+        generate_mpr_viewer_html(participant_id=participant_id, output_dir=dest_dir, mpr_info=mpr_info)
+    except Exception as exc:  # MPR is an optional enhancement; never block the core export
+        print(f"Warning: MPR/3D asset generation skipped: {exc}")
 
     # 4. Check for CSV metrics or use summary_metrics
     final_metrics = summary_metrics or {}
