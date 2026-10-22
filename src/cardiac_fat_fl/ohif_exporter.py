@@ -427,11 +427,12 @@ def render_mpr_assets(
     fat_min, fat_max = -310.0, 90.0
     vol_u8 = (np.clip((vol - fat_min) / (fat_max - fat_min), 0.0, 1.0) * 255.0).astype(np.uint8)
 
-    # Physical display size for reformatted planes (superior at top)
-    sag_w = height // inplane_step
-    cor_w = width // inplane_step
-    sag_h = max(1, int(round(depth * sz / (sy * inplane_step))))
-    cor_h = max(1, int(round(depth * sz / (sx * inplane_step))))
+    # High-resolution physical display size for reformatted planes (superior at top)
+    target_w = max(width, height)
+    sag_w = target_w
+    cor_w = target_w
+    sag_h = max(1, int(round(target_w * (depth * sz) / (height * sy))))
+    cor_h = max(1, int(round(target_w * (depth * sz) / (width * sx))))
 
     sag_indices = list(range(0, width, inplane_step))
     cor_indices = list(range(0, height, inplane_step))
@@ -496,6 +497,10 @@ def render_mpr_assets(
         "cor_count": len(cor_indices),
         "vol_frames": num_3d_frames,
         "spacing_mm": [sz, sy, sx],
+        "sag_w": sag_w,
+        "sag_h": sag_h,
+        "cor_w": cor_w,
+        "cor_h": cor_h,
     }
 
 
@@ -503,6 +508,10 @@ def generate_mpr_viewer_html(participant_id: str, output_dir: Path, mpr_info: Di
     """Generates a self-contained 2x2 MPR viewer (Axial / Sagittal / Coronal / 3D) with linked crosshairs."""
     html_path = output_dir / "mpr.html"
     sz, sy, sx = mpr_info["spacing_mm"]
+    sag_w = int(mpr_info.get("sag_w", 512))
+    sag_h = int(mpr_info.get("sag_h", 365))
+    cor_w = int(mpr_info.get("cor_w", 512))
+    cor_h = int(mpr_info.get("cor_h", 365))
     html = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
 <title>MPR &amp; 3D Viewer &bull; Participant {participant_id}</title>
@@ -513,17 +522,20 @@ def generate_mpr_viewer_html(participant_id: str, output_dir: Path, mpr_info: Di
   header a, header button {{ color: #cbd5e1; background: #1e293b; border: 1px solid #334155; border-radius: 5px; padding: 5px 10px; font-size: 12px; text-decoration: none; cursor: pointer; margin-left: 6px; }}
   header button.on {{ background: #0369a1; color: #fff; border-color: #0284c7; }}
   .grid {{ display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; height: calc(100% - 48px); background: #1e293b; }}
-  .pane {{ position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }}
+  .pane {{ position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 26px 8px; }}
   .label {{ position: absolute; top: 6px; left: 8px; font-size: 12px; font-weight: 700; z-index: 5; pointer-events: none; }}
   .info {{ position: absolute; bottom: 6px; left: 8px; font-size: 11px; color: #94a3b8; font-family: monospace; z-index: 5; pointer-events: none; }}
   .orient {{ position: absolute; font-size: 11px; color: #facc15; font-family: monospace; z-index: 5; pointer-events: none; }}
-  .wrap {{ position: relative; display: inline-block; line-height: 0; cursor: crosshair; }}
-  .wrap img.ct {{ max-width: calc(50vw - 24px); max-height: calc(50vh - 44px); display: block; image-rendering: auto; }}
+  .wrap {{ position: relative; display: inline-block; line-height: 0; cursor: crosshair; height: 100%; max-width: 100%; max-height: 100%; }}
+  #wAx {{ aspect-ratio: 1 / 1; }}
+  #wSag {{ aspect-ratio: {sag_w} / {sag_h}; }}
+  #wCor {{ aspect-ratio: {cor_w} / {cor_h}; }}
+  .wrap img.ct {{ width: 100%; height: 100%; object-fit: fill; display: block; image-rendering: auto; }}
   .wrap img.seg {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.6; }}
   .xh {{ position: absolute; pointer-events: none; z-index: 4; }}
   .xh.v {{ top: 0; bottom: 0; width: 1px; }}
   .xh.h {{ left: 0; right: 0; height: 1px; }}
-  #vol {{ max-width: calc(50vw - 24px); max-height: calc(50vh - 44px); cursor: grab; }}
+  #vol {{ height: 100%; max-width: 100%; aspect-ratio: 1 / 1; object-fit: contain; cursor: grab; }}
   .legend {{ display: flex; gap: 10px; font-size: 11px; }}
   .legend span i {{ display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }}
 </style></head>
@@ -680,6 +692,10 @@ def generate_ohif_3pane_viewer_html(
     nc = int(info.get("cor_count", 256))
     nf = int(info.get("vol_frames", 36))
     sz, sy, sx = info.get("spacing_mm", [3.0, 0.47, 0.47])
+    sag_w = int(info.get("sag_w", 512))
+    sag_h = int(info.get("sag_h", 365))
+    cor_w = int(info.get("cor_w", 512))
+    cor_h = int(info.get("cor_h", 365))
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -738,7 +754,7 @@ def generate_ohif_3pane_viewer_html(
     /* 2x2 MPR Grid */
     .mpr-grid {{ flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; background: #1e293b; overflow: hidden; position: relative; }}
     .mpr-grid.maximized {{ grid-template-columns: 1fr; grid-template-rows: 1fr; }}
-    .viewport-box {{ position: relative; background: #000000; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: crosshair; border: 1.5px solid transparent; }}
+    .viewport-box {{ position: relative; background: #000000; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: crosshair; border: 1.5px solid transparent; padding: 26px 8px; }}
     .viewport-box.active-box {{ border-color: #0284c7; }}
     .viewport-box.hidden {{ display: none !important; }}
     
@@ -755,16 +771,17 @@ def generate_ohif_3pane_viewer_html(
     
     /* Viewport Orientation Labels */
     .orient {{ position: absolute; z-index: 12; font-family: monospace; font-size: 11px; font-weight: 700; color: #facc15; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }}
-    .orient.top {{ top: 22px; left: 50%; transform: translateX(-50%); }}
-    .orient.bottom {{ bottom: 22px; left: 50%; transform: translateX(-50%); }}
+    .orient.top {{ top: 26px; left: 50%; transform: translateX(-50%); }}
+    .orient.bottom {{ bottom: 26px; left: 50%; transform: translateX(-50%); }}
     .orient.left {{ left: 8px; top: 50%; transform: translateY(-50%); }}
     .orient.right {{ right: 8px; top: 50%; transform: translateY(-50%); }}
 
     /* Viewport Canvas & Images */
-    .vp-wrap {{ position: relative; display: inline-block; line-height: 0; max-height: calc(50vh - 40px); max-width: calc(50vw - 140px); }}
-    .mpr-grid.maximized .vp-wrap {{ max-height: calc(100vh - 120px); max-width: calc(100vw - 600px); }}
-    .vp-wrap img.ct-plane {{ max-height: calc(50vh - 40px); max-width: calc(50vw - 140px); object-fit: contain; display: block; }}
-    .mpr-grid.maximized .vp-wrap img.ct-plane {{ max-height: calc(100vh - 120px); max-width: calc(100vw - 600px); }}
+    .vp-wrap {{ position: relative; display: inline-block; line-height: 0; height: 100%; max-width: 100%; max-height: 100%; }}
+    #wAx, #w3D {{ aspect-ratio: 1 / 1; }}
+    #wSag {{ aspect-ratio: {sag_w} / {sag_h}; }}
+    #wCor {{ aspect-ratio: {cor_w} / {cor_h}; }}
+    .vp-wrap img.ct-plane {{ width: 100%; height: 100%; object-fit: fill; display: block; }}
     .vp-wrap img.seg-plane {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.85; }}
     
     /* Crosshairs */
