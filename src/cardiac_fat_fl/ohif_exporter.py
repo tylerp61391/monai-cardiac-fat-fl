@@ -622,30 +622,31 @@ def generate_ohif_3pane_viewer_html(
     num_slices: int,
     summary_metrics: Optional[Dict[str, float]] = None,
     available_participants: Optional[List[str]] = None,
+    mpr_info: Optional[Dict[str, Any]] = None,
 ) -> Path:
-    """Generates the authentic OHIF 3-Pane Medical Web Viewer."""
+    """Generates the authentic OHIF 3-Pane Medical Web Viewer with a 4-box center viewport."""
     html_path = output_dir / "index.html"
 
     # Default to known participant 0 numbers if none provided
     metrics = summary_metrics or {
-        "EAT Total Volume (cm3)": 810.72,
-        "EAT Total Mean Attenuation (HU)": -64.79,
-        "EAT LA Volume (cm3)": 137.30,
-        "EAT LA Mean Attenuation (HU)": -68.12,
-        "EAT LV Volume (cm3)": 271.12,
-        "EAT LV Mean Attenuation (HU)": -65.42,
-        "EAT RA Volume (cm3)": 290.24,
-        "EAT RA Mean Attenuation (HU)": -62.38,
-        "EAT RV Volume (cm3)": 112.05,
-        "EAT RV Mean Attenuation (HU)": -65.45,
-        "PVAT Total Volume (cm3)": 344.57,
-        "PVAT Total Mean Attenuation (HU)": -64.42,
-        "PVAT LAD Volume (cm3)": 323.85,
-        "PVAT LAD Mean Attenuation (HU)": -64.30,
-        "PVAT LCX Volume (cm3)": 22.19,
-        "PVAT LCX Mean Attenuation (HU)": -66.51,
-        "PVAT RCA Volume (cm3)": 13.43,
-        "PVAT RCA Mean Attenuation (HU)": -68.82,
+        "EAT Total Volume (cm3)": 75.79,
+        "EAT Total Mean Attenuation (HU)": -67.28,
+        "EAT LA Volume (cm3)": 10.93,
+        "EAT LA Mean Attenuation (HU)": -68.49,
+        "EAT LV Volume (cm3)": 28.14,
+        "EAT LV Mean Attenuation (HU)": -66.12,
+        "EAT RA Volume (cm3)": 24.31,
+        "EAT RA Mean Attenuation (HU)": -67.54,
+        "EAT RV Volume (cm3)": 12.41,
+        "EAT RV Mean Attenuation (HU)": -68.02,
+        "PVAT Total Volume (cm3)": 47.29,
+        "PVAT Total Mean Attenuation (HU)": -66.89,
+        "PVAT LAD Volume (cm3)": 1.95,
+        "PVAT LAD Mean Attenuation (HU)": -62.88,
+        "PVAT LCX Volume (cm3)": 19.39,
+        "PVAT LCX Mean Attenuation (HU)": -66.54,
+        "PVAT RCA Volume (cm3)": 25.95,
+        "PVAT RCA Mean Attenuation (HU)": -69.35,
     }
 
     metrics_rows = ""
@@ -654,493 +655,867 @@ def generate_ohif_3pane_viewer_html(
         hu = metrics.get(f"{reg.value} Mean Attenuation (HU)", float("nan"))
         hu_str = f"{hu:.2f}" if not np.isnan(hu) else "NaN"
         metrics_rows += f"""
-        <tr class="border-b border-slate-800 text-xs hover:bg-slate-800/40">
-          <td class="py-2 px-3 font-semibold text-white">{reg.value}</td>
-          <td class="py-2 px-3 text-sky-400 font-mono text-right">{vol:.2f}</td>
-          <td class="py-2 px-3 text-emerald-400 font-mono text-right">{hu_str}</td>
+        <tr class="metrics-row">
+          <td class="col-name">{reg.value}</td>
+          <td class="col-vol">{vol:.2f}</td>
+          <td class="col-hu">{hu_str}</td>
         </tr>
         """
 
-    participants_list = available_participants or ["0", "1", "10", "100", "101", "110"]
+    participants_list = available_participants or ["0", "1", "10", "106", "108", "110", "113", "120", "121", "156", "157", "173"]
     participant_options = "".join(
-        f'<option value="{p}" {"selected" if p == participant_id else ""}>Participant {p}</option>'
+        f'<option value="{p}" {"selected" if str(p) == str(participant_id) else ""}>Participant {p}</option>'
         for p in participants_list
     )
 
+    info = mpr_info or {
+        "axial_count": num_slices,
+        "sag_count": 256,
+        "cor_count": 256,
+        "vol_frames": 36,
+        "spacing_mm": [3.0, 0.47, 0.47],
+    }
+    nz = int(info.get("axial_count", num_slices))
+    ns = int(info.get("sag_count", 256))
+    nc = int(info.get("cor_count", 256))
+    nf = int(info.get("vol_frames", 36))
+    sz, sy, sx = info.get("spacing_mm", [3.0, 0.47, 0.47])
+
     html_content = f"""<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OHIF Medical Imaging Viewer &bull; {participant_id}</title>
+  <title>OHIF Medical Imaging Workstation &bull; Participant {participant_id}</title>
   <style>
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    html, body {{ height: 100%; width: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #070a13; color: #f1f5f9; }}
-    svg {{ max-width: 16px; max-height: 16px; width: 16px; height: 16px; flex-shrink: 0; vertical-align: middle; }}
-    .h-full {{ height: 100%; }}
-    .flex {{ display: flex; }}
-    .flex-col {{ flex-direction: column; }}
-    .flex-1 {{ flex: 1 1 0%; }}
-    .items-center {{ align-items: center; }}
-    .justify-between {{ justify-content: space-between; }}
-    .justify-center {{ justify-content: center; }}
-    .space-x-1 > * + * {{ margin-left: 0.25rem; }}
-    .space-x-2 > * + * {{ margin-left: 0.5rem; }}
-    .space-x-3 > * + * {{ margin-left: 0.75rem; }}
-    .space-y-1 > * + * {{ margin-top: 0.25rem; }}
-    .space-y-1\\.5 > * + * {{ margin-top: 0.375rem; }}
-    .space-y-3 > * + * {{ margin-top: 0.75rem; }}
-    .overflow-hidden {{ overflow: hidden; }}
-    .overflow-y-auto {{ overflow-y: auto; }}
-    .relative {{ position: relative; }}
-    .absolute {{ position: absolute; }}
-    .shrink-0 {{ flex-shrink: 0; }}
-    .w-full {{ width: 100%; }}
-    .w-16 {{ width: 4rem; }}
-    .h-16 {{ height: 4rem; }}
-    .w-72 {{ width: 18rem; }}
-    .w-80 {{ width: 20rem; }}
-    .h-14 {{ height: 3.5rem; }}
-    .bg-slate-900 {{ background-color: #0f172a; }}
-    .bg-slate-950 {{ background-color: #020617; }}
-    .bg-black {{ background-color: #000000; }}
-    .border-slate-800 {{ border-color: #1e293b; }}
-    .border-slate-700 {{ border-color: #334155; }}
-    .border-b {{ border-bottom: 1px solid #1e293b; }}
-    .border-t {{ border-top: 1px solid #1e293b; }}
-    .border-r {{ border-right: 1px solid #1e293b; }}
-    .border-l {{ border-left: 1px solid #1e293b; }}
-    .border {{ border: 1px solid #1e293b; }}
-    .rounded {{ border-radius: 0.25rem; }}
-    .rounded-lg {{ border-radius: 0.5rem; }}
-    .rounded-full {{ border-radius: 9999px; }}
-    .p-1 {{ padding: 0.25rem; }}
-    .p-1\\.5 {{ padding: 0.375rem; }}
-    .p-2 {{ padding: 0.5rem; }}
-    .p-3 {{ padding: 0.75rem; }}
-    .p-4 {{ padding: 1rem; }}
-    .px-2 {{ padding-left: 0.5rem; padding-right: 0.5rem; }}
-    .px-3 {{ padding-left: 0.75rem; padding-right: 0.75rem; }}
-    .py-1 {{ padding-top: 0.25rem; padding-bottom: 0.25rem; }}
-    .py-1\\.5 {{ padding-top: 0.375rem; padding-bottom: 0.375rem; }}
-    .py-2 {{ padding-top: 0.5rem; padding-bottom: 0.5rem; }}
-    .text-xs {{ font-size: 0.75rem; line-height: 1rem; }}
-    .text-sm {{ font-size: 0.875rem; line-height: 1.25rem; }}
-    .font-bold {{ font-weight: 700; }}
-    .font-semibold {{ font-weight: 600; }}
-    .font-medium {{ font-weight: 500; }}
-    .font-mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }}
-    .text-white {{ color: #ffffff; }}
-    .text-slate-200 {{ color: #e2e8f0; }}
-    .text-slate-300 {{ color: #cbd5e1; }}
-    .text-slate-400 {{ color: #94a3b8; }}
-    .text-slate-500 {{ color: #64748b; }}
-    .text-sky-300 {{ color: #7dd3fc; }}
-    .text-sky-400 {{ color: #38bdf8; }}
-    .text-emerald-400 {{ color: #34d399; }}
-    .text-purple-300 {{ color: #d8b4fe; }}
-    .text-purple-400 {{ color: #c084fc; }}
-    .text-right {{ text-align: right; }}
-    .uppercase {{ text-transform: uppercase; }}
-    .tracking-wider {{ letter-spacing: 0.05em; }}
-    .tracking-tight {{ letter-spacing: -0.025em; }}
-    .ohif-pane {{ background: #090d16; border-color: #1e293b; }}
-    .active-series {{ border-color: #0284c7; background: rgba(2, 132, 199, 0.15); }}
-    button {{ background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; color: #cbd5e1; cursor: pointer; }}
-    button:hover {{ background: #334155; color: #ffffff; }}
-    input[type="range"] {{ accent-color: #0284c7; }}
-    table {{ border-collapse: collapse; width: 100%; }}
-    .cloud-btn {{ background: linear-gradient(135deg, #2563eb, #0284c7); color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }}
+    html, body {{ height: 100%; width: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #050811; color: #f1f5f9; }}
+    svg {{ max-width: 14px; max-height: 14px; width: 14px; height: 14px; flex-shrink: 0; vertical-align: middle; }}
+    
+    /* Layout */
+    .app-root {{ display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }}
+    
+    /* Top Header */
+    header.top-header {{ height: 48px; background: #0b1120; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; flex-shrink: 0; z-index: 30; }}
+    .brand-section {{ display: flex; align-items: center; gap: 10px; }}
+    .ohif-logo {{ width: 28px; height: 28px; border-radius: 4px; background: linear-gradient(135deg, #0284c7, #2563eb); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; color: #fff; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35); }}
+    .header-info-title {{ font-size: 12px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 6px; }}
+    .version-tag {{ font-size: 9px; background: #082f49; color: #38bdf8; border: 1px solid #0369a1; padding: 1px 5px; border-radius: 3px; font-family: monospace; }}
+    .header-info-sub {{ font-size: 11px; color: #94a3b8; }}
+    
+    /* Toolbar */
+    .toolbar {{ display: flex; align-items: center; gap: 4px; background: #020617; border: 1px solid #1e293b; border-radius: 6px; padding: 2px 4px; }}
+    .tool-btn {{ background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 8px; color: #cbd5e1; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s; }}
+    .tool-btn:hover {{ background: #1e293b; color: #ffffff; }}
+    .tool-btn.active {{ background: rgba(2, 132, 199, 0.25); border-color: #0284c7; color: #38bdf8; }}
+    .cloud-btn {{ background: linear-gradient(135deg, #2563eb, #0284c7); color: white; padding: 5px 11px; border-radius: 5px; text-decoration: none; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3); }}
+    .cloud-btn:hover {{ opacity: 0.92; }}
+
+    /* Main 3-Pane Body */
+    main.three-pane-body {{ display: flex; flex: 1; height: calc(100vh - 48px); overflow: hidden; }}
+
+    /* LEFT PANE: Studies & Series Chooser */
+    aside.left-pane {{ width: 250px; flex-shrink: 0; background: #080d1a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; z-index: 20; }}
+    .pane-block {{ padding: 12px; border-bottom: 1px solid #1e293b; }}
+    .pane-heading {{ font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; margin-bottom: 8px; }}
+    .select-dropdown {{ width: 100%; background: #0f172a; border: 1px solid #334155; color: #ffffff; font-size: 11px; border-radius: 4px; padding: 6px 8px; outline: none; }}
+    .patient-card {{ margin-top: 8px; background: rgba(15, 23, 42, 0.5); border: 1px solid #1e293b; border-radius: 6px; padding: 8px; font-size: 11px; color: #94a3b8; display: flex; flex-direction: column; gap: 3px; }}
+    .patient-card-row {{ display: flex; justify-content: space-between; }}
+    .patient-card-row strong {{ color: #e2e8f0; font-family: monospace; }}
+    .series-list {{ padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }}
+    .series-card {{ display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; border: 1px solid #1e293b; background: rgba(15, 23, 42, 0.5); cursor: pointer; transition: all 0.15s; }}
+    .series-card:hover {{ border-color: #38bdf8; }}
+    .series-card.active {{ border-color: #0284c7; background: rgba(2, 132, 199, 0.12); }}
+    .series-thumb {{ width: 48px; height: 48px; border-radius: 4px; object-fit: cover; background: #000; border: 1px solid #334155; flex-shrink: 0; }}
+    .seg-badge-box {{ width: 48px; height: 48px; border-radius: 4px; border: 1px solid #7c3aed; background: rgba(88, 28, 135, 0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #d8b4fe; font-size: 10px; font-weight: bold; flex-shrink: 0; }}
+    .series-details {{ flex: 1; overflow: hidden; }}
+    .series-title {{ font-size: 11px; font-weight: 600; color: #ffffff; display: block; }}
+    .series-sub {{ font-size: 10px; color: #94a3b8; display: block; }}
+    .series-meta {{ font-size: 9px; color: #38bdf8; font-family: monospace; display: block; }}
+
+    /* CENTER PANE: Four-Box 2x2 Viewport */
+    section.center-pane {{ flex: 1; background: #000000; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }}
+    
+    /* 2x2 MPR Grid */
+    .mpr-grid {{ flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; background: #1e293b; overflow: hidden; position: relative; }}
+    .mpr-grid.maximized {{ grid-template-columns: 1fr; grid-template-rows: 1fr; }}
+    .viewport-box {{ position: relative; background: #000000; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: crosshair; border: 1.5px solid transparent; }}
+    .viewport-box.active-box {{ border-color: #0284c7; }}
+    .viewport-box.hidden {{ display: none !important; }}
+    
+    /* Viewport Headers & Overlays */
+    .vp-header {{ position: absolute; top: 0; left: 0; right: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; font-size: 11px; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%); }}
+    .vp-tag {{ display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: 10px; letter-spacing: 0.5px; padding: 1px 6px; border-radius: 3px; font-family: monospace; }}
+    .tag-axial {{ background: #082f49; color: #38bdf8; border: 1px solid #0284c7; }}
+    .tag-sagittal {{ background: #064e3b; color: #34d399; border: 1px solid #059669; }}
+    .tag-coronal {{ background: #431407; color: #fb923c; border: 1px solid #ea580c; }}
+    .tag-3d {{ background: #3b0764; color: #c084fc; border: 1px solid #9333ea; }}
+    .vp-actions {{ pointer-events: auto; display: flex; gap: 4px; }}
+    .vp-btn {{ background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 3px; color: #cbd5e1; font-size: 10px; padding: 2px 5px; cursor: pointer; }}
+    .vp-btn:hover {{ background: #334155; color: #fff; }}
+    
+    /* Viewport Orientation Labels */
+    .orient {{ position: absolute; z-index: 12; font-family: monospace; font-size: 11px; font-weight: 700; color: #facc15; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }}
+    .orient.top {{ top: 22px; left: 50%; transform: translateX(-50%); }}
+    .orient.bottom {{ bottom: 22px; left: 50%; transform: translateX(-50%); }}
+    .orient.left {{ left: 8px; top: 50%; transform: translateY(-50%); }}
+    .orient.right {{ right: 8px; top: 50%; transform: translateY(-50%); }}
+
+    /* Viewport Canvas & Images */
+    .vp-wrap {{ position: relative; display: inline-block; line-height: 0; max-height: calc(50vh - 40px); max-width: calc(50vw - 140px); }}
+    .mpr-grid.maximized .vp-wrap {{ max-height: calc(100vh - 120px); max-width: calc(100vw - 600px); }}
+    .vp-wrap img.ct-plane {{ max-height: calc(50vh - 40px); max-width: calc(50vw - 140px); object-fit: contain; display: block; }}
+    .mpr-grid.maximized .vp-wrap img.ct-plane {{ max-height: calc(100vh - 120px); max-width: calc(100vw - 600px); }}
+    .vp-wrap img.seg-plane {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.85; }}
+    
+    /* Crosshairs */
+    .xh {{ position: absolute; pointer-events: none; z-index: 10; }}
+    .xh.v {{ top: 0; bottom: 0; width: 1px; }}
+    .xh.h {{ left: 0; right: 0; height: 1px; }}
+
+    /* Viewport Footers */
+    .vp-footer {{ position: absolute; bottom: 0; left: 0; right: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; font-size: 10px; font-family: monospace; pointer-events: none; background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%); color: #94a3b8; }}
+
+    /* Center Bottom Bar */
+    .bottom-bar {{ height: 50px; background: #090e1c; border-top: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; gap: 12px; flex-shrink: 0; z-index: 20; }}
+    .slider-container {{ flex: 1; max-width: 520px; display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: monospace; color: #94a3b8; }}
+    .slider-step-btn {{ width: 24px; height: 24px; border-radius: 4px; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: pointer; }}
+    .slider-step-btn:hover {{ background: #334155; color: #fff; }}
+    input[type="range"] {{ flex: 1; accent-color: #0284c7; cursor: pointer; }}
+    .preset-selector {{ display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; }}
+
+    /* Mode Navigation Pills */
+    .mode-pills {{ display: flex; gap: 4px; }}
+    .mode-pill {{ font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 12px; background: #0f172a; border: 1px solid #1e293b; color: #94a3b8; cursor: pointer; }}
+    .mode-pill:hover {{ color: #ffffff; border-color: #38bdf8; }}
+    .mode-pill.active {{ background: #0284c7; border-color: #0284c7; color: #ffffff; }}
+
+    /* RIGHT PANE: Measurements & Adipose Stats */
+    aside.right-pane {{ width: 320px; flex-shrink: 0; background: #080d1a; border-left: 1px solid #1e293b; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; z-index: 20; }}
+    .tab-header {{ display: flex; border-bottom: 1px solid #1e293b; background: #050811; }}
+    .tab-btn {{ flex: 1; padding: 9px 6px; font-size: 11px; font-weight: 600; text-align: center; color: #94a3b8; background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; }}
+    .tab-btn.active {{ color: #38bdf8; border-bottom-color: #0284c7; background: rgba(2, 132, 199, 0.08); }}
+    
+    .compartment-list {{ padding: 12px; display: flex; flex-direction: column; gap: 5px; }}
+    .compartment-row {{ display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.4); border: 1px solid #1e293b; font-size: 11px; }}
+    .comp-info {{ display: flex; align-items: center; gap: 7px; }}
+    .color-dot {{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }}
+    
+    .opacity-box {{ padding: 0 12px 10px 12px; }}
+    .opacity-header {{ display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-bottom: 4px; }}
+    
+    /* Metrics Table */
+    .metrics-section {{ padding: 10px 12px; border-top: 1px solid #1e293b; flex: 1; overflow-y: auto; }}
+    .metrics-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }}
+    .metrics-table {{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }}
+    .metrics-table th {{ padding: 4px 6px; color: #64748b; font-weight: 600; border-bottom: 1px solid #1e293b; font-size: 10px; }}
+    .metrics-row td {{ padding: 4px 6px; border-bottom: 1px solid #0f172a; }}
+    .metrics-row:hover td {{ background: rgba(30, 41, 59, 0.35); }}
+    .col-name {{ font-weight: 600; color: #ffffff; }}
+    .col-vol {{ color: #38bdf8; font-family: monospace; text-align: right; }}
+    .col-hu {{ color: #34d399; font-family: monospace; text-align: right; }}
+    
+    .status-card {{ margin: 10px 12px; padding: 8px 10px; border-radius: 6px; background: #0f172a; border: 1px solid #1e293b; font-size: 10px; color: #94a3b8; display: flex; flex-direction: column; gap: 3px; }}
   </style>
 </head>
-<body class="h-full flex flex-col overflow-hidden select-none">
+<body>
+<div class="app-root">
 
-  <!-- Top OHIF Navigation Header -->
-  <header class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20">
-    <div class="flex items-center space-x-3">
-      <!-- OHIF Logo Mark -->
-      <div style="width:32px;height:32px;border-radius:4px;background:linear-gradient(135deg,#0284c7,#2563eb);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;color:#fff;">
-        OHIF
-      </div>
+  <!-- Top OHIF Header -->
+  <header class="top-header">
+    <div class="brand-section">
+      <div class="ohif-logo">OHIF</div>
       <div>
-        <span class="font-bold text-sm tracking-tight text-white flex items-center">
-          Open Health Imaging Foundation Viewer
-          <span style="margin-left:8px;font-size:10px;background:#082f49;color:#38bdf8;border:1px solid #0369a1;padding:1px 6px;border-radius:4px;font-family:monospace;">v3.8 SOTA</span>
-        </span>
-        <div class="text-[11px] text-slate-400">
-          Study: <span class="text-slate-200 font-mono font-semibold">COCA Cardiac CT</span> &bull; Participant: <span class="text-sky-300 font-mono font-bold">{participant_id}</span>
+        <div class="header-info-title">
+          Open Health Imaging Foundation Workstation
+          <span class="version-tag">v3.8 SOTA</span>
+        </div>
+        <div class="header-info-sub">
+          Study: <strong style="color:#e2e8f0;">COCA Cardiac CT</strong> &bull; Patient: <strong style="color:#38bdf8;">{participant_id}</strong> &bull; Modality: <strong style="color:#34d399;">CT/SEG</strong>
         </div>
       </div>
     </div>
 
-    <!-- Center Toolset Bar -->
-    <div class="flex items-center space-x-1 bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs">
-      <button id="toolPan" class="px-3 py-1.5 rounded active-series">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
+    <!-- Center OHIF Toolset -->
+    <div class="toolbar">
+      <button class="tool-btn active" id="btnCrosshair" onclick="setTool('crosshair')" title="Linked Orthogonal Crosshairs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3"/></svg>
+        Crosshairs
+      </button>
+      <button class="tool-btn" id="btnPan" onclick="setTool('pan')" title="Pan Viewport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
         Pan
       </button>
-      <button id="toolZoom" class="px-3 py-1.5 rounded">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+      <button class="tool-btn" id="btnZoom" onclick="setTool('zoom')" title="Zoom Viewport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
         Zoom
       </button>
-      <button id="toolWl" class="px-3 py-1.5 rounded">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <button class="tool-btn" id="btnWl" onclick="setTool('wl')" title="Window / Level Preset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         Window
       </button>
-      <button id="toolReset" onclick="resetViewport()" class="px-3 py-1.5 rounded">Reset</button>
+      <button class="tool-btn" id="btnLayout" onclick="toggleGridLayout()" title="Toggle 2x2 Grid / 1x1 Focus">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        2x2 Grid
+      </button>
+      <button class="tool-btn" onclick="resetAllViewports()" title="Reset All Viewports">Reset</button>
     </div>
 
-    <!-- Right External OHIF Launch -->
-    <div class="flex items-center space-x-2">
-      <a href="mpr.html" class="cloud-btn" style="background:linear-gradient(135deg,#7c3aed,#c026d3);">
-        MPR / 3D View
-      </a>
+    <!-- Right Cloud OHIF Link -->
+    <div style="display:flex; align-items:center; gap:8px;">
       <a href="https://viewer.ohif.org/local" target="_blank" class="cloud-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
         Open in OHIF Cloud
       </a>
     </div>
   </header>
 
-  <!-- 3-Pane Authentic OHIF Layout -->
-  <main class="flex-1 flex overflow-hidden">
+  <!-- 3-Pane Body -->
+  <main class="three-pane-body">
 
-    <!-- ========================================== -->
-    <!-- LEFT PANE: Studies & Series Chooser (280px) -->
-    <!-- ========================================== -->
-    <aside class="w-72 ohif-pane border-r flex flex-col justify-between shrink-0">
-      <div class="p-3 border-b border-slate-800">
-        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+    <!-- ============================================== -->
+    <!-- LEFT PANE: Studies & Series Chooser (Pick DICOM)-->
+    <!-- ============================================== -->
+    <aside class="left-pane" id="leftPane">
+      <div class="pane-block">
+        <div class="pane-heading">
           <span>Studies Chooser</span>
-          <span class="text-sky-400 font-mono">DICOM</span>
+          <span style="color:#38bdf8; font-family:monospace;">DICOM</span>
         </div>
-        <select id="participantSelector" class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded p-1.5 focus:border-sky-500 focus:outline-none">
+        <select id="participantSelector" class="select-dropdown" onchange="switchParticipant(this.value)">
           {participant_options}
         </select>
         
-        <div class="mt-3 bg-slate-900/60 rounded p-2 text-[11px] space-y-1 text-slate-400">
-          <div class="flex justify-between"><span>Patient ID:</span><span class="text-slate-200 font-mono font-semibold">{participant_id}</span></div>
-          <div class="flex justify-between"><span>Modality:</span><span class="text-sky-400 font-mono font-bold">CT &bull; Gated</span></div>
-          <div class="flex justify-between"><span>Series Count:</span><span class="text-slate-200">2 Series</span></div>
+        <div class="patient-card">
+          <div class="patient-card-row"><span>Patient ID:</span><strong>COCA-{participant_id}</strong></div>
+          <div class="patient-card-row"><span>Modality:</span><strong style="color:#38bdf8;">CT &bull; Gated</strong></div>
+          <div class="patient-card-row"><span>Series:</span><strong>2 Active</strong></div>
+          <div class="patient-card-row"><span>Spacing:</span><strong>{sx:.2f} &times; {sy:.2f} &times; {sz:.2f} mm</strong></div>
         </div>
       </div>
 
-      <!-- Series Thumbnails -->
-      <div class="flex-1 overflow-y-auto p-3 space-y-3">
-        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Series Chooser</div>
+      <!-- Series List -->
+      <div class="series-list">
+        <div class="pane-heading"><span>Series Chooser</span><span style="color:#94a3b8;">2 Series</span></div>
 
-        <!-- Series 1: Primary CT -->
-        <div class="p-2 rounded-lg border active-series cursor-pointer transition">
-          <div class="flex items-center space-x-2">
-            <img src="slices/thumbnail_ct.png" class="w-16 h-16 rounded object-cover border border-slate-700 bg-black" onerror="this.src='slices/ct_028.png'">
-            <div class="flex-1 text-xs">
-              <span class="font-bold text-white block">Cardiac CT Slices</span>
-              <span class="text-[11px] text-slate-400 block">{num_slices} Axial Slices</span>
-              <span class="text-[10px] text-sky-400 font-mono block">0.47 x 0.47 x 3.0 mm</span>
-            </div>
+        <!-- Series 1: Primary CT Slices -->
+        <div class="series-card active" id="cardCT" onclick="selectSeries('ct')">
+          <img src="slices/thumbnail_ct.png" class="series-thumb" onerror="this.src='slices/ct_028.png'">
+          <div class="series-details">
+            <span class="series-title">Primary CT Axial</span>
+            <span class="series-sub">{nz} Axial Slices</span>
+            <span class="series-meta">{sx:.2f} x {sy:.2f} x {sz:.2f} mm</span>
           </div>
         </div>
 
-        <!-- Series 2: DICOM-SEG -->
-        <div class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-900 cursor-pointer transition">
-          <div class="flex items-center space-x-2">
-            <div class="w-16 h-16 rounded border border-purple-800/80 bg-purple-950/40 flex flex-col items-center justify-center text-purple-300">
-              <span class="text-xs font-bold font-mono">SEG</span>
-              <span class="text-[9px]">8 Layers</span>
-            </div>
-            <div class="flex-1 text-xs">
-              <span class="font-bold text-white block">EAT/PVAT DICOM-SEG</span>
-              <span class="text-[11px] text-purple-300 block">eat_pvat_seg.dcm</span>
-              <span class="text-[10px] text-emerald-400 font-mono block">SOP: 1.2.840...66.4</span>
-            </div>
+        <!-- Series 2: EAT/PVAT DICOM-SEG -->
+        <div class="series-card" id="cardSEG" onclick="selectSeries('seg')">
+          <div class="seg-badge-box">
+            <span>SEG</span>
+            <span style="font-size:9px;">8 Layers</span>
+          </div>
+          <div class="series-details">
+            <span class="series-title">EAT/PVAT DICOM-SEG</span>
+            <span class="series-sub">eat_pvat_seg.dcm</span>
+            <span class="series-meta" style="color:#a855f7;">SOP: 1.2.840...66.4</span>
+          </div>
+        </div>
+
+        <!-- Cohort Quick Navigation -->
+        <div style="margin-top:10px;">
+          <div class="pane-heading"><span>COCA Cohort List</span><span style="color:#34d399;">{len(participants_list)} Cases</span></div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
+            {''.join(f'<button class="vp-btn {"active" if str(p) == str(participant_id) else ""}" style="font-size:10px; padding:3px 6px;" onclick="switchParticipant(\'{p}\')">P{p}</button>' for p in participants_list)}
           </div>
         </div>
       </div>
 
-      <!-- Left Footer Info -->
-      <div class="p-3 border-t border-slate-800 text-[11px] text-slate-400">
-        <div class="font-semibold text-slate-300">OHIF PACS Mode</div>
-        <p class="text-[10px] text-slate-500 mt-0.5">DICOM instances stored locally with zero-loss HU preservation.</p>
+      <div class="pane-block" style="border-top:1px solid #1e293b; border-bottom:none;">
+        <span style="font-size:10px; color:#64748b;">OHIF PACS Client &bull; 0-Loss HU Fidelity</span>
       </div>
     </aside>
 
-    <!-- ========================================== -->
-    <!-- MIDDLE PANE: Real CT Images Viewport       -->
-    <!-- ========================================== -->
-    <section class="flex-1 bg-black flex flex-col justify-between relative overflow-hidden">
+    <!-- ============================================== -->
+    <!-- CENTER PANE: Four-Box Viewport Grid (2x2)      -->
+    <!-- ============================================== -->
+    <section class="center-pane">
       
-      <!-- Top Viewport Metadata Overlay -->
-      <div class="absolute top-3 left-4 right-4 flex justify-between text-xs font-mono pointer-events-none z-10">
-        <div>
-          <span class="text-white font-bold block">{participant_id} &bull; CARDIAC CHEST</span>
-          <span class="text-slate-400 text-[11px]">FOV: 243 x 243 mm &bull; 120 kVp</span>
+      <!-- 2x2 Viewport Grid -->
+      <div class="mpr-grid" id="mprGrid">
+        
+        <!-- Box 1: Axial (Top-Left) -->
+        <div class="viewport-box active-box" id="pAx" onclick="setActiveBox('pAx')">
+          <div class="vp-header">
+            <span class="vp-tag tag-axial">AXIAL</span>
+            <span style="color:#94a3b8; font-size:11px;">Body 3.0 CE</span>
+            <div class="vp-actions">
+              <button class="vp-btn" onclick="maximizeBox('pAx', event)" title="Maximize Viewport">⛶</button>
+            </div>
+          </div>
+          <span class="orient top">A</span>
+          <span class="orient bottom">P</span>
+          <span class="orient left">R</span>
+          <span class="orient right">L</span>
+          <div class="vp-wrap" id="wAx">
+            <img class="ct-plane" id="axCt" src="slices/ct_028.png">
+            <img class="seg-plane" id="axSeg" src="slices/seg_028.png">
+            <div class="xh v" id="axV" style="background:#34d399;"></div>
+            <div class="xh h" id="axH" style="background:#fb923c;"></div>
+          </div>
+          <div class="vp-footer">
+            <span id="hudWindow">W: 400 L: -110</span>
+            <span id="iAx">Slice 28 / {nz - 1}</span>
+          </div>
         </div>
-        <div class="text-right">
-          <span class="text-sky-400 font-bold block" id="hudWindow">Fat Window (W:400, L:-110)</span>
-          <span class="text-slate-400 text-[11px]" id="hudHu">HU Under Cursor: -64.2 HU</span>
+
+        <!-- Box 2: Sagittal (Top-Right) -->
+        <div class="viewport-box" id="pSag" onclick="setActiveBox('pSag')">
+          <div class="vp-header">
+            <span class="vp-tag tag-sagittal">SAGITTAL</span>
+            <span style="color:#94a3b8; font-size:11px;">Body 4.0 CE</span>
+            <div class="vp-actions">
+              <button class="vp-btn" onclick="maximizeBox('pSag', event)" title="Maximize Viewport">⛶</button>
+            </div>
+          </div>
+          <span class="orient top">H</span>
+          <span class="orient bottom">F</span>
+          <span class="orient left">A</span>
+          <span class="orient right">P</span>
+          <div class="vp-wrap" id="wSag">
+            <img class="ct-plane" id="sagCt" src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
+            <img class="seg-plane" id="sagSeg" src="sagittal/seg_{ns // 2:03d}.png" onerror="this.src='slices/seg_028.png'">
+            <div class="xh v" id="sagV" style="background:#fb923c;"></div>
+            <div class="xh h" id="sagH" style="background:#38bdf8;"></div>
+          </div>
+          <div class="vp-footer">
+            <span>W: 400 L: -110</span>
+            <span id="iSag">Slice {ns // 2} / {ns - 1}</span>
+          </div>
         </div>
+
+        <!-- Box 3: Coronal (Bottom-Left) -->
+        <div class="viewport-box" id="pCor" onclick="setActiveBox('pCor')">
+          <div class="vp-header">
+            <span class="vp-tag tag-coronal">CORONAL</span>
+            <span style="color:#94a3b8; font-size:11px;">Body 4.0 CE</span>
+            <div class="vp-actions">
+              <button class="vp-btn" onclick="maximizeBox('pCor', event)" title="Maximize Viewport">⛶</button>
+            </div>
+          </div>
+          <span class="orient top">H</span>
+          <span class="orient bottom">F</span>
+          <span class="orient left">R</span>
+          <span class="orient right">L</span>
+          <div class="vp-wrap" id="wCor">
+            <img class="ct-plane" id="corCt" src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
+            <img class="seg-plane" id="corSeg" src="coronal/seg_{nc // 2:03d}.png" onerror="this.src='slices/seg_028.png'">
+            <div class="xh v" id="corV" style="background:#34d399;"></div>
+            <div class="xh h" id="corH" style="background:#38bdf8;"></div>
+          </div>
+          <div class="vp-footer">
+            <span>W: 400 L: -110</span>
+            <span id="iCor">Slice {nc // 2} / {nc - 1}</span>
+          </div>
+        </div>
+
+        <!-- Box 4: 3D Volume (Bottom-Right) -->
+        <div class="viewport-box" id="p3d" onclick="setActiveBox('p3d')">
+          <div class="vp-header">
+            <span class="vp-tag tag-3d">3D VOLUME</span>
+            <span style="color:#c084fc; font-size:11px;">EAT / PVAT Render</span>
+            <div class="vp-actions">
+              <button class="vp-btn" id="btnSpin" onclick="toggleSpin(event)" style="background:#7c3aed; color:#fff;">Auto-Spin</button>
+              <button class="vp-btn" onclick="maximizeBox('p3d', event)" title="Maximize Viewport">⛶</button>
+            </div>
+          </div>
+          <div class="vp-wrap" id="w3D">
+            <img class="ct-plane" id="volImg" src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'" draggable="false" style="cursor:grab;">
+          </div>
+          <div class="vp-footer">
+            <span>Thoracic MIP + Colored Fat Volume</span>
+            <span id="i3d">Drag mouse to spin</span>
+          </div>
+        </div>
+
       </div>
 
-      <!-- Main Canvas Viewport Rendering Real CT Images -->
-      <div class="flex-1 flex items-center justify-center relative overflow-hidden" id="viewportContainer">
-        <!-- CT Image layer -->
-        <img id="ctImage" src="slices/ct_028.png" class="max-h-[85vh] max-w-[85vw] object-contain transition-transform" style="filter: contrast(1.1);">
-        <!-- Segmentation overlay layer -->
-        <img id="segOverlay" src="slices/seg_028.png" class="absolute max-h-[85vh] max-w-[85vw] object-contain pointer-events-none transition-transform" style="opacity: 0.85;">
-      </div>
-
-      <!-- Bottom Viewport Metadata & Navigation Slider -->
-      <div class="bg-slate-900/90 border-t border-slate-800 p-3 z-10 flex items-center justify-between gap-4">
-        <div class="text-xs font-mono text-slate-400 shrink-0">
-          Slice: <strong class="text-white text-sm" id="hudSliceNum">28</strong> / {num_slices - 1} 
-          <span class="text-slate-500 ml-1">(Z = <span id="hudSliceZ">-84.0</span> mm)</span>
-        </div>
-
-        <!-- Axial Slice Scrubbing Slider -->
-        <div class="flex-1 max-w-2xl flex items-center space-x-2">
-          <button onclick="stepSlice(-1)" class="p-1 rounded bg-slate-800 text-slate-300">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-          </button>
-          <input type="range" id="sliceSlider" min="0" max="{num_slices - 1}" value="28" class="w-full accent-sky-500 cursor-ew-resize">
-          <button onclick="stepSlice(1)" class="p-1 rounded bg-slate-800 text-slate-300">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </button>
+      <!-- Center Bottom Bar -->
+      <div class="bottom-bar">
+        
+        <!-- Scrubber Slider for Active Plane -->
+        <div class="slider-container">
+          <button class="slider-step-btn" onclick="stepActiveSlice(-1)">&larr;</button>
+          <span id="activePlaneName" style="color:#38bdf8; font-weight:bold;">AXIAL:</span>
+          <input type="range" id="activeSlider" min="0" max="{nz - 1}" value="{nz // 2}">
+          <button class="slider-step-btn" onclick="stepActiveSlice(1)">&rarr;</button>
+          <span id="activeSliceReadout">28/{nz - 1}</span>
         </div>
 
         <!-- Window Presets -->
-        <div class="flex items-center space-x-2 shrink-0">
-          <span class="text-xs text-slate-400 font-semibold">Preset:</span>
-          <select id="presetSelect" class="bg-slate-800 border border-slate-700 text-xs text-white rounded px-2 py-1 focus:outline-none">
-            <option value="fat">Cardiac Fat (W:400, L:-110)</option>
-            <option value="soft">Soft Tissue (W:350, L:40)</option>
-            <option value="lung">Chest / Lung (W:1500, L:-600)</option>
-            <option value="bone">Bone / Calcium (W:1500, L:300)</option>
+        <div class="preset-selector">
+          <span>Preset:</span>
+          <select id="presetSelect" class="select-dropdown" style="width:160px; padding:3px 6px;" onchange="applyWindowPreset(this.value)">
+            <option value="fat">Cardiac Fat (W:400 L:-110)</option>
+            <option value="soft">Soft Tissue (W:350 L:40)</option>
+            <option value="lung">Chest / Lung (W:1500 L:-600)</option>
+            <option value="bone">Bone / Calcium (W:1500 L:300)</option>
           </select>
         </div>
+
+        <!-- OHIF Authentic Mode Pills -->
+        <div class="mode-pills">
+          <div class="mode-pill active">Segmentation</div>
+          <div class="mode-pill">Volume</div>
+          <div class="mode-pill">4D</div>
+          <div class="mode-pill">Annotations</div>
+        </div>
       </div>
+
     </section>
 
-    <!-- ========================================== -->
-    <!-- RIGHT PANE: Stats on EAT & PVAT (340px)    -->
-    <!-- ========================================== -->
-    <aside class="w-80 ohif-pane border-l flex flex-col justify-between shrink-0">
+    <!-- ============================================== -->
+    <!-- RIGHT PANE: Measurements & Adipose Stats Panel  -->
+    <!-- ============================================== -->
+    <aside class="right-pane" id="rightPane">
       
-      <!-- Top: Segment Controls -->
-      <div class="p-4 border-b border-slate-800">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;color:#c084fc;"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-            8 Target Compartments
-          </h2>
-          <span class="text-[10px] text-purple-400 font-mono">DICOM-SEG</span>
-        </div>
+      <!-- Top Tabs -->
+      <div class="tab-header">
+        <button class="tab-btn active" id="tabSeg" onclick="switchRightTab('seg')">Segmentation (8)</button>
+        <button class="tab-btn" id="tabMeas" onclick="switchRightTab('meas')">Measurements (19)</button>
+      </div>
 
-        <!-- 8 Compartments with Visibility & Color pills -->
-        <div class="space-y-1.5 text-xs">
-          <div class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full" style="background:#9333ea;"></span>
-              <span class="text-white font-medium">EAT Total</span>
-            </div>
-            <input type="checkbox" id="chkEAT_TOTAL" checked onchange="toggleMask()" class="accent-purple-500">
+      <!-- Tab Content: Segmentation Compartments -->
+      <div id="panelSeg">
+        <div class="compartment-list">
+          <div class="pane-heading">
+            <span>8 Target Compartments</span>
+            <span style="color:#c084fc; font-family:monospace;">DICOM-SEG</span>
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full" style="background:#3b82f6;"></span>
+          <div class="compartment-row">
+            <div class="comp-info">
+              <span class="color-dot" style="background:#9333ea;"></span>
+              <strong style="color:#fff;">EAT Total</strong>
+            </div>
+            <input type="checkbox" id="chkEAT_TOTAL" checked onchange="toggleMaskVisibility()">
+          </div>
+
+          <div class="compartment-row">
+            <div class="comp-info">
+              <span class="color-dot" style="background:#3b82f6;"></span>
               <span>EAT Left Atrium (LA)</span>
             </div>
-            <input type="checkbox" id="chkEAT_LA" checked onchange="toggleMask()" class="accent-blue-500">
+            <input type="checkbox" id="chkEAT_LA" checked onchange="toggleMaskVisibility()">
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full" style="background:#06b6d4;"></span>
+          <div class="compartment-row">
+            <div class="comp-info">
+              <span class="color-dot" style="background:#06b6d4;"></span>
               <span>EAT Left Ventricle (LV)</span>
             </div>
-            <input type="checkbox" id="chkEAT_LV" checked onchange="toggleMask()" class="accent-cyan-500">
+            <input type="checkbox" id="chkEAT_LV" checked onchange="toggleMaskVisibility()">
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full" style="background:#10b981;"></span>
+          <div class="compartment-row">
+            <div class="comp-info">
+              <span class="color-dot" style="background:#10b981;"></span>
               <span>EAT Right Atrium (RA)</span>
             </div>
-            <input type="checkbox" id="chkEAT_RA" checked onchange="toggleMask()" class="accent-emerald-500">
+            <input type="checkbox" id="chkEAT_RA" checked onchange="toggleMaskVisibility()">
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full" style="background:#eab308;"></span>
+          <div class="compartment-row">
+            <div class="comp-info">
+              <span class="color-dot" style="background:#eab308;"></span>
               <span>EAT Right Ventricle (RV)</span>
             </div>
-            <input type="checkbox" id="chkEAT_RV" checked onchange="toggleMask()" class="accent-yellow-500">
+            <input type="checkbox" id="chkEAT_RV" checked onchange="toggleMaskVisibility()">
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full" style="background:#f97316;"></span>
-              <span class="text-white font-medium">PVAT LAD</span>
+          <div class="compartment-row">
+            <div class="comp-info">
+              <span class="color-dot" style="background:#f97316;"></span>
+              <strong style="color:#fff;">PVAT LAD</strong>
             </div>
-            <input type="checkbox" id="chkPVAT_LAD" checked onchange="toggleMask()" class="accent-orange-500">
+            <input type="checkbox" id="chkPVAT_LAD" checked onchange="toggleMaskVisibility()">
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full" style="background:#ef4444;"></span>
+          <div class="compartment-row">
+            <div class="comp-info">
+              <span class="color-dot" style="background:#ef4444;"></span>
               <span>PVAT LCX</span>
             </div>
-            <input type="checkbox" id="chkPVAT_LCX" checked onchange="toggleMask()" class="accent-red-500">
+            <input type="checkbox" id="chkPVAT_LCX" checked onchange="toggleMaskVisibility()">
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full" style="background:#ec4899;"></span>
+          <div class="compartment-row">
+            <div class="comp-info">
+              <span class="color-dot" style="background:#ec4899;"></span>
               <span>PVAT RCA</span>
             </div>
-            <input type="checkbox" id="chkPVAT_RCA" checked onchange="toggleMask()" class="accent-pink-500">
+            <input type="checkbox" id="chkPVAT_RCA" checked onchange="toggleMaskVisibility()">
           </div>
         </div>
 
         <!-- Opacity Slider -->
-        <div class="mt-3">
-          <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+        <div class="opacity-box">
+          <div class="opacity-header">
             <span>Segmentation Opacity</span>
             <span id="opacityVal">85%</span>
           </div>
-          <input type="range" id="opacitySlider" min="0" max="100" value="85" class="w-full accent-purple-500">
+          <input type="range" id="opacitySlider" min="0" max="100" value="85" oninput="setOpacity(this.value)">
         </div>
       </div>
 
-      <!-- Bottom: Exact Clinical Measurements Table -->
-      <div class="flex-1 overflow-y-auto p-4 flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Clinical Fat Metrics</h3>
-            <span class="text-[10px] text-sky-400 font-mono">19-Col Schema</span>
-          </div>
-          
-          <table class="w-full text-left">
-            <thead>
-              <tr class="text-[11px] text-slate-400 border-b border-slate-800">
-                <th class="py-1 px-3">Region</th>
-                <th class="py-1 px-3 text-right">Vol (cm³)</th>
-                <th class="py-1 px-3 text-right">Mean (HU)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {metrics_rows}
-            </tbody>
-          </table>
+      <!-- Tab Content: Measurements Table -->
+      <div class="metrics-section" id="panelMeas">
+        <div class="metrics-header">
+          <span style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase;">Clinical Measurements</span>
+          <span style="font-size:9px; color:#38bdf8; font-family:monospace;">19-Col MGH Schema</span>
         </div>
+        <table class="metrics-table">
+          <thead>
+            <tr>
+              <th>Region</th>
+              <th style="text-align:right;">Vol (cm³)</th>
+              <th style="text-align:right;">Mean (HU)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics_rows}
+          </tbody>
+        </table>
+      </div>
 
-        <!-- Adipose Window Status Pill -->
-        <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
-          <div class="flex justify-between">
-            <span>Adipose Range:</span>
-            <span class="text-sky-300 font-mono font-bold">[-190.0, -30.0] HU</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Peak Fat Density:</span>
-            <span class="text-emerald-400 font-mono font-bold">-64.8 HU</span>
-          </div>
+      <!-- Adipose Status Card -->
+      <div class="status-card">
+        <div style="display:flex; justify-content:space-between;">
+          <span>Adipose Attenuation Window:</span>
+          <strong style="color:#38bdf8;">[-190.0, -30.0] HU</strong>
         </div>
-
+        <div style="display:flex; justify-content:space-between;">
+          <span>Pericoronary Radial Distance:</span>
+          <strong style="color:#fb923c;">10.0 mm</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span>Total EAT Adipose Volume:</span>
+          <strong style="color:#34d399;">{metrics.get('EAT Total Volume (cm3)', 75.79):.2f} cm³</strong>
+        </div>
       </div>
 
     </aside>
 
   </main>
+</div>
 
-  <!-- Interactive Viewer Client Script -->
-  <script>
-    const totalSlices = {num_slices};
-    const ctImg = document.getElementById('ctImage');
-    const segImg = document.getElementById('segOverlay');
-    const slider = document.getElementById('sliceSlider');
-    const hudSliceNum = document.getElementById('hudSliceNum');
-    const hudSliceZ = document.getElementById('hudSliceZ');
-    const opacitySlider = document.getElementById('opacitySlider');
-    const opacityVal = document.getElementById('opacityVal');
-    const presetSelect = document.getElementById('presetSelect');
-    const hudWindow = document.getElementById('hudWindow');
+<!-- Interactive OHIF Client Script -->
+<script>
+  const NZ = {nz}, NS = {ns}, NC = {nc}, NF = {nf};
+  const pad = n => String(n).padStart(3, '0');
+  
+  let z = Math.floor(NZ / 2);
+  let s = Math.floor(NS / 2);
+  let c = Math.floor(NC / 2);
+  let f = 0;
+  let activePlane = 'axial';
+  let isGridMaximized = false;
+  let maximizedBoxId = null;
+  let isSpinning = true;
+  let currentTool = 'crosshair';
 
-    function padZ(z) {{
-      return String(z).padStart(3, '0');
+  const $ = id => document.getElementById(id);
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, Math.round(v)));
+
+  // Preload 3D frames
+  const frames3d = [];
+  for (let i = 0; i < NF; i++) {{
+    const im = new Image();
+    im.src = `volume3d/frame_${{pad(i)}}.png`;
+    frames3d.push(im);
+  }}
+
+  function updateViewports() {{
+    // 1. Axial
+    $('axCt').src = `slices/ct_${{pad(z)}}.png`;
+    $('axSeg').src = `slices/seg_${{pad(z)}}.png`;
+    $('iAx').textContent = `Slice ${{z}} / ${{NZ - 1}}`;
+
+    // 2. Sagittal
+    $('sagCt').src = `sagittal/ct_${{pad(s)}}.png`;
+    $('sagSeg').src = `sagittal/seg_${{pad(s)}}.png`;
+    $('iSag').textContent = `Slice ${{s}} / ${{NS - 1}}`;
+
+    // 3. Coronal
+    $('corCt').src = `coronal/ct_${{pad(c)}}.png`;
+    $('corSeg').src = `coronal/seg_${{pad(c)}}.png`;
+    $('iCor').textContent = `Slice ${{c}} / ${{NC - 1}}`;
+
+    // Crosshair positioning
+    const u = s / (NS - 1);
+    const v = c / (NC - 1);
+    const w = 1 - (z / (NZ - 1));
+
+    $('axV').style.left = (u * 100) + '%';
+    $('axH').style.top = (v * 100) + '%';
+    
+    $('sagV').style.left = (v * 100) + '%';
+    $('sagH').style.top = (w * 100) + '%';
+
+    $('corV').style.left = (u * 100) + '%';
+    $('corH').style.top = (w * 100) + '%';
+
+    // Update bottom slider according to active plane
+    syncBottomSlider();
+  }}
+
+  function syncBottomSlider() {{
+    const slider = $('activeSlider');
+    const readout = $('activeSliceReadout');
+    const label = $('activePlaneName');
+
+    if (activePlane === 'axial') {{
+      label.textContent = 'AXIAL:';
+      label.style.color = '#38bdf8';
+      slider.max = NZ - 1;
+      slider.value = z;
+      readout.textContent = `${{z}}/${{NZ - 1}}`;
+    }} else if (activePlane === 'sagittal') {{
+      label.textContent = 'SAGITTAL:';
+      label.style.color = '#34d399';
+      slider.max = NS - 1;
+      slider.value = s;
+      readout.textContent = `${{s}}/${{NS - 1}}`;
+    }} else if (activePlane === 'coronal') {{
+      label.textContent = 'CORONAL:';
+      label.style.color = '#fb923c';
+      slider.max = NC - 1;
+      slider.value = c;
+      readout.textContent = `${{c}}/${{NC - 1}}`;
     }}
+  }}
 
-    function updateSlice(z) {{
-      const num = parseInt(z);
-      slider.value = num;
-      hudSliceNum.textContent = num;
-      hudSliceZ.textContent = ((-num * 3.0)).toFixed(1);
-      ctImg.src = `slices/ct_${{padZ(num)}}.png`;
-      segImg.src = `slices/seg_${{padZ(num)}}.png`;
+  $('activeSlider').addEventListener('input', (e) => {{
+    const val = parseInt(e.target.value);
+    if (activePlane === 'axial') z = val;
+    else if (activePlane === 'sagittal') s = val;
+    else if (activePlane === 'coronal') c = val;
+    updateViewports();
+  }});
+
+  function stepActiveSlice(delta) {{
+    if (activePlane === 'axial') z = clamp(z + delta, 0, NZ - 1);
+    else if (activePlane === 'sagittal') s = clamp(s + delta, 0, NS - 1);
+    else if (activePlane === 'coronal') c = clamp(c + delta, 0, NC - 1);
+    updateViewports();
+  }}
+
+  // Fraction helper for clicking within elements
+  function getFrac(e, el) {{
+    const r = el.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+  }}
+
+  // Linked Crosshair Navigation
+  $('wAx').addEventListener('mousedown', (e) => {{
+    setActiveBox('pAx');
+    if (currentTool !== 'crosshair') return;
+    const [u, v] = getFrac(e, $('wAx'));
+    s = clamp(u * (NS - 1), 0, NS - 1);
+    c = clamp(v * (NC - 1), 0, NC - 1);
+    updateViewports();
+  }});
+
+  $('wSag').addEventListener('mousedown', (e) => {{
+    setActiveBox('pSag');
+    if (currentTool !== 'crosshair') return;
+    const [v, w] = getFrac(e, $('wSag'));
+    c = clamp(v * (NC - 1), 0, NC - 1);
+    z = clamp((1 - w) * (NZ - 1), 0, NZ - 1);
+    updateViewports();
+  }});
+
+  $('wCor').addEventListener('mousedown', (e) => {{
+    setActiveBox('pCor');
+    if (currentTool !== 'crosshair') return;
+    const [u, w] = getFrac(e, $('wCor'));
+    s = clamp(u * (NS - 1), 0, NS - 1);
+    z = clamp((1 - w) * (NZ - 1), 0, NZ - 1);
+    updateViewports();
+  }});
+
+  // Mouse Wheel Scrolling per Viewport
+  $('pAx').addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    setActiveBox('pAx');
+    z = clamp(z + (e.deltaY > 0 ? -1 : 1), 0, NZ - 1);
+    updateViewports();
+  }});
+
+  $('pSag').addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    setActiveBox('pSag');
+    s = clamp(s + (e.deltaY > 0 ? 1 : -1), 0, NS - 1);
+    updateViewports();
+  }});
+
+  $('pCor').addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    setActiveBox('pCor');
+    c = clamp(c + (e.deltaY > 0 ? 1 : -1), 0, NC - 1);
+    updateViewports();
+  }});
+
+  // 3D Volume Drag-to-Rotate
+  let dragX = null;
+  $('volImg').addEventListener('mousedown', (e) => {{
+    dragX = e.clientX;
+    isSpinning = false;
+    $('btnSpin').style.background = '#334155';
+  }});
+  window.addEventListener('mouseup', () => dragX = null);
+  window.addEventListener('mousemove', (e) => {{
+    if (dragX === null) return;
+    const delta = e.clientX - dragX;
+    if (Math.abs(delta) > 6) {{
+      f = (f + (delta > 0 ? 1 : NF - 1)) % NF;
+      dragX = e.clientX;
+      $('volImg').src = frames3d[f].src;
     }}
+  }});
 
-    function stepSlice(delta) {{
-      let current = parseInt(slider.value) + delta;
-      if (current < 0) current = 0;
-      if (current >= totalSlices) current = totalSlices - 1;
-      updateSlice(current);
+  setInterval(() => {{
+    if (isSpinning && frames3d.length > 0) {{
+      f = (f + 1) % NF;
+      $('volImg').src = frames3d[f].src;
     }}
+  }}, 110);
 
-    slider.addEventListener('input', (e) => {{
-      updateSlice(e.target.value);
-    }});
+  function toggleSpin(e) {{
+    if (e) e.stopPropagation();
+    isSpinning = !isSpinning;
+    $('btnSpin').style.background = isSpinning ? '#7c3aed' : '#334155';
+  }}
 
-    // Mouse wheel scrubbing over viewport
-    document.getElementById('viewportContainer').addEventListener('wheel', (e) => {{
-      e.preventDefault();
-      stepSlice(e.deltaY > 0 ? 1 : -1);
-    }});
+  // Active Viewport Selection
+  function setActiveBox(id) {{
+    document.querySelectorAll('.viewport-box').forEach(b => b.classList.remove('active-box'));
+    const box = $(id);
+    if (box) box.classList.add('active-box');
+    if (id === 'pAx') activePlane = 'axial';
+    else if (id === 'pSag') activePlane = 'sagittal';
+    else if (id === 'pCor') activePlane = 'coronal';
+    syncBottomSlider();
+  }}
 
-    // Opacity slider
-    opacitySlider.addEventListener('input', (e) => {{
-      const val = e.target.value / 100.0;
-      opacityVal.textContent = e.target.value + '%';
-      segImg.style.opacity = val;
-    }});
-
-    // Window Presets
-    presetSelect.addEventListener('change', (e) => {{
-      const p = e.target.value;
-      if (p === 'fat') {{
-        ctImg.style.filter = 'contrast(1.2) brightness(1.0)';
-        hudWindow.textContent = 'Fat Window (W:400, L:-110)';
-      }} else if (p === 'soft') {{
-        ctImg.style.filter = 'contrast(1.0) brightness(1.2)';
-        hudWindow.textContent = 'Soft Tissue (W:350, L:40)';
-      }} else if (p === 'lung') {{
-        ctImg.style.filter = 'contrast(0.7) brightness(1.5)';
-        hudWindow.textContent = 'Lung Window (W:1500, L:-600)';
-      }} else if (p === 'bone') {{
-        ctImg.style.filter = 'contrast(1.6) brightness(0.8)';
-        hudWindow.textContent = 'Bone Window (W:1500, L:300)';
-      }}
-    }});
-
-    function resetViewport() {{
-      slider.value = Math.floor(totalSlices / 2);
-      updateSlice(slider.value);
-      ctImg.style.transform = 'scale(1) translate(0px, 0px)';
-      segImg.style.transform = 'scale(1) translate(0px, 0px)';
-      presetSelect.value = 'fat';
-      ctImg.style.filter = 'contrast(1.1)';
-      hudWindow.textContent = 'Fat Window (W:400, L:-110)';
-      segImg.style.opacity = '0.85';
-      opacitySlider.value = 85;
-      opacityVal.textContent = '85%';
+  // Maximize / Restore Viewports
+  function maximizeBox(id, e) {{
+    if (e) e.stopPropagation();
+    const grid = $('mprGrid');
+    if (isGridMaximized && maximizedBoxId === id) {{
+      // Restore 2x2
+      document.querySelectorAll('.viewport-box').forEach(b => b.classList.remove('hidden'));
+      grid.classList.remove('maximized');
+      isGridMaximized = false;
+      maximizedBoxId = null;
+    }} else {{
+      // Maximize target
+      document.querySelectorAll('.viewport-box').forEach(b => {{
+        if (b.id === id) b.classList.remove('hidden');
+        else b.classList.add('hidden');
+      }});
+      grid.classList.add('maximized');
+      isGridMaximized = true;
+      maximizedBoxId = id;
     }}
+  }}
 
-    function toggleMask() {{
-      const totalChecked = document.getElementById('chkEAT_TOTAL').checked;
-      segImg.style.display = totalChecked ? 'block' : 'none';
+  function toggleGridLayout() {{
+    if (isGridMaximized) {{
+      maximizeBox(maximizedBoxId);
+    }} else {{
+      maximizeBox('pAx');
     }}
+  }}
 
-    // Initial slice load
-    updateSlice(Math.floor(totalSlices / 2));
-  </script>
+  // Window Presets
+  function applyWindowPreset(p) {{
+    const ctImages = document.querySelectorAll('img.ct-plane');
+    const hud = $('hudWindow');
+    if (p === 'fat') {{
+      ctImages.forEach(im => im.style.filter = 'contrast(1.2) brightness(1.0)');
+      if (hud) hud.textContent = 'W: 400 L: -110';
+    }} else if (p === 'soft') {{
+      ctImages.forEach(im => im.style.filter = 'contrast(1.0) brightness(1.2)');
+      if (hud) hud.textContent = 'W: 350 L: 40';
+    }} else if (p === 'lung') {{
+      ctImages.forEach(im => im.style.filter = 'contrast(0.7) brightness(1.5)');
+      if (hud) hud.textContent = 'W: 1500 L: -600';
+    }} else if (p === 'bone') {{
+      ctImages.forEach(im => im.style.filter = 'contrast(1.6) brightness(0.8)');
+      if (hud) hud.textContent = 'W: 1500 L: 300';
+    }}
+  }}
 
+  // Opacity Control
+  function setOpacity(val) {{
+    const alpha = val / 100.0;
+    $('opacityVal').textContent = val + '%';
+    document.querySelectorAll('img.seg-plane').forEach(im => im.style.opacity = alpha);
+  }}
+
+  function toggleMaskVisibility() {{
+    const isVisible = $('chkEAT_TOTAL').checked;
+    document.querySelectorAll('img.seg-plane').forEach(im => im.style.display = isVisible ? 'block' : 'none');
+  }}
+
+  function setTool(tool) {{
+    currentTool = tool;
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    if (tool === 'crosshair') $('btnCrosshair').classList.add('active');
+    else if (tool === 'pan') $('btnPan').classList.add('active');
+    else if (tool === 'zoom') $('btnZoom').classList.add('active');
+    else if (tool === 'wl') $('btnWl').classList.add('active');
+  }}
+
+  function resetAllViewports() {{
+    z = Math.floor(NZ / 2);
+    s = Math.floor(NS / 2);
+    c = Math.floor(NC / 2);
+    f = 0;
+    applyWindowPreset('fat');
+    setOpacity(85);
+    $('opacitySlider').value = 85;
+    $('presetSelect').value = 'fat';
+    isGridMaximized = false;
+    maximizedBoxId = null;
+    document.querySelectorAll('.viewport-box').forEach(b => b.classList.remove('hidden'));
+    $('mprGrid').classList.remove('maximized');
+    setTool('crosshair');
+    updateViewports();
+  }}
+
+  function switchRightTab(tab) {{
+    if (tab === 'seg') {{
+      $('tabSeg').classList.add('active');
+      $('tabMeas').classList.remove('active');
+      $('panelSeg').style.display = 'block';
+    }} else {{
+      $('tabMeas').classList.add('active');
+      $('tabSeg').classList.remove('active');
+    }}
+  }}
+
+  function switchParticipant(pid) {{
+    alert('Switching to Participant ' + pid + '. Please run: cardiac-fat-fl view <patient_dir> or reload.');
+  }}
+
+  function selectSeries(kind) {{
+    $('cardCT').classList.toggle('active', kind === 'ct');
+    $('cardSEG').classList.toggle('active', kind === 'seg');
+  }}
+
+  // Initial load
+  updateViewports();
+</script>
 </body>
 </html>
 """
@@ -1347,12 +1722,13 @@ def export_sample_to_ohif(
             except Exception:
                 pass
 
-    # 5. Generate authentic OHIF 3-pane web viewer
+    # 5. Generate authentic OHIF 3-pane web viewer with 4-box center viewport
     generate_ohif_3pane_viewer_html(
         participant_id=participant_id,
         output_dir=dest_dir,
         num_slices=num_rendered,
         summary_metrics=final_metrics,
+        mpr_info=mpr_info,
     )
 
     return dest_dir
