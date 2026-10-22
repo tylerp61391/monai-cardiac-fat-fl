@@ -15,7 +15,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 
 ![Interactive OHIF v3.13 Medical Workstation: 3D Slicer Four-Up 2x2 Layout](docs/figures/ohif_viewer_snapshot.png)
 
-*Figure 1: Authentic OHIF v3.13 Medical Workstation displaying 3D Cardiac CT with 3D Slicer Four-Up 2x2 grid (Axial, 3D MPR Volume Reconstruction, Sagittal, Coronal), Smart Scrollbars on every viewport, 2-column square studies browser, and 8-layer DICOM-SEG color overlays.*
+*Figure 1: Authentic OHIF v3.13 Medical Workstation displaying 3D Cardiac CT with 3D Slicer Four-Up 2x2 grid (Axial, 3D MPR Volume Reconstruction, Coronal, Sagittal), Smart Scrollbars on every viewport, 2-column square studies browser, and 8-layer DICOM-SEG color overlays.*
 
 ---
 
@@ -84,10 +84,10 @@ The repository provides full integration with the [Open Health Imaging Foundatio
 │ │ Axial │ │3D Vol ││ • 8-Layer DICOM-SEG Masks         │ • Rotational Cinematic Rendering  │   - EAT Total       │
 │ └───────┘ └───────┘│ • Interactive Scrub Thumb         │ • Cardiac Fat / Bone / MTD Presets│   - EAT LA, LV, RA, │
 │ ┌───────┐ ┌───────┐│ • Live Cursor HU Readout & Z-Pos  │ • Quick Flip & Orientation Anchor │     RV              │
-│ │  Sag  │ │  Cor  ││├───────────────────────────────────┼───────────────────────────────────┤   - PVAT LAD, LCX,  │
-│ └───────┘ └───────┘│        SAGITTAL VIEWPORT          │         CORONAL VIEWPORT          │     RCA             │
+│ │  Cor  │ │  Sag  ││├───────────────────────────────────┼───────────────────────────────────┤   - PVAT LAD, LCX,  │
+│ └───────┘ └───────┘│         CORONAL VIEWPORT          │         SAGITTAL VIEWPORT         │     RCA             │
 │ • Patient Chooser  │   (Bottom-Left, Smart Scrollbar)  │   (Bottom-Right, Smart Scrollbar) │ • Exact Volume / HU │
-│ • Series Metadata  │ • Orthogonal YZ Sagittal Cut      │ • Orthogonal XZ Coronal Cut       │ • Isolated Mask Pick│
+│ • Series Metadata  │ • Orthogonal XZ Coronal Cut       │ • Orthogonal YZ Sagittal Cut      │ • Isolated Mask Pick│
 │ • 1-Click OHIF Run │ • Synchronized Spatial Scrollbar  │ • Synchronized Spatial Scrollbar  │ • Cloud Sync Export │
 └────────────────────┴───────────────────────────────────┴───────────────────────────────────┴─────────────────────┘
 ```

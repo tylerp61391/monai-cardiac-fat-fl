@@ -1101,26 +1101,11 @@ def generate_ohif_3pane_viewer_html(
           </div>
         </div>
 
-        <!-- Tile 3: Sagittal MPR (Bottom-Left) -->
-        <div class="series-card" id="cardSag" onclick="selectSeriesTile('sagittal')">
-          <div class="card-top">
-            <span class="card-badge badge-ct">CT</span>
-            <span class="card-count">s:3 i:{ns}</span>
-          </div>
-          <div class="card-thumb-wrap">
-            <img src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
-          </div>
-          <div class="card-bottom">
-            <span class="card-title">Body 4.0 CE</span>
-            <span class="card-sub">Sagittal MPR</span>
-          </div>
-        </div>
-
-        <!-- Tile 4: Coronal MPR (Bottom-Right) -->
+        <!-- Tile 3: Coronal MPR (Bottom-Left, 3D Slicer convention) -->
         <div class="series-card" id="cardCor" onclick="selectSeriesTile('coronal')">
           <div class="card-top">
             <span class="card-badge badge-ct">CT</span>
-            <span class="card-count">s:4 i:{nc}</span>
+            <span class="card-count">s:3 i:{nc}</span>
           </div>
           <div class="card-thumb-wrap">
             <img src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
@@ -1128,6 +1113,21 @@ def generate_ohif_3pane_viewer_html(
           <div class="card-bottom">
             <span class="card-title">Lung 3.0 CE</span>
             <span class="card-sub">Coronal MPR</span>
+          </div>
+        </div>
+
+        <!-- Tile 4: Sagittal MPR (Bottom-Right, 3D Slicer convention) -->
+        <div class="series-card" id="cardSag" onclick="selectSeriesTile('sagittal')">
+          <div class="card-top">
+            <span class="card-badge badge-ct">CT</span>
+            <span class="card-count">s:4 i:{ns}</span>
+          </div>
+          <div class="card-thumb-wrap">
+            <img src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
+          </div>
+          <div class="card-bottom">
+            <span class="card-title">Body 4.0 CE</span>
+            <span class="card-sub">Sagittal MPR</span>
           </div>
         </div>
 
@@ -1213,39 +1213,7 @@ def generate_ohif_3pane_viewer_html(
         </div>
       </div>
 
-      <!-- Viewport 3: Sagittal MPR (Bottom-Left) -->
-      <div class="viewport-box" id="pSag" onclick="setActiveBox('pSag')">
-        <!-- Cornerstone Corner Overlays -->
-        <div class="cs-overlay cs-top-left">
-          <div class="study-meta">22-May-2014</div>
-          <div class="series-meta">Body 4.0 CE (Sagittal)</div>
-        </div>
-        <div class="cs-overlay cs-top-right">
-          <button class="vp-btn" onclick="maximizeBox('pSag', event)" title="Maximize Viewport">⛶</button>
-        </div>
-        <div class="cs-overlay cs-bottom-left" id="hudWindowSag">W: 400 L: -110</div>
-        <div class="cs-overlay cs-bottom-right" id="iSag">I: {ns // 2 + 1} ({ns // 2 + 1}/{ns})</div>
-
-        <!-- Anatomical Markers -->
-        <span class="orient top">H</span>
-        <span class="orient bottom">F</span>
-        <span class="orient left">A</span>
-        <span class="orient right">P</span>
-
-        <div class="vp-canvas-wrap" id="wSag">
-          <img class="ct-plane" id="sagCt" src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
-          <canvas class="seg-plane" id="sagCanvas" width="{sag_w}" height="{sag_h}"></canvas>
-          <div class="xh v" id="sagV" style="background:#f97316;"></div>
-          <div class="xh h" id="sagH" style="background:#38bdf8;"></div>
-        </div>
-
-        <!-- Smart Scrollbar for Sagittal -->
-        <div class="smart-scrollbar" id="smartScrollSag" onclick="onSmartScrollClick(event, 'sagittal')" title="Smart Scrollbar: Jump Sagittal slice">
-          <div class="smart-track" id="smartTrackSag"><div class="smart-thumb" id="smartThumbSag"></div></div>
-        </div>
-      </div>
-
-      <!-- Viewport 4: Coronal MPR (Bottom-Right) -->
+      <!-- Viewport 3: Coronal MPR (Bottom-Left, 3D Slicer Standard) -->
       <div class="viewport-box" id="pCor" onclick="setActiveBox('pCor')">
         <!-- Cornerstone Corner Overlays -->
         <div class="cs-overlay cs-top-left">
@@ -1274,6 +1242,38 @@ def generate_ohif_3pane_viewer_html(
         <!-- Smart Scrollbar for Coronal -->
         <div class="smart-scrollbar" id="smartScrollCor" onclick="onSmartScrollClick(event, 'coronal')" title="Smart Scrollbar: Jump Coronal slice">
           <div class="smart-track" id="smartTrackCor"><div class="smart-thumb" id="smartThumbCor"></div></div>
+        </div>
+      </div>
+
+      <!-- Viewport 4: Sagittal MPR (Bottom-Right, 3D Slicer Standard) -->
+      <div class="viewport-box" id="pSag" onclick="setActiveBox('pSag')">
+        <!-- Cornerstone Corner Overlays -->
+        <div class="cs-overlay cs-top-left">
+          <div class="study-meta">22-May-2014</div>
+          <div class="series-meta">Body 4.0 CE (Sagittal)</div>
+        </div>
+        <div class="cs-overlay cs-top-right">
+          <button class="vp-btn" onclick="maximizeBox('pSag', event)" title="Maximize Viewport">⛶</button>
+        </div>
+        <div class="cs-overlay cs-bottom-left" id="hudWindowSag">W: 400 L: -110</div>
+        <div class="cs-overlay cs-bottom-right" id="iSag">I: {ns // 2 + 1} ({ns // 2 + 1}/{ns})</div>
+
+        <!-- Anatomical Markers -->
+        <span class="orient top">H</span>
+        <span class="orient bottom">F</span>
+        <span class="orient left">A</span>
+        <span class="orient right">P</span>
+
+        <div class="vp-canvas-wrap" id="wSag">
+          <img class="ct-plane" id="sagCt" src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
+          <canvas class="seg-plane" id="sagCanvas" width="{sag_w}" height="{sag_h}"></canvas>
+          <div class="xh v" id="sagV" style="background:#f97316;"></div>
+          <div class="xh h" id="sagH" style="background:#38bdf8;"></div>
+        </div>
+
+        <!-- Smart Scrollbar for Sagittal -->
+        <div class="smart-scrollbar" id="smartScrollSag" onclick="onSmartScrollClick(event, 'sagittal')" title="Smart Scrollbar: Jump Sagittal slice">
+          <div class="smart-track" id="smartTrackSag"><div class="smart-thumb" id="smartThumbSag"></div></div>
         </div>
       </div>
 

@@ -79,7 +79,7 @@ class CohortHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 else:
                     try:
                         idx_txt = (export_dir / "index.html").read_text(encoding="utf-8", errors="ignore")
-                        if "v3.13 Next" not in idx_txt or "viewportsGrid" not in idx_txt or idx_txt.find("card3D") > idx_txt.find("cardSag"):
+                        if "v3.13 Next" not in idx_txt or "viewportsGrid" not in idx_txt or idx_txt.find("cardCor") > idx_txt.find("cardSag"):
                             needs_export = True
                     except Exception:
                         needs_export = True
