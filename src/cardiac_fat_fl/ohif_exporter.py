@@ -441,7 +441,7 @@ def render_real_slice_assets(
                 rgba[mask, 0] = rgb[0]
                 rgba[mask, 1] = rgb[1]
                 rgba[mask, 2] = rgb[2]
-                rgba[mask, 3] = 190  # Alpha
+                rgba[mask, 3] = 255  # Full alpha for lossless pixel filtering
 
         Image.fromarray(rgba, mode="RGBA").save(slices_dir / f"seg_{z:03d}.png")
 
@@ -482,7 +482,7 @@ def _load_hu_volume(ct_dicom_paths: List[Path]) -> Tuple[np.ndarray, Tuple[float
     return vol, (sz, sy, sx)
 
 
-def _colorize_seg_plane(seg_plane: np.ndarray, alpha: int = 190) -> np.ndarray:
+def _colorize_seg_plane(seg_plane: np.ndarray, alpha: int = 255) -> np.ndarray:
     """Converts an (8, A, B) binary compartment plane into an RGBA overlay."""
     _, a, b = seg_plane.shape
     rgba = np.zeros((a, b, 4), dtype=np.uint8)
@@ -1473,31 +1473,55 @@ def generate_ohif_3pane_viewer_html(
   }}
 
   const COMP_DEFS = [
-    {{ id: 'EAT_TOTAL', name: 'EAT Total',            color: '#9333ea', u24: (234 << 16) | (51 << 8) | 147 }},
-    {{ id: 'EAT_LA',    name: 'EAT Left Atrium (LA)', color: '#3b82f6', u24: (246 << 16) | (130 << 8) | 59 }},
-    {{ id: 'EAT_LV',    name: 'EAT Left Ventricle (LV)', color: '#06b6d4', u24: (212 << 16) | (182 << 8) | 6 }},
-    {{ id: 'EAT_RA',    name: 'EAT Right Atrium (RA)', color: '#10b981', u24: (129 << 16) | (185 << 8) | 16 }},
-    {{ id: 'EAT_RV',    name: 'EAT Right Ventricle (RV)', color: '#eab308', u24: (8 << 16) | (179 << 8) | 234 }},
-    {{ id: 'PVAT_LAD',  name: 'PVAT LAD',              color: '#f97316', u24: (22 << 16) | (115 << 8) | 249 }},
-    {{ id: 'PVAT_LCX',  name: 'PVAT LCX',              color: '#ef4444', u24: (68 << 16) | (68 << 8) | 239 }},
-    {{ id: 'PVAT_RCA',  name: 'PVAT RCA',              color: '#ec4899', u24: (153 << 16) | (72 << 8) | 236 }},
+    {{ id: 'EAT_TOTAL', name: 'EAT Total',            color: '#9333ea', r: 147, g: 51,  b: 234 }},
+    {{ id: 'EAT_LA',    name: 'EAT Left Atrium (LA)', color: '#3b82f6', r: 59,  g: 130, b: 246 }},
+    {{ id: 'EAT_LV',    name: 'EAT Left Ventricle (LV)', color: '#06b6d4', r: 6,   g: 182, b: 212 }},
+    {{ id: 'EAT_RA',    name: 'EAT Right Atrium (RA)', color: '#10b981', r: 16,  g: 185, b: 129 }},
+    {{ id: 'EAT_RV',    name: 'EAT Right Ventricle (RV)', color: '#eab308', r: 234, g: 179, b: 8   }},
+    {{ id: 'PVAT_LAD',  name: 'PVAT LAD',              color: '#f97316', r: 249, g: 115, b: 22  }},
+    {{ id: 'PVAT_LCX',  name: 'PVAT LCX',              color: '#ef4444', r: 239, g: 68,  b: 68  }},
+    {{ id: 'PVAT_RCA',  name: 'PVAT RCA',              color: '#ec4899', r: 236, g: 72,  b: 153 }},
   ];
 
   const segImgCache = {{}};
+  const colorClassifierMap = {{}};
+
+  function getPixelCompartmentId(r, g, b) {{
+    const key = (r << 16) | (g << 8) | b;
+    if (colorClassifierMap[key] !== undefined) {{
+      return colorClassifierMap[key];
+    }}
+    let minDistance = 999999;
+    let closestId = null;
+    for (let i = 0; i < COMP_DEFS.length; i++) {{
+      const c = COMP_DEFS[i];
+      const dr = r - c.r;
+      const dg = g - c.g;
+      const db = b - c.b;
+      const dist = dr * dr + dg * dg + db * db;
+      if (dist < minDistance) {{
+        minDistance = dist;
+        closestId = c.id;
+      }}
+    }}
+    // Color cluster tolerance: Euclidean distance < 65 (dist < 4225)
+    const res = (minDistance < 4225) ? closestId : null;
+    colorClassifierMap[key] = res;
+    return res;
+  }}
 
   function drawFilteredSeg(canvasId, srcUrl) {{
     const canvas = $(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const inactiveMap = {{}};
+    const activeSet = {{}};
     let activeCount = 0;
     COMP_DEFS.forEach(c => {{
       const chk = $('chk_' + c.id);
       if (chk && chk.checked) {{
         activeCount++;
-      }} else {{
-        inactiveMap[c.u24] = true;
+        activeSet[c.id] = true;
       }}
     }});
 
@@ -1527,15 +1551,14 @@ def generate_ohif_3pane_viewer_html(
     }}
 
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const u32 = new Uint32Array(imgData.data.buffer);
-    const len = u32.length;
+    const data = imgData.data;
+    const len = data.length;
 
-    for (let i = 0; i < len; i++) {{
-      const px = u32[i];
-      if ((px & 0xFF000000) === 0) continue;
-      const rgb24 = px & 0x00FFFFFF;
-      if (inactiveMap[rgb24]) {{
-        u32[i] = 0;
+    for (let i = 0; i < len; i += 4) {{
+      if (data[i + 3] === 0) continue;
+      const compId = getPixelCompartmentId(data[i], data[i + 1], data[i + 2]);
+      if (!compId || !activeSet[compId]) {{
+        data[i + 3] = 0;
       }}
     }}
     ctx.putImageData(imgData, 0, 0);
