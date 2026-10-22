@@ -38,6 +38,29 @@ python -m cardiac_fat_fl.cli view "path/to/patient" --port 8000 --no-browser
 python -m cardiac_fat_fl.cli fl-step --data-dir "path/to/patient"
 ```
 
+### Common Agent Workflows & Task Recipes
+
+#### Recipe 1: "I have a CT scan at <path> and want the app to run and bring it up in OHIF so I can see results"
+When a user provides a CT scan or participant directory and asks to process and visualize it:
+1. **Check for Existing Segmentations**: Inspect if `<patient_dir>/eat_pvat.seg.nrrd` already exists.
+2. **Quantify First (if missing)**: If segmentation does not exist, run the quantification pipeline to generate the 8-channel masks and measurement CSV:
+   ```bash
+   python -m cardiac_fat_fl.cli quantify "<cohort_or_study_dir>" --save-seg
+   ```
+   *(Note: `quantify` expects a cohort directory containing participant subfolders like `cohort/<patient_id>/scan.nrrd` or DICOM slices).*
+3. **Launch OHIF Viewer (Background)**:
+   ```bash
+   python -m cardiac_fat_fl.cli view "<patient_dir>" --port 8000 --no-browser
+   ```
+4. **Respond to User**: Provide the interactive local URL: `http://127.0.0.1:8000/patient/<patient_id>/` and summarize the computed EAT/PVAT volumes ($cm^3$) and mean attenuation values (HU).
+
+#### Recipe 2: "Compute fat measurements across a cohort"
+```bash
+python -m cardiac_fat_fl.cli quantify "/path/to/cohort" --output-dir "/path/to/cohort" --save-seg
+```
+Verify that `cardiac_fat_measurements.csv` contains the exact 19-column schema.
+
+
 ---
 
 ## 3. Strict Clinical & Mathematical Invariants

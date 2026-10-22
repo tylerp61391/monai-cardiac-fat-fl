@@ -239,6 +239,23 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `federated-train`| `cardiac-fat-fl federated-train --data-dir <dir>` | Runs local NVFLARE client distillation round with FedProx and FedBN. |
 | `federated-stats`| `cardiac-fat-fl federated-stats -c <csv_path>` | Extracts multi-site privacy-preserving cohort statistical moments. |
 
+### End-to-End Workflow: From Raw CT to Interactive OHIF Visualization
+
+To process a new cardiac CT scan and inspect the 8-compartment segmentations in the OHIF workstation:
+
+1. **Step 1: Quantify Adipose Tissue (Batch or Single Study)**:
+   ```bash
+   # Computes 8-channel eat_pvat.seg.nrrd and cardiac_fat_measurements.csv
+   cardiac-fat-fl quantify /path/to/cohort --save-seg
+   ```
+2. **Step 2: Launch Interactive OHIF MPR Workstation**:
+   ```bash
+   # Generates standard DICOM-SEG (eat_pvat_seg.dcm) and serves local viewer on port 8000
+   cardiac-fat-fl view /path/to/cohort/participant_id --port 8000
+   ```
+   Navigate to `http://127.0.0.1:8000/patient/<participant_id>/` to evaluate the 3D Slicer 4-quadrant layout with interactive crosshairs, density sliders, and real-time volumetric metrics.
+
+
 ---
 
 ## Developer & MCP Agent Reference
