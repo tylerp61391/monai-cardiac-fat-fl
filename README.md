@@ -336,14 +336,44 @@ launch_viewer("/path/to/participant_dir", port=8000)
 
 Built upon [NVIDIA FLARE (Federated Learning Application Runtime Environment)](https://developer.nvidia.com/flare), the architecture coordinates secure, privacy-preserving multi-center model distillation and statistical analytics across participating hospital firewalls:
 
-1. **Mode 1 (Distillation with FedBN & FedProx)**:
-   - Server sends global weights $w_{\text{global}}$ to participating hospitals.
-   - Local client (`CardiacFatClientAlgo`) updates convolutional weights using proximal regularization:
-     $$\mathcal{L} = \mathcal{L}_{\text{DiceFocal}}(y_{\text{pred}}, y_{\text{true}}) + \frac{\mu}{2} \| w - w_{\text{global}} \|^2$$
-   - **FedBN**: Normalization layers (`BatchNorm3d`, `InstanceNorm3d`) are filtered out of global updates and retained locally at each hospital to prevent scanner/kVp drift.
-2. **Mode 2 (Federated Cohort Analytics)**:
-   - Local `CardiacFatStatsExecutor` computes sample count $N$, sum $\sum x$, sum of squares $\sum x^2$, min, and max across local patient CSVs.
-   - Server aggregates global moments using Welford's algorithm without transferring any raw CT images across hospital firewalls.
+| Operational Mode | Local Client Execution | Global Server Aggregation | Privacy & Clinical Guarantee |
+| :--- | :--- | :--- | :--- |
+| **Mode 1: Model Distillation** | [`CardiacFatClientAlgo`](src/cardiac_fat_fl/fl_client_algo.py) | `ScatterAndGather` + `FedProx` | Zero DICOM/image transfer; weights-only updates |
+| **Mode 2: Cohort Analytics** | [`CardiacFatStatsExecutor`](src/cardiac_fat_fl/fl_stats_executor.py) | Parallel Welford Aggregator | Multi-site moment aggregation ($N, \mu, \sigma, \text{min}, \text{max}$) |
+
+---
+
+#### Mode 1: Distillation with FedBN & FedProx Regularization
+
+To prevent catastrophic forgetting of foundational anatomical heuristics while distilling into a unified 3D SegResNet, each hospital client optimizes a proximal-regularized loss function:
+
+$$
+\min_{w^{(k)}} \; \mathcal{L}_{\text{FedProx}}\big(w^{(k)}; w_{\text{global}}\big) = \mathcal{L}_{\text{DiceFocal}}\big(\hat{y}(w^{(k)}), y_{\text{true}}\big) + \frac{\mu}{2} \left\| w^{(k)} - w_{\text{global}} \right\|_2^2
+$$
+
+Where:
+- $\mathcal{L}_{\text{DiceFocal}}$ mitigates extreme foreground-background class imbalance across the 8 cardiac adipose compartments.
+- $\mu \in [0.01, 0.1]$ is the proximal regularization coefficient penalizing local client divergence.
+- **FedBN (Domain Adaptation)**: Normalization layers (`BatchNorm3d`, `InstanceNorm3d`) are decoupled from global aggregation to neutralize inter-hospital scanner variations (e.g., Siemens vs. GE energy spectra):
+
+$$
+w^{(k)} = \left\{ w_{\text{conv}}^{(k)}, w_{\text{bn}}^{(k)} \right\}, \quad w_{\text{global}} \leftarrow \sum_{k=1}^K \frac{N_k}{N} w_{\text{conv}}^{(k)}, \quad w_{\text{bn}}^{(k)} \equiv \text{Retained at Site } k
+$$
+
+---
+
+#### Mode 2: Multi-Site Privacy-Preserving Cohort Analytics
+
+To aggregate statistical moments across distributed clinical cohorts (e.g., Framingham, Stanford COCA, UK Biobank) without moving protected health information (PHI):
+
+1. **Local Moment Extraction**: Each hospital site computes summary vectors $(N_k, \sum x, \sum x^2, \min, \max)$ from its local 19-column measurements CSV.
+2. **Global Parallel Welford Aggregation**: The central server computes exact grand means and sample standard deviations:
+
+$$
+\bar{X}_{\text{global}} = \sum_{k=1}^K \frac{N_k}{N} \bar{X}_k, \qquad s^2_{\text{global}} = \frac{1}{N - 1} \left[ \sum_{k=1}^K (N_k - 1) s_k^2 + \sum_{k=1}^K N_k \big(\bar{X}_k - \bar{X}_{\text{global}}\big)^2 \right]
+$$
+
+This guarantees **100.0% mathematical equivalence** to pooling all patient CSVs in a single database, with zero transmission of individual patient identifiers.
 
 ---
 
