@@ -9,7 +9,7 @@
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED.svg?logo=docker&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-fl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Production-ready, zero-placeholder **PyTorch / MONAI Bundle** and **NVIDIA FLARE (NVFLARE)** federated learning repository for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
+**PyTorch / MONAI Bundle** and **NVIDIA FLARE (NVFLARE)** federated learning framework for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
 
 This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) research pipeline, transitioning it into a high-throughput Python 3.11+ and GPU-accelerated ecosystem. It enhances execution speed and scalability through modern PyTorch and ONNX Runtime backends, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer v3.13+](https://ohif.org/release-notes/3p13) via standard DICOM-SEG objects.
 
@@ -140,12 +140,12 @@ Because pretrained DeepHeartSeg ONNX models exceed GitHub's $100\,\text{MB}$ rep
    ```
 3. **Repository Maintainer Deployment**:
    When pushing to a new repository, create release `v1.0.0` and attach `models/deepheartseg_heart.onnx` and `models/deepheartseg_loc.onnx` as binary assets.
-4. **Zero-Download Heuristic Fallback**:
-   If model weights are not downloaded, the pipeline automatically falls back to the high-speed anatomical heuristic segmenter, ensuring instant evaluation without mandatory network downloads.
+4. **Anatomical Heuristic Fallback**:
+   If deep learning model weights are not pre-downloaded, the pipeline automatically activates the anatomical heuristic segmenter for immediate evaluation.
 
 ### Docker & Containerized Deployment
 
-A production-ready `Dockerfile` and `docker-compose.yml` are provided for cross-platform portability across Linux, Windows, macOS, and cloud clusters without local Python environment dependencies:
+A `Dockerfile` and `docker-compose.yml` are provided for cross-platform deployment across Linux, Windows, macOS, and cloud clusters:
 
 ```bash
 # 1. Build the lightweight Docker image
