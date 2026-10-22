@@ -307,9 +307,9 @@ def generate_ohif_dicom_json(
     seg_file: Optional[Path],
     participant_id: str,
 ) -> Path:
-    """Generates an OHIF v3.11 compliant naturalized DICOM JSON manifest (studies.json).
+    """Generates an OHIF v3.13 compliant naturalized DICOM JSON manifest (studies.json).
 
-    Conforms to the OHIF v3.11 dicomjson data source specification (https://docs.ohif.org/3.11/).
+    Conforms to the OHIF v3.13 dicomjson data source specification (https://ohif.org/release-notes/3p13).
     """
     import json
 
@@ -360,7 +360,7 @@ def generate_ohif_dicom_json(
             seg_series_uid = _sanitize_uid(str(getattr(seg_ds, "SeriesInstanceUID", generate_uid())))
             series_list.append({
                 "SeriesInstanceUID": seg_series_uid,
-                "SeriesDescription": "EAT/PVAT 8-Compartment Segmentation (OHIF 3.11 Labelmap)",
+                "SeriesDescription": "EAT/PVAT 8-Compartment Segmentation (OHIF 3.13 Cornerstone v5 Labelmap)",
                 "SeriesNumber": 100,
                 "Modality": "SEG",
                 "instances": [
@@ -378,8 +378,8 @@ def generate_ohif_dicom_json(
             pass
 
     manifest = {
-        "version": "3.11.0",
-        "documentation": "https://docs.ohif.org/3.11/",
+        "version": "3.13.0",
+        "documentation": "https://ohif.org/release-notes/3p13",
         "studies": [
             {
                 "StudyInstanceUID": study_uid,
@@ -866,6 +866,12 @@ def generate_ohif_3pane_viewer_html(
     .vp-actions {{ pointer-events: auto; display: flex; gap: 4px; }}
     .vp-btn {{ background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 3px; color: #cbd5e1; font-size: 10px; padding: 2px 5px; cursor: pointer; }}
     .vp-btn:hover {{ background: #334155; color: #fff; }}
+
+    /* OHIF v3.13 Smart Scrollbar */
+    .smart-scrollbar {{ position: absolute; right: 6px; top: 32px; bottom: 28px; width: 6px; background: rgba(15, 23, 42, 0.7); border-radius: 3px; z-index: 25; cursor: pointer; border: 1px solid rgba(51, 65, 85, 0.6); display: flex; flex-direction: column; overflow: hidden; }}
+    .smart-track {{ flex: 1; position: relative; width: 100%; }}
+    .smart-thumb {{ position: absolute; left: 0; right: 0; height: 10px; background: #38bdf8; border-radius: 2px; box-shadow: 0 0 6px rgba(56, 189, 248, 0.8); pointer-events: none; transition: top 0.05s ease-out; }}
+    .smart-scrollbar:hover {{ width: 8px; border-color: #38bdf8; }}
     
     /* Viewport Orientation Labels */
     .orient {{ position: absolute; z-index: 12; font-family: monospace; font-size: 11px; font-weight: 700; color: #facc15; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }}
@@ -945,7 +951,7 @@ def generate_ohif_3pane_viewer_html(
       <div>
         <div class="header-info-title">
           Open Health Imaging Foundation Workstation
-          <span class="version-tag">v3.11 SOTA</span>
+          <span class="version-tag">v3.13 Next</span>
         </div>
         <div class="header-info-sub">
           Study: <strong style="color:#e2e8f0;">COCA Cardiac CT</strong> &bull; Patient: <strong style="color:#38bdf8;">{participant_id}</strong> &bull; Modality: <strong style="color:#34d399;">CT/SEG</strong>
@@ -980,15 +986,15 @@ def generate_ohif_3pane_viewer_html(
 
     <!-- Right Cloud OHIF Link & Docs -->
     <div style="display:flex; align-items:center; gap:8px;">
-      <a href="studies.json" target="_blank" class="tool-btn" style="border-color:#334155; text-decoration:none;" title="View OHIF v3.11 Naturalized DICOM JSON Manifest">
+      <a href="studies.json" target="_blank" class="tool-btn" style="border-color:#334155; text-decoration:none;" title="View OHIF v3.13 Naturalized DICOM JSON Manifest">
         studies.json
       </a>
-      <a href="https://docs.ohif.org/3.11/" target="_blank" class="tool-btn" style="border-color:#334155; text-decoration:none;" title="OHIF v3.11 Documentation">
-        v3.11 Docs
+      <a href="https://ohif.org/release-notes/3p13" target="_blank" class="tool-btn" style="border-color:#334155; text-decoration:none;" title="OHIF v3.13 Release Notes">
+        v3.13 Notes
       </a>
-      <a href="https://viewer.ohif.org/local" id="btnLaunchOHIF" target="_blank" class="cloud-btn" title="Launch in official OHIF v3.11 Cloud Viewer">
+      <a href="https://viewer.ohif.org/local" id="btnLaunchOHIF" target="_blank" class="cloud-btn" title="Launch in official OHIF v3.13 Cloud Viewer">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-        Open in OHIF v3.11
+        Open in OHIF v3.13
       </a>
     </div>
   </header>
@@ -1088,6 +1094,12 @@ def generate_ohif_3pane_viewer_html(
           <div class="vp-footer">
             <span id="hudWindow">W: 400 L: -110</span>
             <span id="iAx">Slice 28 / {nz - 1}</span>
+          </div>
+          <!-- OHIF v3.13 Smart Scrollbar -->
+          <div class="smart-scrollbar" id="smartScrollAx" onclick="onSmartScrollClick(event, 'axial')" title="OHIF v3.13 Smart Scrollbar: Click to jump slice">
+            <div class="smart-track" id="smartTrackAx">
+              <div class="smart-thumb" id="smartThumbAx"></div>
+            </div>
           </div>
         </div>
 
@@ -1354,6 +1366,10 @@ def generate_ohif_3pane_viewer_html(
           <span>Total EAT Adipose Volume:</span>
           <strong style="color:#34d399;">{metrics.get('EAT Total Volume (cm3)', 75.79):.2f} cm³</strong>
         </div>
+        <div style="display:flex; justify-content:space-between; margin-top:3px; padding-top:3px; border-top:1px dashed #1e293b;">
+          <span>OHIF Architecture:</span>
+          <strong style="color:#38bdf8;"><a href="https://ohif.org/release-notes/3p13" target="_blank" style="color:#38bdf8; text-decoration:none;">v3.13 Next (Cornerstone v5)</a></strong>
+        </div>
       </div>
 
     </aside>
@@ -1488,6 +1504,9 @@ def generate_ohif_3pane_viewer_html(
 
     // Update bottom slider according to active plane
     syncBottomSlider();
+
+    // Update OHIF v3.13 Smart Scrollbar position
+    updateSmartScrollbar();
   }}
 
   function syncBottomSlider() {{
@@ -1794,7 +1813,31 @@ def generate_ohif_3pane_viewer_html(
     $('cardSEG').classList.toggle('active', kind === 'seg');
   }}
 
-  // Configure dynamic OHIF v3.11 Cloud Launch URL using studies.json
+  // OHIF v3.13 Smart Scrollbar Navigation & Read-Tracking
+  function updateSmartScrollbar() {{
+    const thumb = $('smartThumbAx');
+    const track = $('smartTrackAx');
+    if (!thumb || !track) return;
+    const trackHeight = track.clientHeight - 10;
+    if (trackHeight > 0) {{
+      const topPos = Math.round((z / Math.max(1, NZ - 1)) * trackHeight);
+      thumb.style.top = topPos + 'px';
+    }}
+  }}
+
+  function onSmartScrollClick(e, plane) {{
+    const track = $('smartTrackAx');
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const clickY = e.clientY - rect.top;
+    const ratio = Math.min(1.0, Math.max(0.0, clickY / rect.height));
+    if (plane === 'axial') {{
+      z = Math.round(ratio * (NZ - 1));
+      updateViewports();
+    }}
+  }}
+
+  // Configure dynamic OHIF v3.13 Cloud Launch URL using studies.json
   try {{
     const studiesUrl = new URL('studies.json', window.location.href).href;
     const launchBtn = $('btnLaunchOHIF');
