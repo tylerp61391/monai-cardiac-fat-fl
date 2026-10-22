@@ -648,7 +648,7 @@ def generate_mpr_viewer_html(participant_id: str, output_dir: Path, mpr_info: Di
   </div>
   <div>
     <label style="font-size:12px;color:#94a3b8">Overlay <input type="range" id="op" min="0" max="100" value="60" style="vertical-align:middle;width:90px"></label>
-    <button id="spin" class="on">Auto-rotate 3D</button>
+    <button id="spin">Auto-rotate 3D</button>
     <a href="index.html">&larr; Axial viewer</a>
   </div>
 </header>
@@ -673,7 +673,7 @@ def generate_mpr_viewer_html(participant_id: str, output_dir: Path, mpr_info: Di
 <script>
   const NZ = {mpr_info["axial_count"]}, NS = {mpr_info["sag_count"]}, NC = {mpr_info["cor_count"]}, NF = {mpr_info["vol_frames"]};
   const pad = n => String(n).padStart(3, '0');
-  let z = Math.floor(NZ / 2), s = Math.floor(NS / 2), c = Math.floor(NC / 2), f = 0, spinning = true;
+  let z = Math.floor(NZ / 2), s = Math.floor(NS / 2), c = Math.floor(NC / 2), f = 0, spinning = false;
   const $ = id => document.getElementById(id);
   const clamp = (v, n) => Math.max(0, Math.min(n - 1, Math.round(v)));
 
@@ -1197,7 +1197,7 @@ def generate_ohif_3pane_viewer_html(
           <div class="series-meta">3D MPR Reconstruction &bull; Volume Render</div>
         </div>
         <div class="cs-overlay cs-top-right">
-          <button class="vp-btn" id="btnSpin" onclick="toggleSpin(event)" style="background:#7c3aed; color:#fff;">Auto-Spin</button>
+          <button class="vp-btn" id="btnSpin" onclick="toggleSpin(event)" style="background:#334155; color:#cbd5e1;">Auto-Spin</button>
           <button class="vp-btn" onclick="maximizeBox('p3d', event)" title="Maximize Viewport">⛶</button>
         </div>
         <div class="cs-overlay cs-bottom-left">Drag to rotate volume</div>
@@ -1458,7 +1458,7 @@ def generate_ohif_3pane_viewer_html(
   let activePlane = 'axial';
   let isGridMaximized = false;
   let maximizedBoxId = null;
-  let isSpinning = true;
+  let isSpinning = false;
   let currentTool = 'crosshair';
 
   const $ = id => document.getElementById(id);
@@ -1765,6 +1765,7 @@ def generate_ohif_3pane_viewer_html(
     if (e) e.stopPropagation();
     isSpinning = !isSpinning;
     $('btnSpin').style.background = isSpinning ? '#7c3aed' : '#334155';
+    $('btnSpin').style.color = isSpinning ? '#ffffff' : '#cbd5e1';
   }}
 
   // Active Viewport Selection
