@@ -26,7 +26,7 @@
     
     <div class="flex items-center space-x-4">
       <div class="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700" id="slideIndicator">
-        Slide 1 / 10
+        Slide 1 / 11
       </div>
       <button id="toggleNotesBtn" onclick="toggleNotes()" class="text-xs font-medium px-3 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 transition">
         Speaker Notes [N]
@@ -381,8 +381,67 @@
       </div>
     </div>
 
-    <!-- SLIDE 8: High-Throughput Batch Processing & Tri-Level Outputs -->
-    <div class="slide flex-col justify-center space-y-6" data-slide="8">
+    <!-- SLIDE 8: Clinical Cohort Validation (Stanford AIMI COCA) -->
+    <div class="slide flex-col justify-center space-y-5" data-slide="8">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Clinical Cohort Validation</span>
+        <span class="text-xs text-slate-500">Stanford AIMI COCA (N = 787 Patients)</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <h2 class="text-2xl md:text-3xl font-bold text-white">Real-World Evidence: Multi-Vendor Diversity &amp; Plaque Biology</h2>
+        <span class="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">100.0% Pipeline Completion Rate</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Left Card: Multi-Vendor Scanner Breakdown -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-cyan-400 uppercase">Scanner Heterogeneity &amp; FedBN</span>
+              <span class="text-[11px] text-slate-400 font-mono">54,528 DICOM Files</span>
+            </div>
+            
+            <div class="rounded-lg overflow-hidden border border-slate-800 bg-slate-950 mb-3 flex items-center justify-center p-1">
+              <img src="figures/coca_manufacturer_breakdown.png" alt="COCA Manufacturer Breakdown" class="max-h-44 object-contain rounded">
+            </div>
+
+            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+              <li><strong class="text-white">Multi-Vendor Distribution:</strong> Siemens (87.6%), GE Healthcare (11.5%), Toshiba, and Philips across 451 gated and 213 non-gated scans.</li>
+              <li><strong class="text-white">Why FedBN is Essential:</strong> Different detector optics and kVp spectra shift Hounsfield Unit baselines. FedBN keeps normalization layers local to eliminate cross-scanner calibration drift.</li>
+            </ul>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-500">
+            Gated tube current (~808 mA) vs Non-gated screening (~364 mA)
+          </div>
+        </div>
+
+        <!-- Right Card: Coronary Vessel Prevalence & PVAT Coupling -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400 uppercase">Vessel Calcium vs. PVAT Distribution</span>
+              <span class="text-[11px] text-slate-400 font-mono">Plaque Prevalence</span>
+            </div>
+
+            <div class="rounded-lg overflow-hidden border border-slate-800 bg-slate-950 mb-3 flex items-center justify-center p-1">
+              <img src="figures/coca_vessel_prevalence.png" alt="COCA Vessel Calcium Prevalence" class="max-h-44 object-contain rounded">
+            </div>
+
+            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+              <li><strong class="text-white">Coronary Involvement:</strong> LAD plaque in <strong class="text-cyan-300">~95%</strong>, RCA in <strong class="text-blue-300">~85%</strong>, LCX in <strong class="text-purple-300">~70%</strong> of gated patients.</li>
+              <li><strong class="text-white">Biological Coupling:</strong> LAD territory harbors <strong class="text-white">94.9%</strong> (40.94 cm&sup3;) of total perivascular fat.</li>
+              <li><strong class="text-white">Inflammatory Shift:</strong> PVAT attenuation strongly tracks EAT attenuation (<em class="text-amber-300">r = 0.9634, p &lt; 10&minus;15</em>), validating fat attenuation as a systemic biomarker.</li>
+            </ul>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-500">
+            Stanford AIMI COCA Reference: DOI 10.71718/ge5g-ds80
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: High-Throughput Batch Processing & Tri-Level Outputs -->
+    <div class="slide flex-col justify-center space-y-6" data-slide="9">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Cohort Scalability</span>
         <span class="text-xs text-slate-500">Universal Ingestion &amp; Outputs</span>
@@ -462,8 +521,8 @@
       </div>
     </div>
 
-    <!-- SLIDE 9: Zero-Code Clinician & Agent Experience -->
-    <div class="slide flex-col justify-center space-y-6" data-slide="9">
+    <!-- SLIDE 10: Zero-Code Clinician & Agent Experience -->
+    <div class="slide flex-col justify-center space-y-6" data-slide="10">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Cardiologist Experience</span>
         <span class="text-xs text-slate-500">Autonomous Agent Workflow</span>
@@ -528,8 +587,8 @@
       </div>
     </div>
 
-    <!-- SLIDE 10: Summary & Key Takeaways -->
-    <div class="slide flex-col justify-center space-y-6" data-slide="10">
+    <!-- SLIDE 11: Summary & Key Takeaways -->
+    <div class="slide flex-col justify-center space-y-6" data-slide="11">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Summary</span>
         <span class="text-xs text-slate-500">15-Minute Takeaway</span>
@@ -601,9 +660,10 @@
       5: "Two core mathematical algorithms power our transforms: First, Voronoi chamber allocation uses 3D Euclidean distance transforms from chamber walls to assign continuous fat voxels to the nearest chamber without overlap. Second, 10 mm radial dilation computes a 3D Euclidean buffer from coronary centerlines, clipped to the adipose window and outside the myocardium.",
       6: "For federated deployment with NVIDIA FLARE, we have two operational modes: Mode 1 distills a unified 3D SegResNet using FedProx proximal loss and FedBN, which keeps normalization layers local to adapt to scanner variations. Mode 2 uses parallel Welford aggregation to compute multi-site statistical moments with 100% mathematical equivalence to pooled data and zero scan transfer.",
       7: "Instead of requiring clinicians to install desktop software like 3D Slicer, we embed OHIF v3.13. It opens directly in the browser with standard 4-quadrant MPR (Axial, Sagittal, Coronal, and 3D rendering). Segmentations are standard DICOM-SEG SOP Class .66.4, ensuring complete PACS compatibility.",
-      8: "Next is cohort and batch scalability. The pipeline handles any mix of DICOM folders, NRRDs, and NIfTIs. When an agent runs batch quantification, it produces three distinct deliverables: First, a single master CSV with all 19 columns for Excel, R, and SPSS. Second, 3D segmentation masks—both NRRD for 3D Slicer and standard DICOM-SEG for PACS. Third, an interactive OHIF workstation with a dynamic patient switcher dropdown to toggle across hundreds of cases.",
-      9: "Here is how this translates to a zero-code experience: a cardiologist can simply prompt an agent: 'Use this repo on these CTs in folder X to show me results and where I can get an output.' The agent executes the entire batch, outputs the master spreadsheet, and returns the interactive viewer URL. No terminal commands, no Python scripts, no DevOps friction.",
-      10: "In summary, monai-cardiac-fat-fl delivers a complete, production-ready, zero-placeholder medical AI engine. It honors the clinical lineage of the original Harvard/MGH research while bringing it into the modern era of PyTorch, MONAI, federated learning, and zero-footprint web visualization. Thank you, and I welcome any questions."
+      8: "Here we validate the pipeline on the Stanford AIMI COCA cohort of 787 patients and over 54,000 DICOMs. On the left, notice the manufacturer breakdown: while cardiac-gated scans are predominantly Siemens, the screening non-gated cohort is 39% GE Healthcare. This multi-vendor variance directly justifies our FedBN architecture, ensuring stable Hounsfield Unit quantification regardless of scanner physics. On the right, plaque prevalence shows LAD involvement in 95% of patients, which mirrors our biological finding that LAD perivascular fat represents 94.9% of total PVAT. Furthermore, PVAT attenuation tightly tracks EAT attenuation (r = 0.9634), proving that pericoronary fat reflects active inflammatory signaling.",
+      9: "Next is cohort and batch scalability. The pipeline handles any mix of DICOM folders, NRRDs, and NIfTIs. When an agent runs batch quantification, it produces three distinct deliverables: First, a single master CSV with all 19 columns for Excel, R, and SPSS. Second, 3D segmentation masks—both NRRD for 3D Slicer and standard DICOM-SEG for PACS. Third, an interactive OHIF workstation with a dynamic patient switcher dropdown to toggle across hundreds of cases.",
+      10: "Here is how this translates to a zero-code experience: a cardiologist can simply prompt an agent: 'Use this repo on these CTs in folder X to show me results and where I can get an output.' The agent executes the entire batch, outputs the master spreadsheet, and returns the interactive viewer URL. No terminal commands, no Python scripts, no DevOps friction.",
+      11: "In summary, monai-cardiac-fat-fl delivers a complete, production-ready, zero-placeholder medical AI engine. It honors the clinical lineage of the original Harvard/MGH research while bringing it into the modern era of PyTorch, MONAI, federated learning, and zero-footprint web visualization. Thank you, and I welcome any questions."
     };
 
     function updateSlide() {
