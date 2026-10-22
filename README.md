@@ -5,17 +5,17 @@
 [![MONAI](https://img.shields.io/badge/MONAI-1.4%2B-green.svg)](https://monai.io/)
 [![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://nvflare.readthedocs.io/)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
-[![OHIF Viewer](https://img.shields.io/badge/OHIF%20Viewer-v3.8%2B%20Ready-0284c7.svg)](https://docs.ohif.org/)
+[![OHIF Viewer](https://img.shields.io/badge/OHIF%20Viewer-v3.13%20Next-0284c7.svg)](https://ohif.org/release-notes/3p13)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED.svg?logo=docker&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-fl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Production-ready, zero-placeholder **PyTorch / MONAI Bundle** and **NVIDIA FLARE (NVFLARE)** federated learning repository for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
 
-This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) research pipeline, transitioning it into a high-throughput Python 3.11+ and GPU-accelerated ecosystem. It enhances execution speed and scalability through modern PyTorch and ONNX Runtime backends, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer](https://docs.ohif.org/) via standard DICOM-SEG objects.
+This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) research pipeline, transitioning it into a high-throughput Python 3.11+ and GPU-accelerated ecosystem. It enhances execution speed and scalability through modern PyTorch and ONNX Runtime backends, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer v3.13+](https://ohif.org/release-notes/3p13) via standard DICOM-SEG objects.
 
-![Interactive OHIF Medical Viewer: 3-Pane Clinical Visualization](docs/figures/ohif_viewer_snapshot.png)
+![Interactive OHIF v3.13 Medical Workstation: 3D Slicer Four-Up 2x2 Layout](docs/figures/ohif_viewer_snapshot.png)
 
-*Figure 1: Authentic 3-Pane OHIF Medical Web Viewer displaying 3D Cardiac CT with real slices, 8-layer DICOM-SEG color overlays, live Hounsfield Unit inspection, and quantified EAT/PVAT clinical volume/density readouts.*
+*Figure 1: Authentic OHIF v3.13 Medical Workstation displaying 3D Cardiac CT with 3D Slicer Four-Up 2x2 grid (Axial, 3D MPR Volume Reconstruction, Sagittal, Coronal), Smart Scrollbars on every viewport, 2-column square studies browser, and 8-layer DICOM-SEG color overlays.*
 
 ---
 
@@ -35,7 +35,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 | **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$, $r = 1.000$) |
 | **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
 | **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
-| **Visualization & PACS** | Manual 3D Slicer import | Native **OHIF Viewer v3+** 3-pane UI & standard **DICOM-SEG** export |
+| **Visualization & PACS** | Manual 3D Slicer import | Native **OHIF v3.13 Workstation** with 3D Slicer Four-Up 2x2 MPR grid, Smart Scrollbars & **DICOM-SEG** export |
 
 ---
 
@@ -71,28 +71,30 @@ $$\text{Volume } (\text{cm}^3) = \frac{\text{Voxel Count} \times (s_x \times s_y
 
 ---
 
-## Interactive OHIF Viewer & DICOM-SEG Capability
+## Interactive OHIF v3.13 Medical Workstation & DICOM-SEG Capability
 
-The repository provides full integration with the [Open Health Imaging Foundation (OHIF) Viewer](https://docs.ohif.org/) via standard **DICOM Segmentation Objects** (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`):
+The repository provides full integration with the [Open Health Imaging Foundation (OHIF) Viewer v3.13 Next](https://ohif.org/release-notes/3p13) via standard **DICOM Segmentation Objects** (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`):
 
 ```text
-┌───────────────────────────┬──────────────────────────────────────────┬─────────────────────────────┐
-│       LEFT PANE           │               MIDDLE PANE                │         RIGHT PANE          │
-│    Studies Chooser        │              Real CT Images              │     Stats on EAT & PVAT     │
-├───────────────────────────┼──────────────────────────────────────────┼─────────────────────────────┤
-│ • Study: Cardiac CT       │ • Real DICOM CT Slices (Patient Scans)   │ • 8 Compartment Toggles:    │
-│ • Patient: <id>           │ • Real EAT & PVAT Segmentation Overlays  │   - EAT Total               │
-│ • Series 1: CT Axial      │ • Interactive Mouse Wheel Slice Scroll   │   - EAT LA, LV, RA, RV      │
-│   (57 slices, 0.47x3.0mm) │ • Cardiac Fat Window Preset (W:400,L:-110│   - PVAT LAD, LCX, RCA      │
-│ • Series 2: EAT/PVAT SEG  │ • Soft Tissue, Lung, and Bone Presets    │ • Exact Clinical Volume/HU: │
-│   (8 layers, 456 frames)  │ • Live Cursor HU Readout & Z-Position    │   - EAT Total: 75.79 cm³    │
-│ • 1-Click OHIF Cloud Link │ • Medical Crosshairs & Reset Tool        │   - Mean HU:   -67.28 HU    │
-└───────────────────────────┴──────────────────────────────────────────┴─────────────────────────────┘
+┌────────────────────┬───────────────────────────────────┬───────────────────────────────────┬─────────────────────┐
+│  STUDIES DRAWER    │         AXIAL VIEWPORT            │         3D MPR VOLUME             │  MEASUREMENTS & SEG │
+│  (2-Col Thumbnails)│   (Top-Left, Smart Scrollbar)     │   (Top-Right, 3D Slicer Grid)     │  (Collapsible Right)│
+├────────────────────┼───────────────────────────────────┼───────────────────────────────────┼─────────────────────┤
+│ ┌───────┐ ┌───────┐│ • Real High-Res Axial CT Slices   │ • Real-Time 3D Cardiac Volume     │ • 8 Segment Toggles │
+│ │ Axial │ │ Sag   ││ • 8-Layer DICOM-SEG Masks         │ • Rotational Cinematic Rendering  │   - EAT Total       │
+│ └───────┘ └───────┘│ • Interactive Scrub Thumb         │ • Cardiac Fat / Bone / MTD Presets│   - EAT LA, LV, RA, │
+│ ┌───────┐ ┌───────┐│ • Live Cursor HU Readout & Z-Pos  │ • Quick Flip & Orientation Anchor │     RV              │
+│ │ Cor   │ │ 3D Vol│├───────────────────────────────────┼───────────────────────────────────┤   - PVAT LAD, LCX,  │
+│ └───────┘ └───────┘│        SAGITTAL VIEWPORT          │         CORONAL VIEWPORT          │     RCA             │
+│ • Patient Chooser  │   (Bottom-Left, Smart Scrollbar)  │   (Bottom-Right, Smart Scrollbar) │ • Exact Volume / HU │
+│ • Series Metadata  │ • Orthogonal YZ Sagittal Cut      │ • Orthogonal XZ Coronal Cut       │ • Isolated Mask Pick│
+│ • 1-Click OHIF Run │ • Synchronized Spatial Scrollbar  │ • Synchronized Spatial Scrollbar  │ • Cloud Sync Export │
+└────────────────────┴───────────────────────────────────┴───────────────────────────────────┴─────────────────────┘
 ```
 
-### Launching the Viewer
+### Launching the Medical Workstation
 ```bash
-# Launch the local interactive medical web viewer (serves on http://127.0.0.1:8000)
+# Launch the local interactive OHIF v3.13 workstation (serves on http://127.0.0.1:8000)
 cardiac-fat-fl view /path/to/participant_dir --port 8000
 
 # Or export the OHIF study package (CT slices + eat_pvat_seg.dcm) without running a server
@@ -153,13 +155,13 @@ docker build -t monai-cardiac-fat-fl:latest .
 docker run --rm -v /path/to/data:/data monai-cardiac-fat-fl \
     quantify /data/patients -o /data/results --workers 8
 
-# 3. Launch interactive OHIF 3-Pane Viewer
+# 3. Launch interactive OHIF v3.13 Medical Workstation
 docker run --rm -p 8000:8000 -v /path/to/data:/data monai-cardiac-fat-fl \
     view /data/sample --port 8000 --no-browser
 
 # 4. Or use Docker Compose for instant multi-service launch:
 docker compose run --rm cardiofat quantify /data/patients -o /data/results
-docker compose up viewer    # CardioFat 3-Pane Viewer at http://localhost:8000
+docker compose up viewer    # CardioFat OHIF Workstation at http://localhost:8000
 docker compose up -d ohif   # Official OHIF Web Platform at http://localhost:3000
 ```
 
@@ -228,7 +230,7 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `hardware` | `cardiac-fat-fl hardware` | Inspects host CPUs, RAM, and CUDA GPUs to display safe concurrency limits. |
 | `download-models`| `cardiac-fat-fl download-models [--tag v1.0.0]` | Downloads validated DeepHeartSeg ONNX models from GitHub Release assets. |
 | `quantify` | `cardiac-fat-fl quantify <cohort_dir> [--workers 0] [--limit N]` | End-to-end batch quantification over DICOM/NRRD/NIfTI cohort (auto-sized). |
-| `view` | `cardiac-fat-fl view <sample_dir> [--port 8000]` | Prepares study and launches authentic 3-pane local OHIF viewer. |
+| `view` | `cardiac-fat-fl view <sample_dir> [--port 8000]` | Prepares study and launches authentic OHIF v3.13 2x2 medical workstation. |
 | `export-ohif` | `cardiac-fat-fl export-ohif <sample_dir> [-o dest]` | Generates standard CT DICOM series and multi-frame `eat_pvat_seg.dcm`. |
 | `compare-models`| `cardiac-fat-fl compare-models <scan_path>` | Side-by-side equivalency test: MONAI vs frozen DeepHeartSeg ONNX. |
 | `federated-train`| `cardiac-fat-fl federated-train --data-dir <dir>` | Runs local NVFLARE client distillation round with FedProx and FedBN. |
@@ -264,7 +266,7 @@ monai-cardiac-fat-fl/
 │       ├── model.py               # 3D SegResNet / SwinUNETR factory and FedBN layer filtering
 │       ├── fl_client_algo.py      # monai.fl.client.ClientAlgo subclass for distillation and local analytics
 │       ├── fl_stats_executor.py   # NVFLARE Executor for privacy-preserving federated summary statistics
-│       ├── ohif_exporter.py       # DICOM series generator, DICOM-SEG builder, and 3-pane viewer generator
+│       ├── ohif_exporter.py       # DICOM series generator, DICOM-SEG builder, and OHIF v3.13 workstation generator
 │       ├── ohif_viewer.py         # Local CORS-enabled HTTP server and browser launcher
 │       ├── hardware.py            # Dynamic hardware auto-detection (CPU/RAM/GPU) & safe concurrency sizing
 │       └── cli.py                 # Typer CLI reproducing all quantification, comparison, and viewing tasks
@@ -323,7 +325,7 @@ from cardiac_fat_fl.ohif_viewer import launch_viewer
 # Export study into DICOM slices + DICOM-SEG (eat_pvat_seg.dcm)
 export_dir = export_sample_to_ohif("/path/to/participant_dir")
 
-# Launch local 3-pane viewer
+# Launch local OHIF v3.13 workstation
 launch_viewer("/path/to/participant_dir", port=8000)
 ```
 
