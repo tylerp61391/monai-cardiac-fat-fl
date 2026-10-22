@@ -357,7 +357,7 @@ Where:
 - **FedBN (Domain Adaptation)**: Normalization layers (`BatchNorm3d`, `InstanceNorm3d`) are decoupled from global aggregation to neutralize inter-hospital scanner variations (e.g., Siemens vs. GE energy spectra):
 
 $$
-w^{(k)} = \left\{ w_{\text{conv}}^{(k)}, w_{\text{bn}}^{(k)} \right\}, \quad w_{\text{global}} \leftarrow \sum_{k=1}^K \frac{N_k}{N} w_{\text{conv}}^{(k)}, \quad w_{\text{bn}}^{(k)} \equiv \text{Retained at Site } k
+w^{(k)} = \left\lbrace w_{\text{conv}}^{(k)}, \; w_{\text{bn}}^{(k)} \right\rbrace, \quad w_{\text{global}} \leftarrow \sum_{k=1}^K \frac{N_k}{N} w_{\text{conv}}^{(k)}, \quad w_{\text{bn}}^{(k)} \equiv \text{Retained at Site } k
 $$
 
 ---
