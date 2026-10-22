@@ -782,7 +782,10 @@ def generate_ohif_3pane_viewer_html(
     #wSag {{ aspect-ratio: {sag_w} / {sag_h}; }}
     #wCor {{ aspect-ratio: {cor_w} / {cor_h}; }}
     .vp-wrap img.ct-plane {{ width: 100%; height: 100%; object-fit: fill; display: block; }}
-    .vp-wrap img.seg-plane {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.85; }}
+    .vp-wrap img.seg-plane, .vp-wrap canvas.seg-plane {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.85; }}
+    .solo-btn {{ background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 3px; font-size: 9px; font-weight: 600; padding: 1px 5px; cursor: pointer; transition: all 0.15s; }}
+    .solo-btn:hover {{ background: #0284c7; color: #fff; border-color: #38bdf8; }}
+    .solo-btn.active {{ background: #0284c7; color: #fff; border-color: #38bdf8; }}
     
     /* Crosshairs */
     .xh {{ position: absolute; pointer-events: none; z-index: 10; }}
@@ -974,7 +977,7 @@ def generate_ohif_3pane_viewer_html(
           <span class="orient right">L</span>
           <div class="vp-wrap" id="wAx">
             <img class="ct-plane" id="axCt" src="slices/ct_028.png">
-            <img class="seg-plane" id="axSeg" src="slices/seg_028.png">
+            <canvas class="seg-plane" id="axCanvas" width="512" height="512"></canvas>
             <div class="xh v" id="axV" style="background:#34d399;"></div>
             <div class="xh h" id="axH" style="background:#fb923c;"></div>
           </div>
@@ -999,7 +1002,7 @@ def generate_ohif_3pane_viewer_html(
           <span class="orient right">P</span>
           <div class="vp-wrap" id="wSag">
             <img class="ct-plane" id="sagCt" src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
-            <img class="seg-plane" id="sagSeg" src="sagittal/seg_{ns // 2:03d}.png" onerror="this.src='slices/seg_028.png'">
+            <canvas class="seg-plane" id="sagCanvas" width="{sag_w}" height="{sag_h}"></canvas>
             <div class="xh v" id="sagV" style="background:#fb923c;"></div>
             <div class="xh h" id="sagH" style="background:#38bdf8;"></div>
           </div>
@@ -1024,7 +1027,7 @@ def generate_ohif_3pane_viewer_html(
           <span class="orient right">L</span>
           <div class="vp-wrap" id="wCor">
             <img class="ct-plane" id="corCt" src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
-            <img class="seg-plane" id="corSeg" src="coronal/seg_{nc // 2:03d}.png" onerror="this.src='slices/seg_028.png'">
+            <canvas class="seg-plane" id="corCanvas" width="{cor_w}" height="{cor_h}"></canvas>
             <div class="xh v" id="corV" style="background:#34d399;"></div>
             <div class="xh h" id="corH" style="background:#38bdf8;"></div>
           </div>
@@ -1108,68 +1111,98 @@ def generate_ohif_3pane_viewer_html(
             <span style="color:#c084fc; font-family:monospace;">DICOM-SEG</span>
           </div>
 
-          <div class="compartment-row">
+          <!-- Quick Actions: Show / Hide All -->
+          <div style="display:flex; gap:6px; margin-bottom:8px;">
+            <button class="vp-btn" onclick="setAllCompartments(true)" style="flex:1; padding:3px 6px;">Show All</button>
+            <button class="vp-btn" onclick="setAllCompartments(false)" style="flex:1; padding:3px 6px;">Hide All</button>
+          </div>
+
+          <div class="compartment-row" id="row_EAT_TOTAL">
             <div class="comp-info">
               <span class="color-dot" style="background:#9333ea;"></span>
               <strong style="color:#fff;">EAT Total</strong>
             </div>
-            <input type="checkbox" id="chkEAT_TOTAL" checked onchange="toggleMaskVisibility()">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="solo-btn" onclick="isolateCompartment('EAT_TOTAL')" title="Isolate this compartment">Solo</button>
+              <input type="checkbox" id="chk_EAT_TOTAL" checked onchange="onCompartmentChange()">
+            </div>
           </div>
 
-          <div class="compartment-row">
+          <div class="compartment-row" id="row_EAT_LA">
             <div class="comp-info">
               <span class="color-dot" style="background:#3b82f6;"></span>
               <span>EAT Left Atrium (LA)</span>
             </div>
-            <input type="checkbox" id="chkEAT_LA" checked onchange="toggleMaskVisibility()">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="solo-btn" onclick="isolateCompartment('EAT_LA')" title="Isolate this compartment">Solo</button>
+              <input type="checkbox" id="chk_EAT_LA" checked onchange="onCompartmentChange()">
+            </div>
           </div>
 
-          <div class="compartment-row">
+          <div class="compartment-row" id="row_EAT_LV">
             <div class="comp-info">
               <span class="color-dot" style="background:#06b6d4;"></span>
               <span>EAT Left Ventricle (LV)</span>
             </div>
-            <input type="checkbox" id="chkEAT_LV" checked onchange="toggleMaskVisibility()">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="solo-btn" onclick="isolateCompartment('EAT_LV')" title="Isolate this compartment">Solo</button>
+              <input type="checkbox" id="chk_EAT_LV" checked onchange="onCompartmentChange()">
+            </div>
           </div>
 
-          <div class="compartment-row">
+          <div class="compartment-row" id="row_EAT_RA">
             <div class="comp-info">
               <span class="color-dot" style="background:#10b981;"></span>
               <span>EAT Right Atrium (RA)</span>
             </div>
-            <input type="checkbox" id="chkEAT_RA" checked onchange="toggleMaskVisibility()">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="solo-btn" onclick="isolateCompartment('EAT_RA')" title="Isolate this compartment">Solo</button>
+              <input type="checkbox" id="chk_EAT_RA" checked onchange="onCompartmentChange()">
+            </div>
           </div>
 
-          <div class="compartment-row">
+          <div class="compartment-row" id="row_EAT_RV">
             <div class="comp-info">
               <span class="color-dot" style="background:#eab308;"></span>
               <span>EAT Right Ventricle (RV)</span>
             </div>
-            <input type="checkbox" id="chkEAT_RV" checked onchange="toggleMaskVisibility()">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="solo-btn" onclick="isolateCompartment('EAT_RV')" title="Isolate this compartment">Solo</button>
+              <input type="checkbox" id="chk_EAT_RV" checked onchange="onCompartmentChange()">
+            </div>
           </div>
 
-          <div class="compartment-row">
+          <div class="compartment-row" id="row_PVAT_LAD">
             <div class="comp-info">
               <span class="color-dot" style="background:#f97316;"></span>
               <strong style="color:#fff;">PVAT LAD</strong>
             </div>
-            <input type="checkbox" id="chkPVAT_LAD" checked onchange="toggleMaskVisibility()">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="solo-btn" onclick="isolateCompartment('PVAT_LAD')" title="Isolate this compartment">Solo</button>
+              <input type="checkbox" id="chk_PVAT_LAD" checked onchange="onCompartmentChange()">
+            </div>
           </div>
 
-          <div class="compartment-row">
+          <div class="compartment-row" id="row_PVAT_LCX">
             <div class="comp-info">
               <span class="color-dot" style="background:#ef4444;"></span>
               <span>PVAT LCX</span>
             </div>
-            <input type="checkbox" id="chkPVAT_LCX" checked onchange="toggleMaskVisibility()">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="solo-btn" onclick="isolateCompartment('PVAT_LCX')" title="Isolate this compartment">Solo</button>
+              <input type="checkbox" id="chk_PVAT_LCX" checked onchange="onCompartmentChange()">
+            </div>
           </div>
 
-          <div class="compartment-row">
+          <div class="compartment-row" id="row_PVAT_RCA">
             <div class="comp-info">
               <span class="color-dot" style="background:#ec4899;"></span>
               <span>PVAT RCA</span>
             </div>
-            <input type="checkbox" id="chkPVAT_RCA" checked onchange="toggleMaskVisibility()">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="solo-btn" onclick="isolateCompartment('PVAT_RCA')" title="Isolate this compartment">Solo</button>
+              <input type="checkbox" id="chk_PVAT_RCA" checked onchange="onCompartmentChange()">
+            </div>
           </div>
         </div>
 
@@ -1250,20 +1283,89 @@ def generate_ohif_3pane_viewer_html(
     frames3d.push(im);
   }}
 
+  const COMP_DEFS = [
+    {{ id: 'EAT_TOTAL', name: 'EAT Total',            color: '#9333ea', u24: (234 << 16) | (51 << 8) | 147 }},
+    {{ id: 'EAT_LA',    name: 'EAT Left Atrium (LA)', color: '#3b82f6', u24: (246 << 16) | (130 << 8) | 59 }},
+    {{ id: 'EAT_LV',    name: 'EAT Left Ventricle (LV)', color: '#06b6d4', u24: (212 << 16) | (182 << 8) | 6 }},
+    {{ id: 'EAT_RA',    name: 'EAT Right Atrium (RA)', color: '#10b981', u24: (129 << 16) | (185 << 8) | 16 }},
+    {{ id: 'EAT_RV',    name: 'EAT Right Ventricle (RV)', color: '#eab308', u24: (8 << 16) | (179 << 8) | 234 }},
+    {{ id: 'PVAT_LAD',  name: 'PVAT LAD',              color: '#f97316', u24: (22 << 16) | (115 << 8) | 249 }},
+    {{ id: 'PVAT_LCX',  name: 'PVAT LCX',              color: '#ef4444', u24: (68 << 16) | (68 << 8) | 239 }},
+    {{ id: 'PVAT_RCA',  name: 'PVAT RCA',              color: '#ec4899', u24: (153 << 16) | (72 << 8) | 236 }},
+  ];
+
+  const segImgCache = {{}};
+
+  function drawFilteredSeg(canvasId, srcUrl) {{
+    const canvas = $(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const inactiveMap = {{}};
+    let activeCount = 0;
+    COMP_DEFS.forEach(c => {{
+      const chk = $('chk_' + c.id);
+      if (chk && chk.checked) {{
+        activeCount++;
+      }} else {{
+        inactiveMap[c.u24] = true;
+      }}
+    }});
+
+    if (activeCount === 0) {{
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }}
+
+    let img = segImgCache[srcUrl];
+    if (!img) {{
+      img = new Image();
+      img.src = srcUrl;
+      img.onload = () => drawFilteredSeg(canvasId, srcUrl);
+      segImgCache[srcUrl] = img;
+      return;
+    }}
+    if (!img.complete || img.naturalWidth === 0) return;
+
+    if (canvas.width !== img.naturalWidth) canvas.width = img.naturalWidth;
+    if (canvas.height !== img.naturalHeight) canvas.height = img.naturalHeight;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+
+    if (activeCount === COMP_DEFS.length) {{
+      return;
+    }}
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const u32 = new Uint32Array(imgData.data.buffer);
+    const len = u32.length;
+
+    for (let i = 0; i < len; i++) {{
+      const px = u32[i];
+      if ((px & 0xFF000000) === 0) continue;
+      const rgb24 = px & 0x00FFFFFF;
+      if (inactiveMap[rgb24]) {{
+        u32[i] = 0;
+      }}
+    }}
+    ctx.putImageData(imgData, 0, 0);
+  }}
+
   function updateViewports() {{
     // 1. Axial
     $('axCt').src = `slices/ct_${{pad(z)}}.png`;
-    $('axSeg').src = `slices/seg_${{pad(z)}}.png`;
+    drawFilteredSeg('axCanvas', `slices/seg_${{pad(z)}}.png`);
     $('iAx').textContent = `Slice ${{z}} / ${{NZ - 1}}`;
 
     // 2. Sagittal
     $('sagCt').src = `sagittal/ct_${{pad(s)}}.png`;
-    $('sagSeg').src = `sagittal/seg_${{pad(s)}}.png`;
+    drawFilteredSeg('sagCanvas', `sagittal/seg_${{pad(s)}}.png`);
     $('iSag').textContent = `Slice ${{s}} / ${{NS - 1}}`;
 
     // 3. Coronal
     $('corCt').src = `coronal/ct_${{pad(c)}}.png`;
-    $('corSeg').src = `coronal/seg_${{pad(c)}}.png`;
+    drawFilteredSeg('corCanvas', `coronal/seg_${{pad(c)}}.png`);
     $('iCor').textContent = `Slice ${{c}} / ${{NC - 1}}`;
 
     // Crosshair positioning
@@ -1472,16 +1574,66 @@ def generate_ohif_3pane_viewer_html(
     }}
   }}
 
+  let soloCompartmentId = null;
+
+  function isolateCompartment(id) {{
+    if (soloCompartmentId === id) {{
+      // Restore all
+      soloCompartmentId = null;
+      COMP_DEFS.forEach(c => {{
+        const chk = $('chk_' + c.id);
+        if (chk) chk.checked = true;
+      }});
+    }} else {{
+      soloCompartmentId = id;
+      COMP_DEFS.forEach(c => {{
+        const chk = $('chk_' + c.id);
+        if (chk) chk.checked = (c.id === id);
+      }});
+    }}
+    updateSoloBtnStyles();
+    onCompartmentChange();
+  }}
+
+  function updateSoloBtnStyles() {{
+    COMP_DEFS.forEach(c => {{
+      const row = $('row_' + c.id);
+      if (!row) return;
+      const btn = row.querySelector('.solo-btn');
+      if (btn) btn.classList.toggle('active', soloCompartmentId === c.id);
+    }});
+  }}
+
+  function setAllCompartments(state) {{
+    soloCompartmentId = null;
+    COMP_DEFS.forEach(c => {{
+      const chk = $('chk_' + c.id);
+      if (chk) chk.checked = state;
+    }});
+    updateSoloBtnStyles();
+    onCompartmentChange();
+  }}
+
+  function onCompartmentChange() {{
+    const checked = COMP_DEFS.filter(c => {{
+      const chk = $('chk_' + c.id);
+      return chk && chk.checked;
+    }});
+    if (checked.length !== 1) {{
+      soloCompartmentId = null;
+      updateSoloBtnStyles();
+    }} else {{
+      soloCompartmentId = checked[0].id;
+      updateSoloBtnStyles();
+    }}
+    updateViewports();
+  }}
+
   // Opacity Control
   function setOpacity(val) {{
     const alpha = val / 100.0;
     $('opacityVal').textContent = val + '%';
-    document.querySelectorAll('img.seg-plane').forEach(im => im.style.opacity = alpha);
-  }}
-
-  function toggleMaskVisibility() {{
-    const isVisible = $('chkEAT_TOTAL').checked;
-    document.querySelectorAll('img.seg-plane').forEach(im => im.style.display = isVisible ? 'block' : 'none');
+    document.querySelectorAll('.seg-plane').forEach(cv => cv.style.opacity = alpha);
   }}
 
   function setTool(tool) {{
@@ -1507,7 +1659,7 @@ def generate_ohif_3pane_viewer_html(
     document.querySelectorAll('.viewport-box').forEach(b => b.classList.remove('hidden'));
     $('mprGrid').classList.remove('maximized');
     setTool('crosshair');
-    updateViewports();
+    setAllCompartments(true);
   }}
 
   function switchRightTab(tab) {{
