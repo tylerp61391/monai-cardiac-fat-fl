@@ -73,8 +73,19 @@ class CohortHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     return
 
                 export_dir = patient_folder / "ohif_export"
+                needs_export = False
                 if not (export_dir / "index.html").exists():
-                    print(f"Exporting OHIF assets on-the-fly for Patient {pid}...")
+                    needs_export = True
+                else:
+                    try:
+                        idx_txt = (export_dir / "index.html").read_text(encoding="utf-8", errors="ignore")
+                        if "v3.13 Next" not in idx_txt or "viewportsGrid" not in idx_txt:
+                            needs_export = True
+                    except Exception:
+                        needs_export = True
+
+                if needs_export:
+                    print(f"Upgrading/Exporting OHIF assets on-the-fly for Patient {pid}...")
                     try:
                         export_sample_to_ohif(
                             sample_dir=patient_folder,
@@ -168,9 +179,12 @@ def launch_viewer(
     if not all_pids:
         all_pids = [sample_path.name]
 
-    print(f"Preparing OHIF DICOM study & segmentation package for {sample_path.name}...")
-    export_dir = export_sample_to_ohif(sample_path, available_participants=all_pids)
-    print(f"OHIF study exported to: {export_dir}")
+    export_dir = sample_path / "ohif_export"
+    idx_file = export_dir / "index.html"
+    if not idx_file.exists() or "v3.13 Next" not in idx_file.read_text(encoding="utf-8", errors="ignore"):
+        print(f"Preparing OHIF DICOM study & segmentation package for {sample_path.name}...")
+        export_dir = export_sample_to_ohif(sample_path, available_participants=all_pids)
+    print(f"OHIF study ready at: {export_dir}")
 
     if export_only:
         return export_dir
