@@ -1086,11 +1086,26 @@ def generate_ohif_3pane_viewer_html(
           </div>
         </div>
 
-        <!-- Tile 2: Sagittal MPR -->
+        <!-- Tile 2: 3D Thoracic Render (Top-Right) -->
+        <div class="series-card" id="card3D" onclick="selectSeriesTile('3d')">
+          <div class="card-top">
+            <span class="card-badge badge-vr">VR</span>
+            <span class="card-count">s:2 i:{nf}</span>
+          </div>
+          <div class="card-thumb-wrap">
+            <img src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'">
+          </div>
+          <div class="card-bottom">
+            <span class="card-title">Thoracic 3D</span>
+            <span class="card-sub">Cardiac Fat Render</span>
+          </div>
+        </div>
+
+        <!-- Tile 3: Sagittal MPR (Bottom-Left) -->
         <div class="series-card" id="cardSag" onclick="selectSeriesTile('sagittal')">
           <div class="card-top">
             <span class="card-badge badge-ct">CT</span>
-            <span class="card-count">s:2 i:{ns}</span>
+            <span class="card-count">s:3 i:{ns}</span>
           </div>
           <div class="card-thumb-wrap">
             <img src="sagittal/ct_{ns // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
@@ -1101,11 +1116,11 @@ def generate_ohif_3pane_viewer_html(
           </div>
         </div>
 
-        <!-- Tile 3: Coronal MPR -->
+        <!-- Tile 4: Coronal MPR (Bottom-Right) -->
         <div class="series-card" id="cardCor" onclick="selectSeriesTile('coronal')">
           <div class="card-top">
             <span class="card-badge badge-ct">CT</span>
-            <span class="card-count">s:3 i:{nc}</span>
+            <span class="card-count">s:4 i:{nc}</span>
           </div>
           <div class="card-thumb-wrap">
             <img src="coronal/ct_{nc // 2:03d}.png" onerror="this.src='slices/ct_028.png'">
@@ -1113,21 +1128,6 @@ def generate_ohif_3pane_viewer_html(
           <div class="card-bottom">
             <span class="card-title">Lung 3.0 CE</span>
             <span class="card-sub">Coronal MPR</span>
-          </div>
-        </div>
-
-        <!-- Tile 4: 3D Thoracic Render -->
-        <div class="series-card" id="card3D" onclick="selectSeriesTile('3d')">
-          <div class="card-top">
-            <span class="card-badge badge-vr">VR</span>
-            <span class="card-count">s:4 i:{nf}</span>
-          </div>
-          <div class="card-thumb-wrap">
-            <img src="volume3d/frame_000.png" onerror="this.src='slices/ct_028.png'">
-          </div>
-          <div class="card-bottom">
-            <span class="card-title">Thoracic 3D</span>
-            <span class="card-sub">Cardiac Fat Render</span>
           </div>
         </div>
 

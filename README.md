@@ -81,10 +81,10 @@ The repository provides full integration with the [Open Health Imaging Foundatio
 │  (2-Col Thumbnails)│   (Top-Left, Smart Scrollbar)     │   (Top-Right, 3D Slicer Grid)     │  (Collapsible Right)│
 ├────────────────────┼───────────────────────────────────┼───────────────────────────────────┼─────────────────────┤
 │ ┌───────┐ ┌───────┐│ • Real High-Res Axial CT Slices   │ • Real-Time 3D Cardiac Volume     │ • 8 Segment Toggles │
-│ │ Axial │ │ Sag   ││ • 8-Layer DICOM-SEG Masks         │ • Rotational Cinematic Rendering  │   - EAT Total       │
+│ │ Axial │ │3D Vol ││ • 8-Layer DICOM-SEG Masks         │ • Rotational Cinematic Rendering  │   - EAT Total       │
 │ └───────┘ └───────┘│ • Interactive Scrub Thumb         │ • Cardiac Fat / Bone / MTD Presets│   - EAT LA, LV, RA, │
 │ ┌───────┐ ┌───────┐│ • Live Cursor HU Readout & Z-Pos  │ • Quick Flip & Orientation Anchor │     RV              │
-│ │ Cor   │ │ 3D Vol│├───────────────────────────────────┼───────────────────────────────────┤   - PVAT LAD, LCX,  │
+│ │  Sag  │ │  Cor  ││├───────────────────────────────────┼───────────────────────────────────┤   - PVAT LAD, LCX,  │
 │ └───────┘ └───────┘│        SAGITTAL VIEWPORT          │         CORONAL VIEWPORT          │     RCA             │
 │ • Patient Chooser  │   (Bottom-Left, Smart Scrollbar)  │   (Bottom-Right, Smart Scrollbar) │ • Exact Volume / HU │
 │ • Series Metadata  │ • Orthogonal YZ Sagittal Cut      │ • Orthogonal XZ Coronal Cut       │ • Isolated Mask Pick│
