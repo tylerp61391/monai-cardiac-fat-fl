@@ -3,7 +3,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![PyTorch 2.14+](https://img.shields.io/badge/PyTorch-2.14%2B-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![CUDA 13.0+](https://img.shields.io/badge/CUDA-13.0%2B-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
-[![MONAI](https://img.shields.io/badge/MONAI-1.4%2B-green.svg)](https://project-monai.github.io/)
+[![MONAI](https://img.shields.io/badge/MONAI-1.6.1-green.svg)](https://project-monai.github.io/)
 [![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://developer.nvidia.com/flare)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
 [![OHIF Viewer](https://img.shields.io/badge/OHIF%20Viewer-v3.13%20Next-0284c7.svg)](https://ohif.org/release-notes/3p13)
