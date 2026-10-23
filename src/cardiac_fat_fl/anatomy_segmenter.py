@@ -1,10 +1,14 @@
 """Unified PyTorch/MONAI Heart-and-Pericardium Anatomy Segmenter.
 
-Eliminates the legacy Python 2.7 / TensorFlow 1.14 `DeepHeartSeg` dependency completely.
+Eliminates the legacy Python 2.7 / TensorFlow 1.14 `DeepHeartSeg` and external
+subprocess TotalSegmentator dependencies completely.
+
 Supports:
-  1. MONAI / PyTorch 3D deep learning models (e.g. TotalSegmentator / WholeBody CT).
-  2. Optional ONNX Runtime fallback for converted legacy frozen graphs.
-  3. Geometric / Heuristic segmentation engine for standalone execution and offline validation.
+  1. Native MONAI Model Zoo / NVIDIA NGC `wholeBody_ct_segmentation` (104 whole-body labels
+     including Left/Right Atrium, Left/Right Ventricle, Aorta, and Myocardium).
+  2. Optimized ONNX Runtime graphs for 2-step DeepHeartSeg pericardial sac segmentation.
+  3. Single-stage 8-channel distilled MONAI SegResNet.
+  4. Built-in geometric/heuristic segmentation engine for self-contained, zero-dependency execution.
 """
 
 from __future__ import annotations
@@ -111,6 +115,7 @@ class UnifiedAnatomySegmenter:
         self.torch_model: Optional[torch.nn.Module] = None
         self.onnx_session: Optional[Any] = None
         self.onnx_loc_session: Optional[Any] = None
+        self.wholebody_bundle: Optional[Any] = None
 
         self._init_backend()
 
@@ -338,10 +343,49 @@ class UnifiedAnatomySegmenter:
         self,
         pericardium: np.ndarray,
         arr: np.ndarray,
+        multilabel_map: Optional[np.ndarray] = None,
     ) -> AnatomyMasks:
-        """Derive cardiac chamber and coronary vessel masks within a given pericardium."""
+        """Derive cardiac chamber and coronary vessel masks within a given pericardium.
+
+        If `multilabel_map` from MONAI / TotalSegmentator WholeBody CT is provided:
+          - Label 45: Left Atrium (`heart_atrium_left`)
+          - Label 46: Left Ventricle (`heart_ventricle_left`)
+          - Label 47: Right Atrium (`heart_atrium_right`)
+          - Label 48: Right Ventricle (`heart_ventricle_right`)
+          - Label 7:  Aorta (`aorta`)
+          - Label 49: Pulmonary Artery (`pulmonary_artery`)
+        Otherwise, derives anatomical chamber partitions and coronary grooves using
+        calibrated cardiac quadrant spatial rules.
+        """
         shape = arr.shape
         nz, ny, nx = shape  # Axis 0: Z (axial), Axis 1: Y (coronal), Axis 2: X (sagittal)
+
+        # 1. Check if WholeBody CT multi-label masks are present
+        if multilabel_map is not None:
+            la_seg = (multilabel_map == 45) & pericardium
+            lv_seg = (multilabel_map == 46) & pericardium
+            ra_seg = (multilabel_map == 47) & pericardium
+            rv_seg = (multilabel_map == 48) & pericardium
+            aorta_seg = (multilabel_map == 7)
+
+            if np.any(la_seg) and np.any(lv_seg) and np.any(ra_seg) and np.any(rv_seg):
+                # Coronaries from coronary sulci around aorta / anterior groove
+                lad = ndi.binary_dilation(rv_seg & lv_seg, iterations=2) & (arr >= -30.0)
+                if not np.any(lad):
+                    lad = ndi.binary_dilation(lv_seg, iterations=1) & (arr >= -30.0)
+                lcx = ndi.binary_dilation(la_seg & lv_seg, iterations=2) & (arr >= -30.0)
+                rca = ndi.binary_dilation(ra_seg & rv_seg, iterations=2) & (arr >= -30.0)
+
+                return AnatomyMasks(
+                    pericardium=pericardium.astype(bool),
+                    la=la_seg.astype(bool),
+                    lv=lv_seg.astype(bool),
+                    ra=ra_seg.astype(bool),
+                    rv=rv_seg.astype(bool),
+                    lad=lad.astype(bool),
+                    lcx=lcx.astype(bool),
+                    rca=rca.astype(bool),
+                )
 
         indices = np.where(pericardium)
         if len(indices[0]) > 0:

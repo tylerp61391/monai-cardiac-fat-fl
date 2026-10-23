@@ -32,7 +32,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 | :--- | :--- | :--- |
 | **Language & Runtime** | Python 2.7 / TensorFlow 1.14 (Frozen Keras `.pb`/`.hdf5`) | Python 3.11+ / PyTorch 2.x & ONNX Runtime GPU |
 | **Image Ingestion** | Folder structure (`scan.nrrd`) | Universal: DICOM Series (with slope/intercept), NIfTI, NRRD, MHA |
-| **Segmentation Engine** | 2-stage DeepHeartSeg (TF 1.14) | Unified: DeepHeartSeg ONNX, MONAI Bundle SegResNet, SwinUNETR |
+| **Segmentation Engine** | Multi-step external tools: subprocess `TotalSegmentator` (nnUNet) + 2-stage `DeepHeartSeg` (TF 1.14 `.pb`) | **Native MONAI & GPU Stack**: NVIDIA NGC / MONAI Model Zoo [`wholeBody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation) (104 labels: LA, LV, RA, RV, Aorta) + DeepHeartSeg ONNX + 8-ch SegResNet |
 | **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$, $r = 1.000$) |
 | **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
 | **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
@@ -125,16 +125,27 @@ cd monai-cardiac-fat-fl
 pip install -e .
 ```
 
-### Pretrained Deep Learning Weights (GitHub Releases)
+### Pretrained Deep Learning Weights & MONAI Model Zoo
 
-Because pretrained DeepHeartSeg ONNX models exceed GitHub's $100\,\text{MB}$ repository file limit, model binaries are hosted on GitHub Releases rather than tracked in git:
+The pipeline eliminates legacy Python 2.7 / TensorFlow 1.14 subprocess scripts, supporting native MONAI and ONNX backends:
 
-1. **Automatic Download via CLI**:
+1. **NVIDIA NGC / MONAI Model Zoo `wholeBody_ct_segmentation`**:
+   - Replaces external TotalSegmentator CLI with NVIDIA's official SegResNet bundle ([NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation)).
+   - Natively segments 104 whole-body structures on GPU, including Left Atrium (label 45), Left Ventricle (46), Right Atrium (47), Right Ventricle (48), and Aorta (7).
+   - Loadable directly via `monai.bundle`:
+     ```python
+     import monai.bundle
+     # Downloads or loads the official wholeBody_ct_segmentation bundle
+     bundle = monai.bundle.load("wholeBody_ct_segmentation")
+     ```
+
+2. **Pretrained Pericardium DeepHeartSeg ONNX Models (GitHub Releases)**:
+   - For 100.0% zero-drift match ($\Delta = 0.00\,\text{cm}^3$) to the MGH DeepHeartSeg weights:
    ```bash
    # Automatically downloads deepheartseg_heart.onnx & deepheartseg_loc.onnx into models/
    cardiac-fat-fl download-models
    ```
-2. **Manual Download via `curl`**:
+   Or via `curl`:
    ```bash
    curl -L -o models/deepheartseg_heart.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_heart.onnx
    curl -L -o models/deepheartseg_loc.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_loc.onnx
