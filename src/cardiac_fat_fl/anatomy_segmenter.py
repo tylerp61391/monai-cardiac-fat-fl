@@ -10,6 +10,7 @@ Supports:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -17,6 +18,8 @@ import numpy as np
 import scipy.ndimage as ndi
 import torch
 from monai.networks.nets import SegResNet
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -189,9 +192,17 @@ class UnifiedAnatomySegmenter:
             arr = np.asarray(image_hu, dtype=np.float32)
 
         if self.backend == "onnx" and self.onnx_session is not None:
-            return self._segment_onnx(arr, spacing)
+            try:
+                return self._segment_onnx(arr, spacing)
+            except Exception as exc:
+                logger.warning("ONNX segmentation failed (%s); falling back to heuristic engine.", exc)
+                return self._segment_heuristic(arr, spacing)
         elif self.backend == "monai" and self.torch_model is not None and self.model_path is not None:
-            return self._segment_monai(arr, spacing)
+            try:
+                return self._segment_monai(arr, spacing)
+            except Exception as exc:
+                logger.warning("MONAI segmentation failed (%s); falling back to heuristic engine.", exc)
+                return self._segment_heuristic(arr, spacing)
         else:
             return self._segment_heuristic(arr, spacing)
 
