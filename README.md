@@ -496,5 +496,17 @@ The software is provided "as is", without warranty of any kind, express or impli
 
 ---
 
+## Acknowledgements & Foundation Attribution
+
+This project builds directly upon the pioneering research and engineering of the foundational **[`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant)** and **[`DeepHeartSeg`](https://github.com/AIM-Harvard/DeepHeartSeg)** pipelines developed at the **Cardiovascular Imaging Research Center (CIRC)** at Massachusetts General Hospital / Harvard Medical School, and the **Artificial Intelligence in Medicine (AIM)** Program at Mass General Brigham.
+
+Special acknowledgement is extended to:
+- **Ibrahim Hadzic ([@ibro45](https://github.com/ibro45))** for the foundational design, architecture, and code contributions that established the original automated cardiac fat segmentation and quantification methodology.
+- The CIRC and AIM research groups for open-sourcing foundational weights, validation cohorts, and domain specifications that made modernizing this pipeline into MONAI and NVIDIA FLARE possible.
+
+If you utilize this pipeline or the foundational methodology in your research, please consider citing both the foundational MGH / CIRC publications and this repository.
+
+---
+
 ## Citation & Lineage
 Modernized from the original Harvard / MGH `CardiacFatQuant` research pipeline by Tyler Patay, XuCong Ruan, Shawn Newlander, George Wesbey, and Borek Foldyna.
