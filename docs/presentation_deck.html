@@ -282,87 +282,262 @@
       </div>
     </div>
 
-    <!-- SLIDE 4: Tensor Shapes & Pipeline Lifecycle -->
-    <div class="slide flex-col justify-center space-y-6" data-slide="4">
+            <!-- SLIDE 4: Protocol Comparison Flow Graph (MGH vs. Current) -->
+    <div class="slide flex-col justify-center space-y-3.5" data-slide="4">
       <div class="flex items-center justify-between">
-        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Technical Deep Dive</span>
-        <span class="text-xs text-slate-500">Data Shapes &amp; Methods</span>
-      </div>
-      <h2 class="text-3xl md:text-4xl font-bold text-white">End-to-End Pipeline &amp; Tensor Lifecycle</h2>
-
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <!-- Step 1 -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
-          <div>
-            <div class="text-xs font-bold text-cyan-400 uppercase mb-1">Step 1: Ingestion</div>
-            <h4 class="font-bold text-white text-sm mb-2">Raw 3D CT Volume</h4>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-cyan-300 font-mono mb-2">
-              (1, D, H, W)<br>
-              float32 [-1000, 3000]
-            </div>
-            <p class="text-xs text-slate-400">ITK orientation, spacing (sz, sy, sx), origin, and 3x3 direction matrix strictly preserved.</p>
-          </div>
-          <div class="text-[11px] text-slate-500 mt-2">Module: <code class="text-slate-400">io_nrrd.py</code></div>
-        </div>
-
-        <!-- Step 2 -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
-          <div>
-            <div class="text-xs font-bold text-blue-400 uppercase mb-1">Step 2: Anatomy</div>
-            <h4 class="font-bold text-white text-sm mb-2">Unified Segmentation</h4>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-blue-300 font-mono mb-2">
-              heart: (D, H, W)<br>
-              chambers: 4x (D, H, W)<br>
-              vessels: 3x (D, H, W)
-            </div>
-            <p class="text-xs text-slate-400">Pericardium, 4 cardiac chambers (LA, LV, RA, RV), and 3 coronary trajectories (LAD, LCX, RCA).</p>
-          </div>
-          <div class="text-[11px] text-slate-500 mt-2">Module: <code class="text-slate-400">anatomy_segmenter.py</code></div>
-        </div>
-
-        <!-- Step 3 -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
-          <div>
-            <div class="text-xs font-bold text-purple-400 uppercase mb-1">Step 3: Fat Geometry</div>
-            <h4 class="font-bold text-white text-sm mb-2">8-Channel Mask</h4>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-purple-300 font-mono mb-2">
-              (8, D, H, W)<br>
-              uint8 Boolean
-            </div>
-            <p class="text-xs text-slate-400">HU thresholding [-190, -30] + Voronoi chamber allocation + 10 mm radial dilation.</p>
-          </div>
-          <div class="text-[11px] text-slate-500 mt-2">Module: <code class="text-slate-400">transforms.py</code></div>
-        </div>
-
-        <!-- Step 4 -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
-          <div>
-            <div class="text-xs font-bold text-emerald-400 uppercase mb-1">Step 4: Output</div>
-            <h4 class="font-bold text-white text-sm mb-2">Quantification &amp; SEG</h4>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-emerald-300 font-mono mb-2">
-              19-Column CSV row<br>
-              + eat_pvat_seg.dcm
-            </div>
-            <p class="text-xs text-slate-400">Volume (cm³) and Mean HU across 9 regions; SOP .66.4 DICOM-SEG for OHIF.</p>
-          </div>
-          <div class="text-[11px] text-slate-500 mt-2">Module: <code class="text-slate-400">ohif_exporter.py</code></div>
-        </div>
-      </div>
-
-      <!-- Bottom Pipeline Flow & Coordinate Preservation Banner -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-300">
         <div class="flex items-center space-x-2">
-          <span class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300 font-bold uppercase text-[10px]">Coordinate Invariant</span>
-          <span>Origin, direction cosines, and voxel spacing <code class="text-cyan-300 font-mono">(sx, sy, sz)</code> strictly preserved from input CT &rarr; MONAI MetaTensor &rarr; exported <strong class="text-white">eat_pvat.seg.nrrd</strong> &amp; <strong class="text-white">DICOM-SEG</strong>.</span>
+          <span class="text-xs uppercase font-bold tracking-wider text-cyan-400 bg-cyan-950/80 px-2.5 py-1 rounded border border-cyan-800/80">Protocol Comparison Flow Graph</span>
+          <span class="text-xs text-slate-400 font-medium">Comparative Architectural Analysis</span>
         </div>
-        <div class="flex items-center space-x-2 shrink-0">
-          <span class="text-slate-400">Physical Volume:</span>
-          <span class="bg-slate-950 px-2.5 py-1 rounded border border-slate-800 font-mono text-emerald-400 text-[11px]">Vol (cm³) = voxels &times; (sx &times; sy &times; sz) / 1000.0</span>
+        <span class="text-xs text-slate-500 font-mono">Legacy Harvard / MGH vs. Modern monai-cardiac-fat-fl</span>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Pipeline Comparison: MGH Protocol vs. Current Protocol</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Disjoint multi-script CLI process with intermediate disk I/O vs. unified in-memory GPU <code class="text-cyan-300 font-mono">MetaTensor</code> stream</p>
+        </div>
+        <div class="hidden md:flex items-center space-x-2">
+          <span class="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 font-medium">
+            Latency: <strong class="text-rose-400 font-mono">&gt;150s</strong> &rarr; <strong class="text-emerald-400 font-mono">&lt;15s</strong> (~10x speedup)
+          </span>
+        </div>
+      </div>
+
+      <!-- Comparative Flow Graph: Two Parallel Tracks -->
+      <div class="space-y-3">
+        <!-- TRACK A: Legacy Harvard / MGH CardiacFatQuant Protocol -->
+        <div class="bg-slate-900/90 border border-amber-900/40 rounded-xl p-3 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <span class="px-2 py-0.5 rounded bg-amber-950/80 border border-amber-700/60 text-amber-300 font-bold uppercase text-[10px] tracking-wider">Legacy MGH Protocol</span>
+              <h3 class="font-bold text-slate-200 text-sm">Harvard / MGH CardiacFatQuant (4 Disjoint CLI Stages)</h3>
+            </div>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <span class="px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800 font-mono">Python 2.7 / TF 1.14 + PyTorch</span>
+              <span class="px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/80 font-bold font-mono">~150s / patient</span>
+            </div>
+          </div>
+
+          <!-- Flowchart Nodes for Legacy Track -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5 items-stretch relative">
+            <!-- Node A1: Raw Input -->
+            <div class="bg-slate-950/90 border border-slate-800 rounded-lg p-2.5 flex flex-col justify-between relative">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-semibold mb-1">
+                  <span class="flex items-center space-x-1">
+                    <span class="w-3.5 h-3.5 rounded-full bg-slate-800 flex items-center justify-center text-[9px] text-slate-300 font-bold">1</span>
+                    <span>STAGE 1: INPUT</span>
+                  </span>
+                  <span class="text-amber-400 text-xs font-bold">&rarr;</span>
+                </div>
+                <div class="text-xs font-bold text-white mb-0.5">Static NRRD CT</div>
+                <p class="text-[11px] text-slate-400 leading-snug">Requires pre-converted NRRD volume on disk; no direct DICOM handling.</p>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+                <span>Disk Format</span>
+                <span class="text-slate-400 font-mono">scan.nrrd (Disk)</span>
+              </div>
+            </div>
+
+            <!-- Node A2: Disjoint Anatomy Subprocesses -->
+            <div class="bg-slate-950/90 border border-amber-900/50 rounded-lg p-2.5 flex flex-col justify-between relative">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-amber-400 font-semibold mb-1">
+                  <span class="flex items-center space-x-1">
+                    <span class="w-3.5 h-3.5 rounded-full bg-amber-950 border border-amber-800 flex items-center justify-center text-[9px] text-amber-300 font-bold">2</span>
+                    <span>STAGE 2: ANATOMY</span>
+                  </span>
+                  <span class="text-amber-400 text-xs font-bold">&rarr;</span>
+                </div>
+                <div class="text-xs font-bold text-white mb-1">2 Separate Subprocesses</div>
+                <div class="space-y-1 text-[10px]">
+                  <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800 flex justify-between">
+                    <span class="text-slate-400">TotalSegmentator CLI</span>
+                    <span class="text-amber-300 font-mono">Disk: masks.seg.nrrd</span>
+                  </div>
+                  <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800 flex justify-between">
+                    <span class="text-slate-400">DeepHeartSeg (TF 1.14)</span>
+                    <span class="text-amber-300 font-mono">Disk: heart.seg.nrrd</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+                <span>Inter-process</span>
+                <span class="text-amber-400 font-mono">2 Disk Writes (~120MB)</span>
+              </div>
+            </div>
+
+            <!-- Node A3: CPU SciPy EDT Bottleneck -->
+            <div class="bg-slate-950/90 border border-rose-900/50 rounded-lg p-2.5 flex flex-col justify-between relative">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-rose-400 font-semibold mb-1">
+                  <span class="flex items-center space-x-1">
+                    <span class="w-3.5 h-3.5 rounded-full bg-rose-950 border border-rose-800 flex items-center justify-center text-[9px] text-rose-300 font-bold">3</span>
+                    <span>STAGE 3: FAT GEOMETRY</span>
+                  </span>
+                  <span class="text-rose-400 text-xs font-bold">&rarr;</span>
+                </div>
+                <div class="text-xs font-bold text-white mb-0.5">CPU SciPy EDT</div>
+                <p class="text-[11px] text-slate-400 leading-snug"><code class="text-rose-300">generate_eat_pvat_masks.py</code>: Single-threaded CPU Euclidean distance transform &amp; 10mm radial dilation.</p>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+                <span>Compute Latency</span>
+                <span class="text-rose-400 font-bold font-mono">CPU Bottleneck (~120s)</span>
+              </div>
+            </div>
+
+            <!-- Node A4: Manual Quantification & Slicer -->
+            <div class="bg-slate-950/90 border border-slate-800 rounded-lg p-2.5 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-semibold mb-1">
+                  <span class="flex items-center space-x-1">
+                    <span class="w-3.5 h-3.5 rounded-full bg-slate-800 flex items-center justify-center text-[9px] text-slate-300 font-bold">4</span>
+                    <span>STAGE 4: REVIEW</span>
+                  </span>
+                  <span class="text-slate-500 text-[10px]">END</span>
+                </div>
+                <div class="text-xs font-bold text-white mb-0.5">CSV &amp; Desktop Slicer</div>
+                <p class="text-[11px] text-slate-400 leading-snug">Separate script for 19-col CSV. Radiologist must manually launch 3D Slicer and import multi-layer NRRDs.</p>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+                <span>Workstation</span>
+                <span class="text-slate-400 font-mono">Desktop Slicer Only</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TRACK B: Modern monai-cardiac-fat-fl Protocol -->
+        <div class="bg-slate-900/90 border border-cyan-800/60 rounded-xl p-3 relative overflow-hidden shadow-lg shadow-cyan-950/20">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <span class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700 text-cyan-300 font-bold uppercase text-[10px] tracking-wider">Current Protocol</span>
+              <h3 class="font-bold text-white text-sm">monai-cardiac-fat-fl (Unified In-Memory GPU Pipeline)</h3>
+            </div>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <span class="px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-cyan-900 font-mono">Unified Python 3.11+</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-700 font-bold font-mono">&lt;15s / patient</span>
+            </div>
+          </div>
+
+          <!-- Flowchart Nodes for Modern Track -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5 items-stretch relative">
+            <!-- Node B1: Universal Ingest -->
+            <div class="bg-slate-950/90 border border-cyan-900/60 rounded-lg p-2.5 flex flex-col justify-between relative">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-cyan-400 font-semibold mb-1">
+                  <span class="flex items-center space-x-1">
+                    <span class="w-3.5 h-3.5 rounded-full bg-cyan-950 border border-cyan-700 flex items-center justify-center text-[9px] text-cyan-300 font-bold">1</span>
+                    <span>STAGE 1: INGESTION</span>
+                  </span>
+                  <span class="text-cyan-400 text-xs font-bold">&rarr;</span>
+                </div>
+                <div class="text-xs font-bold text-white mb-0.5">Universal Ingestion</div>
+                <p class="text-[11px] text-slate-300 leading-snug">Auto-detects DICOM series or NRRD directly into GPU-resident <code class="text-cyan-300 font-mono">MetaTensor</code> with spatial affine preservation.</p>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                <span class="text-slate-500">Memory</span>
+                <span class="text-cyan-300 font-mono">Zero-Copy GPU VRAM</span>
+              </div>
+            </div>
+
+            <!-- Node B2: Native NGC & ONNX Anatomy -->
+            <div class="bg-slate-950/90 border border-blue-900/60 rounded-lg p-2.5 flex flex-col justify-between relative">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-blue-400 font-semibold mb-1">
+                  <span class="flex items-center space-x-1">
+                    <span class="w-3.5 h-3.5 rounded-full bg-blue-950 border border-blue-700 flex items-center justify-center text-[9px] text-blue-300 font-bold">2</span>
+                    <span>STAGE 2: ANATOMY</span>
+                  </span>
+                  <span class="text-blue-400 text-xs font-bold">&rarr;</span>
+                </div>
+                <div class="text-xs font-bold text-white mb-1">Dual NGC + ONNX Pipeline</div>
+                <div class="space-y-1 text-[10px] text-slate-300">
+                  <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800 flex justify-between">
+                    <span class="text-slate-400">NGC WholeBody (SegResNet)</span>
+                    <span class="text-cyan-300 font-mono">104 labels in VRAM</span>
+                  </div>
+                  <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800 flex justify-between">
+                    <span class="text-slate-400">DeepHeartSeg ONNX (2-stage)</span>
+                    <span class="text-blue-300 font-mono">Zero-drift Pericardium</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                <span class="text-slate-500">Parity Flag</span>
+                <span class="text-emerald-400 font-mono">--save-intermediate (opt)</span>
+              </div>
+            </div>
+
+            <!-- Node B3: GPU MapTransforms -->
+            <div class="bg-slate-950/90 border border-purple-900/60 rounded-lg p-2.5 flex flex-col justify-between relative">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-purple-400 font-semibold mb-1">
+                  <span class="flex items-center space-x-1">
+                    <span class="w-3.5 h-3.5 rounded-full bg-purple-950 border border-purple-700 flex items-center justify-center text-[9px] text-purple-300 font-bold">3</span>
+                    <span>STAGE 3: FAT GEOMETRY</span>
+                  </span>
+                  <span class="text-purple-400 text-xs font-bold">&rarr;</span>
+                </div>
+                <div class="text-xs font-bold text-white mb-0.5">GPU MapTransforms</div>
+                <p class="text-[11px] text-slate-300 leading-snug"><code class="text-purple-300 font-mono">ComputeEatPvatMasksd</code>: [-190,-30] HU window + bounded Voronoi + 10mm radial dilation on GPU.</p>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                <span class="text-slate-500">Speed</span>
+                <span class="text-emerald-400 font-mono">&lt;15s in VRAM (10x faster)</span>
+              </div>
+            </div>
+
+            <!-- Node B4: Multimodal Output & OHIF Web -->
+            <div class="bg-slate-950/90 border border-emerald-900/60 rounded-lg p-2.5 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-emerald-400 font-semibold mb-1">
+                  <span class="flex items-center space-x-1">
+                    <span class="w-3.5 h-3.5 rounded-full bg-emerald-950 border border-emerald-700 flex items-center justify-center text-[9px] text-emerald-300 font-bold">4</span>
+                    <span>STAGE 4: REPORT &amp; VIEW</span>
+                  </span>
+                  <span class="text-emerald-400 text-[10px] font-bold">ZERO FOOTPRINT</span>
+                </div>
+                <div class="text-xs font-bold text-white mb-0.5">CSV + DICOM-SEG + OHIF</div>
+                <p class="text-[11px] text-slate-300 leading-snug">Strict 19-col CSV + SOP .66.4 DICOM-SEG + embedded OHIF v3.13 4-up MPR web workstation.</p>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                <span class="text-slate-500">Web Viewer</span>
+                <span class="text-emerald-400 font-mono">http://localhost:8000</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparative Summary Matrix -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-0.5">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-500 mb-0.5">Execution Model</div>
+          <div class="text-xs font-bold text-white">4 Subprocesses &rarr; 1 CLI</div>
+          <div class="text-[10px] text-cyan-400 mt-0.5 font-mono">cardiac-fat-fl quantify</div>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-500 mb-0.5">Disk &amp; Memory I/O</div>
+          <div class="text-xs font-bold text-white">Mandatory Disk &rarr; GPU VRAM</div>
+          <div class="text-[10px] text-emerald-400 mt-0.5">Zero-copy in-memory tensor graph</div>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-500 mb-0.5">Voronoi Partitioning</div>
+          <div class="text-xs font-bold text-white">CPU SciPy (~120s) &rarr; GPU (&lt;15s)</div>
+          <div class="text-[10px] text-purple-400 mt-0.5 font-mono">10x Acceleration in VRAM</div>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-500 mb-0.5">Clinical Workstation</div>
+          <div class="text-xs font-bold text-white">Desktop 3D Slicer &rarr; OHIF v3.13</div>
+          <div class="text-[10px] text-amber-400 mt-0.5 font-mono">Browser-based 4-up MPR</div>
         </div>
       </div>
     </div>
 
-        <!-- SLIDE 5: Architectural Code Review (anatomy_segmenter.py) -->
+
+    <!-- SLIDE 5: Architectural Code Review (anatomy_segmenter.py) -->
     <div class="slide flex-col justify-center space-y-4" data-slide="5">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Code Review &amp; Technical Architecture</span>
