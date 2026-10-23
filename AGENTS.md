@@ -29,13 +29,19 @@ pytest -v
 ### CLI Quick Reference
 ```bash
 # End-to-end quantification across a cohort directory:
-python -m cardiac_fat_fl.cli quantify /path/to/cohort --output-csv measurements.csv
+cardiac-fat-fl quantify /path/to/cohort --output-dir /path/to/cohort --save-seg
+
+# With full MGH legacy intermediate file parity (heart.seg.nrrd + totalsegmentator_1-5mm_masks.seg.nrrd):
+cardiac-fat-fl quantify /path/to/cohort --save-seg --save-intermediate
+
+# Run quantification on included benchmark scans:
+cardiac-fat-fl quantify example_source_dir --save-seg
 
 # Launch local OHIF MPR viewer for a patient:
-python -m cardiac_fat_fl.cli view "path/to/patient" --port 8000 --no-browser
+cardiac-fat-fl view "example_source_dir/0506" --port 8000 --no-browser
 
 # Run federated client mock step:
-python -m cardiac_fat_fl.cli fl-step --data-dir "path/to/patient"
+cardiac-fat-fl federated-train --data-dir "example_source_dir"
 ```
 
 ### Common Agent Workflows & Task Recipes
@@ -56,9 +62,18 @@ When a user provides a CT scan or participant directory and asks to process and 
 
 #### Recipe 2: "Compute fat measurements across a cohort"
 ```bash
-python -m cardiac_fat_fl.cli quantify "/path/to/cohort" --output-dir "/path/to/cohort" --save-seg
+# Standard high-throughput run:
+cardiac-fat-fl quantify "/path/to/cohort" --output-dir "/path/to/cohort" --save-seg
+
+# With full 1:1 MGH intermediate files (heart.seg.nrrd + totalsegmentator_1-5mm_masks.seg.nrrd):
+cardiac-fat-fl quantify "/path/to/cohort" --output-dir "/path/to/cohort" --save-seg --save-intermediate
 ```
 Verify that `cardiac_fat_measurements.csv` contains the exact 19-column schema.
+
+#### Recipe 3: "Use NVIDIA NGC WholeBody CT Segmentation for Cardiac Chambers"
+- The anatomy segmentation engine uses NVIDIA NGC's official `wholeBody_ct_segmentation` bundle (1.5 mm isotropic SegResNet).
+- Relevant cardiac chamber labels: Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Aorta (`7`).
+- Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights.
 
 
 ---
