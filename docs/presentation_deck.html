@@ -1123,17 +1123,22 @@
               <span>Output 2: 3D Segmentations</span>
             </div>
             <h4 class="font-bold text-white text-sm mb-2">Research NRRD &amp; PACS DICOM-SEG</h4>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-cyan-300 font-mono mb-2 space-y-1">
-              <div>&bull; eat_pvat.seg.nrrd (3D Slicer)</div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] text-cyan-300 font-mono mb-2 space-y-0.5">
+              <div class="text-emerald-400 font-semibold">&bull; eat_pvat.seg.nrrd (8-Ch EAT/PVAT)</div>
               <div>&bull; eat_pvat_seg.dcm (SOP .66.4)</div>
+              <div class="text-amber-300/90">&bull; heart.seg.nrrd (Optional MGH)</div>
+              <div class="text-amber-300/90 truncate">&bull; totalsegmentator_1-5mm_masks.seg.nrrd</div>
             </div>
-            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-              <li>Saved inside each participant folder.</li>
-              <li>Drag &amp; drop into <strong class="text-white">3D Slicer / ITK-SNAP</strong>.</li>
-              <li>Import directly into hospital <strong class="text-white">PACS, OsiriX, Horos</strong>.</li>
+            <ul class="text-[11px] text-slate-300 space-y-1 list-disc list-inside">
+              <li>Primary masks saved inside participant folder.</li>
+              <li>Pass <code class="mono-code text-[10px] text-amber-300 bg-slate-950 px-1 py-0.5 rounded">--save-intermediate</code> to write full MGH legacy chamber &amp; pericardial NRRD files.</li>
+              <li>Drag &amp; drop directly into <strong class="text-white">3D Slicer / ITK-SNAP / OHIF</strong>.</li>
             </ul>
           </div>
-          <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-500">Saved per participant folder</div>
+          <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-500 flex justify-between">
+            <span>Per participant folder</span>
+            <span class="text-amber-400/90 font-mono text-[10px]">--save-intermediate</span>
+          </div>
         </div>
 
         <!-- Output 3 -->
