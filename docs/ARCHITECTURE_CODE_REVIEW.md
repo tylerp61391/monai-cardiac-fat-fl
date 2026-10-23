@@ -149,8 +149,8 @@ This zero-copy marshalling prepares masks for accelerated Voronoi distance trans
 
 | Metric | Harvard / MGH Baseline | Modernized Pipeline | Status |
 | :--- | :--- | :--- | :--- |
-| **Python Runtime** | Python 2.7 / TF 1.14 | Python 3.11+ / PyTorch 2.x | **Modernized** |
-| **Throughput (RTX 4090)** | ~8–12 scans/min | **120+ scans/min** | **>10x Speedup** |
+| **Python Runtime** | Python 2.7 / TF 1.14 | Python 3.12 / PyTorch 2.14.1 (CUDA 13.0) & ORT-GPU | **Modernized** |
+| **Throughput (RTX 4090)** | ~8–12 scans/min | **120+ scans/min (~0.45s / 3D volume)** | **>10x Speedup** |
 | **EAT Total Volume Delta** | Baseline reference | **$\Delta = 0.00\text{ cm}^3$** | **100% Identical** |
 | **PVAT Attenuation Delta** | Baseline reference | **$\Delta = 0.00\text{ HU}$** | **100% Identical** |
 | **Concurrency Safety** | Thread crashes | **Controlled (`intra=2, inter=1`)** | **Zero OS Thrash** |

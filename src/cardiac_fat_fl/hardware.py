@@ -6,14 +6,85 @@ safe worker limits and prevent system freezing, OOM crashes, or thread oversubsc
 
 from __future__ import annotations
 
+import functools
 import os
+import shutil
+import subprocess
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Any, List, Optional, Union
 
 import psutil
 import torch
 from rich.console import Console
 from rich.table import Table
+
+GPU_INSTALL_HINT = (
+    "uv pip install --reinstall-package torch torch --index-url https://download.pytorch.org/whl/cu130 && "
+    "uv pip uninstall onnxruntime && uv pip install onnxruntime-gpu"
+)
+
+
+@functools.lru_cache(maxsize=1)
+def nvidia_gpu_names() -> tuple:
+    """Return NVIDIA GPU names reported by the driver (independent of the installed Python builds)."""
+    exe = shutil.which("nvidia-smi")
+    if exe is None:
+        return ()
+    try:
+        out = subprocess.run(
+            [exe, "--query-gpu=name", "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=10, check=False,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ()
+    return tuple(line.strip() for line in out.splitlines() if line.strip())
+
+
+@functools.lru_cache(maxsize=1)
+def onnx_cuda_available() -> bool:
+    """Whether ONNX Runtime can execute on an NVIDIA GPU (requires the `onnxruntime-gpu` build)."""
+    try:
+        import onnxruntime as ort
+    except ImportError:
+        return False
+    if "CUDAExecutionProvider" not in ort.get_available_providers():
+        return False
+    # ORT >= 1.21 can load the CUDA/cuDNN DLLs bundled with the PyTorch CUDA wheels.
+    preload = getattr(ort, "preload_dlls", None)
+    if preload is not None:
+        try:
+            preload()
+        except Exception:  # pragma: no cover - best effort; session creation reports real failures
+            pass
+    return True
+
+
+def select_torch_device(device: Optional[Union[str, torch.device]] = None) -> torch.device:
+    """Resolve the PyTorch device, preferring CUDA whenever it is usable."""
+    if device is not None:
+        return torch.device(device)
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def select_onnx_providers(device: Optional[Union[str, torch.device]] = None) -> List[Any]:
+    """Return ONNX Runtime execution providers, GPU first unless the CPU was explicitly requested."""
+    dev = torch.device(device) if device is not None else None
+    if (dev is None or dev.type == "cuda") and onnx_cuda_available():
+        device_id = dev.index if dev is not None and dev.index is not None else 0
+        return [("CUDAExecutionProvider", {"device_id": device_id}), "CPUExecutionProvider"]
+    return ["CPUExecutionProvider"]
+
+
+def gpu_unused_reason() -> Optional[str]:
+    """Explain why an installed NVIDIA GPU cannot be used, or None if the GPU is usable / absent."""
+    if not nvidia_gpu_names():
+        return None
+    problems = []
+    if not torch.cuda.is_available():
+        problems.append(f"PyTorch {torch.__version__} is a CPU-only build")
+    if not onnx_cuda_available():
+        problems.append("ONNX Runtime lacks CUDAExecutionProvider (install onnxruntime-gpu)")
+    return "; ".join(problems) or None
 
 
 @dataclass
@@ -47,12 +118,20 @@ def detect_hardware() -> HardwareProfile:
     total_ram_gb = round(vm.total / (1024**3), 2)
     available_ram_gb = round(vm.available / (1024**3), 2)
 
-    has_cuda = torch.cuda.is_available()
-    gpu_count = torch.cuda.device_count() if has_cuda else 0
-    gpu_names = [torch.cuda.get_device_name(i) for i in range(gpu_count)] if has_cuda else []
+    torch_cuda = torch.cuda.is_available()
+    # The default segmentation backend is ONNX, so a GPU is usable if either runtime can reach it.
+    has_cuda = torch_cuda or onnx_cuda_available()
+    if torch_cuda:
+        gpu_count = torch.cuda.device_count()
+        gpu_names = [torch.cuda.get_device_name(i) for i in range(gpu_count)]
+    elif has_cuda:
+        gpu_names = list(nvidia_gpu_names())
+        gpu_count = len(gpu_names)
+    else:
+        gpu_count, gpu_names = 0, []
 
     total_vram_gb = 0.0
-    if has_cuda and gpu_count > 0:
+    if torch_cuda and gpu_count > 0:
         total_vram_gb = round(
             sum(torch.cuda.get_device_properties(i).total_memory for i in range(gpu_count)) / (1024**3),
             2,
@@ -130,4 +209,11 @@ def display_hardware_summary(profile: HardwareProfile, console: Optional[Console
     table.add_row("Safe Concurrency Sizing", f"{profile.recommended_workers} parallel workers", f"{profile.intra_op_threads} threads/worker (Zero Contention)")
 
     console.print(table)
+
+    reason = gpu_unused_reason()
+    if reason:
+        console.print(
+            f"[bold yellow]WARNING: NVIDIA GPU detected ({', '.join(nvidia_gpu_names())}) but running on CPU:[/bold yellow] "
+            f"{reason}.\n[yellow]Enable GPU with:[/yellow] {GPU_INSTALL_HINT}"
+        )
 
