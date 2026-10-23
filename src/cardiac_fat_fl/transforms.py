@@ -41,7 +41,7 @@ class ComputeEatPvatMasksd(MapTransform):
 
     def __init__(
         self,
-        keys: KeysCollection,
+        keys: KeysCollection = ("image",),
         ct_key: str = "image",
         anatomy_key: Optional[str] = "anatomy",
         output_key: str = "pred",
@@ -51,6 +51,7 @@ class ComputeEatPvatMasksd(MapTransform):
         restrict_pvat_to_pericardium: bool = True,
         segmenter: Optional[UnifiedAnatomySegmenter] = None,
         allow_missing_keys: bool = False,
+        pvat_radial_dilation_mm: Optional[float] = None,
     ) -> None:
         """Initialize transform.
 
@@ -65,6 +66,7 @@ class ComputeEatPvatMasksd(MapTransform):
             restrict_pvat_to_pericardium: Whether PVAT must lie within pericardial envelope.
             segmenter: Optional custom UnifiedAnatomySegmenter instance.
             allow_missing_keys: If False, raises KeyError when key is missing.
+            pvat_radial_dilation_mm: Backward-compatible alias for pvat_radial_distance_mm.
         """
         super().__init__(keys, allow_missing_keys)
         self.ct_key = ct_key
@@ -72,6 +74,8 @@ class ComputeEatPvatMasksd(MapTransform):
         self.output_key = output_key
         self.hu_min = hu_min
         self.hu_max = hu_max
+        if pvat_radial_dilation_mm is not None:
+            pvat_radial_distance_mm = pvat_radial_dilation_mm
         self.pvat_radial_distance_mm = pvat_radial_distance_mm
         self.restrict_pvat_to_pericardium = restrict_pvat_to_pericardium
         self._segmenter = segmenter if segmenter is not None else UnifiedAnatomySegmenter(backend="auto")
@@ -105,6 +109,10 @@ class ComputeEatPvatMasksd(MapTransform):
         pericardium: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Compute Voronoi proximity partition among the 4 cardiac chambers."""
+        # Arrays are indexed in (Z, Y, X) order, while spacing is (sx, sy, sz) = (X, Y, Z).
+        # SciPy distance_transform_edt sampling must match the array axis order (sz, sy, sx).
+        sampling_zyx = (float(spacing[2]), float(spacing[1]), float(spacing[0]))
+
         if pericardium is not None and np.any(pericardium):
             idx = np.where(pericardium)
             z0, z1 = int(np.min(idx[0])), int(np.max(idx[0])) + 1
@@ -124,10 +132,10 @@ class ComputeEatPvatMasksd(MapTransform):
             sub_ra = ra[z0:z1, y0:y1, x0:x1]
             sub_rv = rv[z0:z1, y0:y1, x0:x1]
 
-            d_la = ndi.distance_transform_edt(~sub_la, sampling=spacing) if np.any(sub_la) else np.full(sub_la.shape, 1e6)
-            d_lv = ndi.distance_transform_edt(~sub_lv, sampling=spacing) if np.any(sub_lv) else np.full(sub_lv.shape, 1e6)
-            d_ra = ndi.distance_transform_edt(~sub_ra, sampling=spacing) if np.any(sub_ra) else np.full(sub_ra.shape, 1e6)
-            d_rv = ndi.distance_transform_edt(~sub_rv, sampling=spacing) if np.any(sub_rv) else np.full(sub_rv.shape, 1e6)
+            d_la = ndi.distance_transform_edt(~sub_la, sampling=sampling_zyx) if np.any(sub_la) else np.full(sub_la.shape, 1e6)
+            d_lv = ndi.distance_transform_edt(~sub_lv, sampling=sampling_zyx) if np.any(sub_lv) else np.full(sub_lv.shape, 1e6)
+            d_ra = ndi.distance_transform_edt(~sub_ra, sampling=sampling_zyx) if np.any(sub_ra) else np.full(sub_ra.shape, 1e6)
+            d_rv = ndi.distance_transform_edt(~sub_rv, sampling=sampling_zyx) if np.any(sub_rv) else np.full(sub_rv.shape, 1e6)
 
             stacked = np.stack([d_la, d_lv, d_ra, d_rv], axis=0)
             nearest = np.argmin(stacked, axis=0)
@@ -143,10 +151,10 @@ class ComputeEatPvatMasksd(MapTransform):
             return zone_la, zone_lv, zone_ra, zone_rv
 
         # Full-volume fallback if no pericardium provided
-        d_la = ndi.distance_transform_edt(~la, sampling=spacing) if np.any(la) else np.full(la.shape, 1e6)
-        d_lv = ndi.distance_transform_edt(~lv, sampling=spacing) if np.any(lv) else np.full(lv.shape, 1e6)
-        d_ra = ndi.distance_transform_edt(~ra, sampling=spacing) if np.any(ra) else np.full(ra.shape, 1e6)
-        d_rv = ndi.distance_transform_edt(~rv, sampling=spacing) if np.any(rv) else np.full(rv.shape, 1e6)
+        d_la = ndi.distance_transform_edt(~la, sampling=sampling_zyx) if np.any(la) else np.full(la.shape, 1e6)
+        d_lv = ndi.distance_transform_edt(~lv, sampling=sampling_zyx) if np.any(lv) else np.full(lv.shape, 1e6)
+        d_ra = ndi.distance_transform_edt(~ra, sampling=sampling_zyx) if np.any(ra) else np.full(ra.shape, 1e6)
+        d_rv = ndi.distance_transform_edt(~rv, sampling=sampling_zyx) if np.any(rv) else np.full(rv.shape, 1e6)
 
         stacked = np.stack([d_la, d_lv, d_ra, d_rv], axis=0)  # Shape (4, D, H, W)
         nearest = np.argmin(stacked, axis=0)
@@ -169,6 +177,8 @@ class ComputeEatPvatMasksd(MapTransform):
         if not np.any(vessel_mask):
             return np.zeros_like(vessel_mask, dtype=bool)
 
+        sampling_zyx = (float(spacing[2]), float(spacing[1]), float(spacing[0]))
+
         if pericardium is not None and np.any(pericardium):
             idx = np.where(pericardium)
             z0, z1 = int(np.min(idx[0])), int(np.max(idx[0])) + 1
@@ -187,14 +197,14 @@ class ComputeEatPvatMasksd(MapTransform):
             if not np.any(sub_v):
                 return np.zeros_like(vessel_mask, dtype=bool)
 
-            dist = ndi.distance_transform_edt(~sub_v, sampling=spacing)
+            dist = ndi.distance_transform_edt(~sub_v, sampling=sampling_zyx)
             sub_env = (dist <= max_dist_mm) & (~sub_v)
 
             envelope = np.zeros_like(vessel_mask, dtype=bool)
             envelope[z0:z1, y0:y1, x0:x1] = sub_env
             return envelope
 
-        dist = ndi.distance_transform_edt(~vessel_mask, sampling=spacing)
+        dist = ndi.distance_transform_edt(~vessel_mask, sampling=sampling_zyx)
         envelope = (dist <= max_dist_mm) & (~vessel_mask)
         return envelope
 
@@ -308,7 +318,7 @@ class QuantifyAdiposeMetricsd(MapTransform):
 
     def __init__(
         self,
-        keys: KeysCollection,
+        keys: KeysCollection = ("image",),
         ct_key: str = "image",
         mask_key: str = "pred",
         participant_id_key: str = "participant_id",

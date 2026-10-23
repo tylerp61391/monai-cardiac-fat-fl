@@ -239,3 +239,36 @@ def test_header_preserving_nrrd_io(tmp_path: Path, synthetic_ct_fixture) -> None
     assert read_header["Segment0_Name"] == "EAT_TOTAL"
     assert read_header["Segment5_Name"] == "PVAT_LAD"
 
+
+def test_anisotropic_edt_sampling_and_aliases() -> None:
+    """Verify anisotropic EDT sampling order and backward-compatible constructor aliases."""
+    # Test constructor aliases
+    transform = ComputeEatPvatMasksd(pvat_radial_dilation_mm=12.0)
+    assert transform.pvat_radial_distance_mm == 12.0
+
+    seg = UnifiedAnatomySegmenter(onnx_heart_path=None, onnx_loc_path=None, backend="heuristic")
+    assert seg.backend == "heuristic"
+
+    # Test anisotropic physical dilation:
+    # Array shape (Z=20, Y=30, X=30) with spacing (sx=1.0, sy=1.0, sz=5.0) mm
+    # A single voxel vessel at center (z=10, y=15, x=15)
+    vessel = np.zeros((20, 30, 30), dtype=bool)
+    vessel[10, 15, 15] = True
+    spacing = (1.0, 1.0, 5.0)  # (X, Y, Z)
+
+    # With max_dist_mm = 6.0:
+    # In Z direction, 1 slice is 5.0 mm <= 6.0 mm, but 2 slices is 10.0 mm > 6.0 mm.
+    # In X and Y directions, up to 6 voxels are within 6.0 mm.
+    envelope = transform._compute_pvat_envelope(vessel, spacing, max_dist_mm=6.0)
+
+    # Along Z: only z=9, 10, 11 can be True (within 5mm)
+    z_indices = np.where(envelope)[0]
+    assert np.min(z_indices) >= 9
+    assert np.max(z_indices) <= 11
+
+    # Along X: voxels up to distance 6 (15-6=9 to 15+6=21) should be included
+    x_indices = np.where(envelope)[2]
+    assert np.min(x_indices) <= 10
+    assert np.max(x_indices) >= 20
+
+

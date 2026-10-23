@@ -79,6 +79,8 @@ class UnifiedAnatomySegmenter:
         loc_model_path: Optional[Union[str, Path]] = None,
         backend: str = "auto",
         device: Optional[Union[str, torch.device]] = None,
+        onnx_heart_path: Optional[Union[str, Path]] = None,
+        onnx_loc_path: Optional[Union[str, Path]] = None,
     ) -> None:
         """Initialize the segmenter.
 
@@ -87,7 +89,14 @@ class UnifiedAnatomySegmenter:
             loc_model_path: Optional path to heart localization ONNX model for 2-step DeepHeartSeg.
             backend: One of 'auto', 'monai', 'onnx', or 'heuristic'.
             device: Compute device ('cuda', 'cpu', or torch.device).
+            onnx_heart_path: Backward-compatible alias for model_path.
+            onnx_loc_path: Backward-compatible alias for loc_model_path.
         """
+        if model_path is None and onnx_heart_path is not None:
+            model_path = onnx_heart_path
+        if loc_model_path is None and onnx_loc_path is not None:
+            loc_model_path = onnx_loc_path
+
         if device is None:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
@@ -191,14 +200,21 @@ class UnifiedAnatomySegmenter:
         arr: np.ndarray,
         spacing: Tuple[float, float, float],
     ) -> AnatomyMasks:
-        """Run PyTorch/MONAI deep learning inference."""
+        """Run PyTorch/MONAI deep learning inference with sliding window support."""
         assert self.torch_model is not None
+        from monai.inferers import SlidingWindowInferer
+
         # Normalize HU input: standard cardiac window [-200, 800] -> [0, 1]
         norm = np.clip((arr - (-200.0)) / (800.0 - (-200.0)), 0.0, 1.0)
         inp = torch.from_numpy(norm).unsqueeze(0).unsqueeze(0).to(self.device)
 
+        # Dynamic ROI divisible by 16 for SegResNet architecture
+        spatial_shape = norm.shape
+        roi = tuple(max(16, min(96, (s // 16) * 16)) for s in spatial_shape)
+        inferer = SlidingWindowInferer(roi_size=roi, sw_batch_size=2, overlap=0.25, mode="gaussian")
+
         with torch.no_grad():
-            pred = self.torch_model(inp)
+            pred = inferer(inp, self.torch_model)
             probs = torch.sigmoid(pred).squeeze(0).cpu().numpy()
 
         pericardium = probs[0] > 0.5
@@ -419,78 +435,6 @@ class UnifiedAnatomySegmenter:
         # Fill holes in pericardium
         pericardium = ndi.binary_fill_holes(pericardium)
 
-        # 2. Cardiac Chambers Partitioning within Pericardium
-        # Using centroid of pericardium as anatomical reference point
-        indices = np.where(pericardium)
-        if len(indices[0]) > 0:
-            cx = float(np.mean(indices[0]))
-            cy = float(np.mean(indices[1]))
-            cz = float(np.mean(indices[2]))
-        else:
-            cx, cy, cz = nx / 2.0, ny / 2.0, nz / 2.0
-
-        grid_x, grid_y, grid_z = np.indices(shape)
-
-        # Chambers lie within heart core (blood pool / myocardium > 0 HU)
-        chamber_voxels = pericardium & (arr >= -30.0)
-
-        # Anatomical layout in standard CT (axial slices Z, coronal Y, sagittal X):
-        # LA: Posterior-Superior / Posterior-Left
-        # LV: Posterior-Inferior / Left (thick myocardium, apex)
-        # RA: Anterior-Superior / Right
-        # RV: Anterior-Inferior / Right-Middle
-        is_left = grid_x >= cx
-        is_right = ~is_left
-        is_anterior = grid_y < cy
-        is_posterior = ~is_anterior
-        is_superior = grid_z >= cz
-        is_inferior = ~is_superior
-
-        la = chamber_voxels & is_left & is_posterior & is_superior
-        lv = chamber_voxels & is_left & (is_inferior | (is_posterior & ~is_superior))
-        ra = chamber_voxels & is_right & (is_superior | (is_anterior & is_superior))
-        rv = chamber_voxels & is_right & is_anterior & is_inferior
-
-        # Ensure non-empty chamber seeds
-        if not np.any(la):
-            la = pericardium & is_left & is_posterior
-        if not np.any(lv):
-            lv = pericardium & is_left & is_anterior
-        if not np.any(ra):
-            ra = pericardium & is_right & is_posterior
-        if not np.any(rv):
-            rv = pericardium & is_right & is_anterior
-
-        # 3. Coronary Artery Paths (Centerlines / Vessels)
-        # LAD: Anterior interventricular groove (between RV and LV on anterior pericardial surface)
-        lad_zone = pericardium & (np.abs(grid_x - cx) <= 3) & is_anterior
-        lad_dilated = ndi.binary_dilation(lad_zone, iterations=1)
-        lad = lad_dilated & (arr >= -30.0)
-        if not np.any(lad):
-            lad = lad_zone
-
-        # LCX: Left atrioventricular groove (between LA and LV along lateral/posterior margin)
-        lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 3) & is_posterior
-        lcx_dilated = ndi.binary_dilation(lcx_zone, iterations=1)
-        lcx = lcx_dilated & (arr >= -30.0)
-        if not np.any(lcx):
-            lcx = lcx_zone
-
-        # RCA: Right atrioventricular groove (between RA and RV along anterior/lateral right margin)
-        rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 3) & is_anterior
-        rca_dilated = ndi.binary_dilation(rca_zone, iterations=1)
-        rca = rca_dilated & (arr >= -30.0)
-        if not np.any(rca):
-            rca = rca_zone
-
-        return AnatomyMasks(
-            pericardium=pericardium.astype(bool),
-            la=la.astype(bool),
-            lv=lv.astype(bool),
-            ra=ra.astype(bool),
-            rv=rv.astype(bool),
-            lad=lad.astype(bool),
-            lcx=lcx.astype(bool),
-            rca=rca.astype(bool),
-        )
+        # Derive chambers and coronaries using standardized spatial rules
+        return self._derive_chambers_and_vessels(pericardium, arr)
 
