@@ -11,6 +11,7 @@ from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import typer
 from rich.console import Console
@@ -44,9 +45,9 @@ app = typer.Typer(
 console = Console()
 
 
-def _process_one_participant(task: Tuple[str, Path, bool, float, Optional[Path], Path]) -> dict:
+def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[Path], Path]) -> dict:
     """Worker function to process a single participant scan."""
-    pid, scan_path, save_seg, pvat_radius, model_path, source_dir = task
+    pid, scan_path, save_seg, save_intermediate, pvat_radius, model_path, source_dir = task
     try:
         meta_ct = read_nrrd_as_metatensor(scan_path)
         data_dict = {
@@ -67,22 +68,57 @@ def _process_one_participant(task: Tuple[str, Path, bool, float, Optional[Path],
         # Step 1: Compute 8-compartment EAT/PVAT masks
         data_dict = mask_transform(data_dict)
         seg_mask_8ch = data_dict["pred"]
+        anatomy = data_dict.get("anatomy_masks")
+
+        if scan_path.is_dir():
+            participant_dir = scan_path if scan_path.parent == source_dir else scan_path.parent
+        else:
+            participant_dir = scan_path.parent
+
+        ref_header = meta_ct.meta.get("nrrd_header")
+        spacing = tuple(meta_ct.meta.get("spacing", (1.0, 1.0, 1.0)))
+        origin = tuple(meta_ct.meta.get("origin", (0.0, 0.0, 0.0))) if "origin" in meta_ct.meta else None
 
         # Save eat_pvat.seg.nrrd in participant directory if requested
         if save_seg:
-            if scan_path.is_dir():
-                participant_dir = scan_path if scan_path.parent == source_dir else scan_path.parent
-            else:
-                participant_dir = scan_path.parent
-
             seg_path = participant_dir / "eat_pvat.seg.nrrd"
-            ref_header = meta_ct.meta.get("nrrd_header")
-            spacing = tuple(meta_ct.meta.get("spacing", (1.0, 1.0, 1.0)))
-            origin = tuple(meta_ct.meta.get("origin", (0.0, 0.0, 0.0))) if "origin" in meta_ct.meta else None
-
             write_eat_pvat_seg_nrrd(
                 seg_data=seg_mask_8ch,
                 output_path=seg_path,
+                reference_header=ref_header,
+                spacing=spacing,
+                origin=origin,
+            )
+
+        # Save MGH-compatible intermediate masks if requested
+        if save_intermediate and anatomy is not None:
+            # 1. heart.seg.nrrd (pericardial sac binary mask)
+            heart_path = participant_dir / "heart.seg.nrrd"
+            write_eat_pvat_seg_nrrd(
+                seg_data=anatomy.pericardium.astype(np.uint8),
+                output_path=heart_path,
+                reference_header=ref_header,
+                spacing=spacing,
+                origin=origin,
+            )
+
+            # 2. totalsegmentator_1-5mm_masks.seg.nrrd (multi-label chamber & vessel mask)
+            tot_seg = np.zeros_like(anatomy.pericardium, dtype=np.uint16)
+            tot_seg[anatomy.la] = 45
+            tot_seg[anatomy.lv] = 46
+            tot_seg[anatomy.ra] = 47
+            tot_seg[anatomy.rv] = 48
+            if anatomy.lad is not None:
+                tot_seg[anatomy.lad] = 5
+            if anatomy.lcx is not None:
+                tot_seg[anatomy.lcx] = 6
+            if anatomy.rca is not None:
+                tot_seg[anatomy.rca] = 7
+
+            tot_path = participant_dir / "totalsegmentator_1-5mm_masks.seg.nrrd"
+            write_eat_pvat_seg_nrrd(
+                seg_data=tot_seg,
+                output_path=tot_path,
                 reference_header=ref_header,
                 spacing=spacing,
                 origin=origin,
@@ -135,6 +171,11 @@ def quantify(
         True,
         "--save-seg/--no-save-seg",
         help="Whether to write `eat_pvat.seg.nrrd` inside each participant directory.",
+    ),
+    save_intermediate: bool = typer.Option(
+        False,
+        "--save-intermediate/--no-save-intermediate",
+        help="Save MGH-equivalent intermediate masks: `heart.seg.nrrd` and `totalsegmentator_1-5mm_masks.seg.nrrd`.",
     ),
     csv_filename: str = typer.Option(
         "cardiac_fat_measurements.csv",
@@ -244,7 +285,7 @@ def quantify(
         return
 
     tasks = [
-        (pid, scan_path, save_seg, pvat_radius, model_path, source_dir)
+        (pid, scan_path, save_seg, save_intermediate, pvat_radius, model_path, source_dir)
         for pid, scan_path in remaining_participants
     ]
 

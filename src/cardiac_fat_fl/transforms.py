@@ -295,6 +295,7 @@ class ComputeEatPvatMasksd(MapTransform):
             out_tensor = torch.from_numpy(masks_8ch)
 
         d[self.output_key] = out_tensor
+        d["anatomy_masks"] = anatomy
         return d
 
 

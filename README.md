@@ -54,16 +54,22 @@ participant_001/
 └── eat_pvat.seg.nrrd                       # 8-channel final EAT & PVAT segmentation
 ```
 
-In `monai-cardiac-fat-fl`, the output layout is **100.0% equivalent and backwards-compatible**, while dramatically streamlining the execution into a single command:
-```text
-# monai-cardiac-fat-fl Output:
-participant_001/
-├── scan.nrrd (or DICOM series)             # Raw 3D input CT volume (NRRD, NIfTI, or DICOM)
-├── eat_pvat.seg.nrrd                       # 8-channel final EAT & PVAT segmentation (NRRD header preserved)
-└── eat_pvat_seg.dcm (optional via export)  # Multi-frame standard DICOM-SEG (SOP .66.4) for OHIF PACS
-```
+In `monai-cardiac-fat-fl`, the default execution is streamlined to output the primary clinical endpoint (`eat_pvat.seg.nrrd`) in-memory to save disk space and maximize I/O throughput. 
 
-*Note: In `monai-cardiac-fat-fl`, intermediate chamber (`wholeBody_ct_segmentation`) and pericardial (`heart`) predictions are processed in-memory as native GPU MONAI `MetaTensor` pipelines for high throughput, saving `eat_pvat.seg.nrrd` directly into each participant's folder without cluttering disk space.*
+However, if you want **100% full per-file disk parity** with the MGH legacy research pipeline, pass the `--save-intermediate` flag:
+```bash
+cardiac-fat-fl quantify /path/to/cohort --save-seg --save-intermediate
+```
+This writes the full suite of MGH-compatible intermediate segmentation volumes into each participant folder:
+```text
+# With --save-intermediate:
+participant_001/
+├── scan.nrrd                               # Raw input CT volume
+├── totalsegmentator_1-5mm_masks.seg.nrrd   # Multi-label chamber & vessel segmentation (1.5mm)
+├── heart.seg.nrrd                          # Pericardial sac binary segmentation
+├── eat_pvat.seg.nrrd                       # 8-channel final EAT & PVAT segmentation
+└── eat_pvat_seg.dcm (optional via export)  # Multi-frame standard DICOM-SEG (SOP .66.4) for OHIF
+```
 
 ### 2. Cohort-Level Aggregation Output
 Running batch quantification across a cohort directory:
