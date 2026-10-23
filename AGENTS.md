@@ -120,9 +120,9 @@ Whenever modifying preprocessing, segmentation, transforms, or reporting:
 - **Autospin MPR**: Defaults to `OFF` (`autoSpinMPR: false` in OHIF configuration) to ensure stable diagnostic presentation upon viewer launch.
 - **Viewport Layout**: Uses standard 3D Slicer clinical convention:
   - Top-Left: Axial CT (Primary view)
-  - Top-Right: Sagittal CT (MPR)
+  - Top-Right: 3D Volume Rendering / Segmentations
   - Bottom-Left: Coronal CT (MPR)
-  - Bottom-Right: 3D Volume Rendering / Segmentations
+  - Bottom-Right: Sagittal CT (MPR)
 
 ---
 
