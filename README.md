@@ -139,6 +139,29 @@ Because pretrained DeepHeartSeg ONNX models exceed GitHub's $100\,\text{MB}$ rep
    curl -L -o models/deepheartseg_heart.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_heart.onnx
    curl -L -o models/deepheartseg_loc.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_loc.onnx
    ```
+
+### Official MGH Benchmark Test Data (`example_source_dir`)
+
+To allow users and researchers to immediately run end-to-end quantification, testing, and OHIF visualization out of the box, the repository includes the official [MGH CardiacFatQuant](https://github.com/circ-ml/CardiacFatQuant/tree/main/example_source_dir) test cohort in [`example_source_dir/`](example_source_dir):
+
+```text
+example_source_dir/
+├── 0506/
+│   └── img.nrrd   # 3D Cardiac CT (512 x 512 x 122, 16-bit signed, [-1024, 1590] HU)
+├── 0909/
+│   └── img.nrrd   # 3D Cardiac CT (512 x 512 x 126, 16-bit signed, [-1024, 1629] HU)
+└── 0987/
+    └── img.nrrd   # 3D Cardiac CT (512 x 512 x 119, 16-bit signed, [-1024, 1840] HU)
+```
+
+**Run quantification immediately on the included test data:**
+```bash
+# Process all 3 benchmark cases and generate measurements.csv + 8-compartment masks:
+cardiac-fat-fl quantify example_source_dir --save-seg
+
+# Launch interactive OHIF 3D MPR workstation for participant 0506:
+cardiac-fat-fl view example_source_dir/0506 --port 8000
+```
 3. **Repository Maintainer Deployment**:
    When pushing to a new repository, create release `v1.0.0` and attach `models/deepheartseg_heart.onnx` and `models/deepheartseg_loc.onnx` as binary assets.
 4. **Anatomical Heuristic Fallback**:
