@@ -32,7 +32,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 | :--- | :--- | :--- |
 | **Language & Runtime** | Python 2.7 / TensorFlow 1.14 (Frozen Keras `.pb`/`.hdf5`) | Python 3.11+ / PyTorch 2.x & ONNX Runtime GPU |
 | **Image Ingestion** | Folder structure (`scan.nrrd`) | Universal: DICOM Series (with slope/intercept), NIfTI, NRRD, MHA |
-| **Segmentation Engine** | Multi-step external tools: subprocess `TotalSegmentator` (nnUNet 1.5 mm isotropic) + 2-stage `DeepHeartSeg` (TF 1.14 `.pb`) | **Native MONAI & GPU Stack**: NVIDIA NGC / MONAI Model Zoo [`wholeBody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation) (1.5 mm isotropic SegResNet, 104 labels: LA, LV, RA, RV, Aorta) + DeepHeartSeg ONNX + 8-ch SegResNet |
+| **Segmentation Engine** | Multi-step external tools: subprocess `TotalSegmentator` (nnUNet 1.5 mm isotropic) + 2-stage `DeepHeartSeg` (TF 1.14 `.pb`) | **Native MONAI & GPU Stack**: NVIDIA NGC / MONAI Model Zoo [`wholeBody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation) (1.5 mm isotropic SegResNet, 104 labels: LA, LV, RA, RV, Aorta) + 2-stage `DeepHeartSeg` ONNX (`loc` + `heart`) + distilled 8-ch SegResNet |
 | **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$, $r = 1.000$) |
 | **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
 | **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
