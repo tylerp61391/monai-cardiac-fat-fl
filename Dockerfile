@@ -1,12 +1,12 @@
 # ==============================================================================
 # Dockerfile: monai-cardiac-fat-fl
-# Modernized MONAI & NVFLARE Pipeline for EAT & PVAT Cardiac Fat Quantification
+# MONAI, FLARE & OHIF Pipeline for EAT & PVAT Cardiac Fat Quantification
 # ==============================================================================
 
 FROM python:3.11-slim
 
 LABEL maintainer="Tyler Patay"
-LABEL description="Containerized MONAI & NVFLARE Cardiac Fat Quantification Pipeline"
+LABEL description="Containerized MONAI, FLARE & OHIF Cardiac Fat Quantification Pipeline"
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

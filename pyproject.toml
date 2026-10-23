@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "monai-cardiac-fat-fl"
 version = "0.1.0"
-description = "Modernized MONAI & NVIDIA FLARE pipeline for Epicardial and Pericoronary Adipose Tissue (EAT/PVAT) quantification from cardiac CT"
+description = "MONAI, FLARE & OHIF pipeline for Epicardial and Pericoronary Adipose Tissue (EAT/PVAT) quantification from cardiac CT"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"

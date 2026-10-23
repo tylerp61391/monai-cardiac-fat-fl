@@ -38,7 +38,7 @@ from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetri
 
 app = typer.Typer(
     name="cardiac-fat-fl",
-    help="Modernized MONAI & NVFLARE pipeline for EAT/PVAT quantification from Cardiac CT.",
+    help="MONAI, FLARE & OHIF pipeline for Epicardial and Pericoronary Adipose Tissue (EAT/PVAT) quantification from cardiac CT.",
     add_completion=False,
 )
 console = Console()
