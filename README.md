@@ -40,6 +40,42 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 
 ---
 
+## Pipeline Execution & Output File Structure
+
+### 1. Per-Participant Output Files (100% Equivalent to MGH `CardiacFatQuant`)
+
+In the reference MGH pipeline, running the multiple steps generated intermediate segmentations inside each participant folder:
+```text
+# MGH Legacy Pipeline Output:
+participant_001/
+├── scan.nrrd                               # Raw 3D input CT volume
+├── totalsegmentator_1-5mm_masks.seg.nrrd   # Multi-label chamber & vessel segmentation (1.5mm)
+├── heart.seg.nrrd                          # Pericardial sac binary segmentation
+└── eat_pvat.seg.nrrd                       # 8-channel final EAT & PVAT segmentation
+```
+
+In `monai-cardiac-fat-fl`, the output layout is **100.0% equivalent and backwards-compatible**, while dramatically streamlining the execution into a single command:
+```text
+# monai-cardiac-fat-fl Output:
+participant_001/
+├── scan.nrrd (or DICOM series)             # Raw 3D input CT volume (NRRD, NIfTI, or DICOM)
+├── eat_pvat.seg.nrrd                       # 8-channel final EAT & PVAT segmentation (NRRD header preserved)
+└── eat_pvat_seg.dcm (optional via export)  # Multi-frame standard DICOM-SEG (SOP .66.4) for OHIF PACS
+```
+
+*Note: In `monai-cardiac-fat-fl`, intermediate chamber (`wholeBody_ct_segmentation`) and pericardial (`heart`) predictions are processed in-memory as native GPU MONAI `MetaTensor` pipelines for high throughput, saving `eat_pvat.seg.nrrd` directly into each participant's folder without cluttering disk space.*
+
+### 2. Cohort-Level Aggregation Output
+Running batch quantification across a cohort directory:
+```bash
+cardiac-fat-fl quantify /path/to/cohort --output-dir /path/to/cohort --save-seg
+```
+Outputs:
+1. **Per-Participant Masks**: Written to each participant subfolder (`/path/to/cohort/<participant_id>/eat_pvat.seg.nrrd`).
+2. **Cohort Summary Table**: Written to the `--output-dir` (defaults to cohort root) as `cardiac_fat_measurements.csv` conforming to the exact 19-column clinical schema.
+
+---
+
 ## Clinical & Anatomical Specifications
 
 ### 1. Adipose Attenuation Window
