@@ -62,6 +62,9 @@ docs/*.pdf
 !docs/Cardiac_Segmentation_Architecture.pdf
 docs/architecture_review/*.png
 
+# Local scratch scripts & temporary test outputs
+scratch/
+
 
 
 
