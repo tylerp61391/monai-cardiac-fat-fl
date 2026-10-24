@@ -2238,7 +2238,7 @@ def export_sample_to_ohif(
                 and ((d / "eat_pvat.seg.nrrd").is_file() or (d / "ohif_export").is_dir() or any(f.name.endswith(".nrrd") for f in d.iterdir()))
             ]
             if found:
-                found.sort(key=lambda x: int(x) if x.isdigit() else str(x))
+                found.sort(key=lambda x: (0, int(x)) if x.isdigit() else (1, str(x)))
                 available_participants = found
 
     # 6. Generate authentic OHIF 3-pane web viewer with 4-box center viewport
