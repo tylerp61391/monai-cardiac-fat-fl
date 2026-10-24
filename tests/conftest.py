@@ -15,7 +15,7 @@ import pytest
 import torch
 
 from cardiac_fat_fl.anatomy_segmenter import AnatomyMasks
-from cardiac_fat_fl.io_nrrd import write_eat_pvat_seg_nrrd
+from cardiac_fat_fl.io_metatensor import write_eat_pvat_seg_nrrd
 
 
 def generate_synthetic_cardiac_ct(

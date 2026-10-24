@@ -6,8 +6,9 @@ from cardiac_fat_fl.fl_stats_executor import (
     CardiacFatStatsExecutor,
     aggregate_federated_statistics,
 )
-from cardiac_fat_fl.io_nrrd import (
+from cardiac_fat_fl.io_metatensor import (
     discover_participants,
+    read_medical_image_as_metatensor,
     read_nrrd_as_metatensor,
     read_nrrd_ct,
     write_eat_pvat_seg_nrrd,
@@ -38,6 +39,7 @@ __all__ = [
     "validate_measurement_dataframe",
     "calculate_volume_cm3",
     "discover_participants",
+    "read_medical_image_as_metatensor",
     "read_nrrd_ct",
     "read_nrrd_as_metatensor",
     "write_eat_pvat_seg_nrrd",

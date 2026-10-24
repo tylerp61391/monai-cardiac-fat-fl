@@ -23,7 +23,7 @@ from monai.fl.utils.exchange_object import ExchangeObject, WeightType
 from monai.losses import DiceFocalLoss
 from torch.utils.data import DataLoader, Dataset
 
-from cardiac_fat_fl.io_nrrd import discover_participants, read_nrrd_ct
+from cardiac_fat_fl.io_metatensor import discover_participants, read_nrrd_ct
 from cardiac_fat_fl.measurement_schema import (
     MEASUREMENT_CSV_COLUMNS,
     REPORTED_REGIONS,

@@ -28,7 +28,7 @@ from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
 from pydicom.sequence import Sequence
 from pydicom.uid import ExplicitVRLittleEndian, generate_uid
 
-from cardiac_fat_fl.io_nrrd import read_medical_image_as_metatensor
+from cardiac_fat_fl.io_metatensor import read_medical_image_as_metatensor
 from cardiac_fat_fl.measurement_schema import (
     ADIPOSE_HU_MAX,
     ADIPOSE_HU_MIN,

@@ -23,7 +23,7 @@ import torch
 from monai.data import MetaTensor
 
 from cardiac_fat_fl.anatomy_segmenter import AnatomyMasks, UnifiedAnatomySegmenter
-from cardiac_fat_fl.io_nrrd import (
+from cardiac_fat_fl.io_metatensor import (
     discover_participants,
     read_nrrd_as_metatensor,
     read_nrrd_ct,

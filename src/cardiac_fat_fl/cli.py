@@ -25,7 +25,7 @@ from cardiac_fat_fl.hardware import (
     display_hardware_summary,
     validate_worker_concurrency,
 )
-from cardiac_fat_fl.io_nrrd import (
+from cardiac_fat_fl.io_metatensor import (
     discover_participants,
     read_nrrd_as_metatensor,
     write_eat_pvat_seg_nrrd,
@@ -129,7 +129,7 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
             )
 
             # 3. Optional coronary_sulci.seg.nrrd (derived geometric sulci seeds)
-            from cardiac_fat_fl.io_nrrd import write_coronary_sulci_seg_nrrd
+            from cardiac_fat_fl.io_metatensor import write_coronary_sulci_seg_nrrd
             sulci_seg = np.zeros_like(anatomy.pericardium, dtype=np.uint16)
             if anatomy.lad is not None:
                 sulci_seg[anatomy.lad] = 1

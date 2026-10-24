@@ -368,7 +368,7 @@ monai-cardiac-fat-fl/
 │   └── cardiac_fat_fl/
 │       ├── __init__.py            # Package root exports
 │       ├── measurement_schema.py  # ADIPOSE_HU_MIN/MAX, SegmentationCompartment, REPORTED_REGIONS, volume math
-│       ├── io_nrrd.py             # Universal loader (read_medical_image_as_metatensor), NRRD/NIfTI/DICOM writer
+│       ├── io_metatensor.py       # Universal loader (DICOM/NRRD/NIfTI -> MetaTensor) (read_medical_image_as_metatensor), NRRD/NIfTI/DICOM writer
 │       ├── anatomy_segmenter.py   # UnifiedAnatomySegmenter (DeepHeartSeg ONNX, MONAI deep model, fallback)
 │       ├── transforms.py          # ComputeEatPvatMasksd (Voronoi & radial dilation) & QuantifyAdiposeMetricsd
 │       ├── model.py               # 3D SegResNet / SwinUNETR factory and FedBN layer filtering
@@ -391,7 +391,7 @@ monai-cardiac-fat-fl/
 
 #### Loading Scans & Multi-Modal I/O
 ```python
-from cardiac_fat_fl.io_nrrd import read_medical_image_as_metatensor, discover_participants
+from cardiac_fat_fl.io_metatensor import read_medical_image_as_metatensor, discover_participants
 
 # Automatically handles DICOM folders, NIfTI (.nii, .nii.gz), NRRD, or MetaImage
 participants = discover_participants("/path/to/cohort")
