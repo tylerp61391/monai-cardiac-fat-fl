@@ -298,3 +298,4 @@ def push_to_dimse_cstore(
         "status_code": 0x0000 if failed == 0 else 0x0111,
         "details": details or f"Successfully transmitted {success} instances via C-STORE",
     }
+

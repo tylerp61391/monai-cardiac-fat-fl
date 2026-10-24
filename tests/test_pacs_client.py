@@ -145,3 +145,4 @@ def test_push_to_dimse_cstore_mock(tmp_path: Path):
         assert res["failed_count"] == 0
         assert res["status_code"] == 0x0000
         assert mock_assoc.release.called
+
