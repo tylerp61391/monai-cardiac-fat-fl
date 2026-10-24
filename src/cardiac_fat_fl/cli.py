@@ -116,17 +116,14 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
             if anatomy.rca is not None:
                 tot_seg[anatomy.rca] = 7
 
-            tot_path = participant_dir / "totalsegmentator_1-5mm_masks.seg.nrrd"
-            write_totalsegmentator_seg_nrrd(
+            monai_tot_path = participant_dir / "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
+            write_monai_wholebody_ct_segmentation_seg_nrrd(
                 seg_data=tot_seg,
-                output_path=tot_path,
+                output_path=monai_tot_path,
                 reference_header=ref_header,
                 spacing=spacing,
                 origin=origin,
             )
-            # Also write alias with exact model name: monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd
-            monai_tot_path = participant_dir / "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
-            shutil.copy2(tot_path, monai_tot_path)
 
         # Step 2: Quantify volumes and mean attenuation
         data_dict = quant_transform(data_dict)
@@ -179,7 +176,7 @@ def quantify(
     save_intermediate: bool = typer.Option(
         False,
         "--save-intermediate/--no-save-intermediate",
-        help="Save MGH-equivalent intermediate masks: `heart.seg.nrrd` and `totalsegmentator_1-5mm_masks.seg.nrrd`.",
+        help="Save intermediate masks: `heart.seg.nrrd` and `monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd`.",
     ),
     csv_filename: str = typer.Option(
         "cardiac_fat_measurements.csv",

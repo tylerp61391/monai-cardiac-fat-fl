@@ -267,12 +267,20 @@ class UnifiedAnatomySegmenter:
         is_single_channel = len(out_shape) == 5 and out_shape[1] == 1
 
         if is_single_channel:
+            # Check axis ordering: NRRD volumes typically arrive as (X, Y, Z) where Z (slices) < X (in-plane)
+            is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256
+            if is_xyz:
+                # Transpose from (X, Y, Z) to (Z, Y, X) for DeepHeartSeg 3D CNN
+                arr_zyx = arr.transpose(2, 1, 0)
+            else:
+                arr_zyx = arr
+
             # 1. Heart localization (Step 1) to derive cardiac bounding box
             if self.onnx_loc_session is not None:
-                z_zoom = 64.0 / arr.shape[0]
-                y_zoom = 128.0 / arr.shape[1]
-                x_zoom = 128.0 / arr.shape[2]
-                down = ndi.zoom(arr, (z_zoom, y_zoom, x_zoom), order=1)
+                z_zoom = 64.0 / arr_zyx.shape[0]
+                y_zoom = 128.0 / arr_zyx.shape[1]
+                x_zoom = 128.0 / arr_zyx.shape[2]
+                down = ndi.zoom(arr_zyx, (z_zoom, y_zoom, x_zoom), order=1)
                 norm_loc = ((np.clip(down, -1024.0, 3071.0)) - 1023.5) / 2047.5
                 inp_loc = norm_loc[np.newaxis, np.newaxis, ...].astype(np.float32)
                 pred_loc = self.onnx_loc_session.run(None, {self.onnx_loc_session.get_inputs()[0].name: inp_loc})[0]
@@ -284,19 +292,19 @@ class UnifiedAnatomySegmenter:
                     y_min, y_max = int(np.min(idx[1]) / y_zoom), int(np.max(idx[1]) / y_zoom)
                     x_min, x_max = int(np.min(idx[2]) / x_zoom), int(np.max(idx[2]) / x_zoom)
                     # Add margin
-                    z_min, z_max = max(0, z_min - 4), min(arr.shape[0], z_max + 4)
-                    y_min, y_max = max(0, y_min - 16), min(arr.shape[1], y_max + 16)
-                    x_min, x_max = max(0, x_min - 16), min(arr.shape[2], x_max + 16)
+                    z_min, z_max = max(0, z_min - 4), min(arr_zyx.shape[0], z_max + 4)
+                    y_min, y_max = max(0, y_min - 16), min(arr_zyx.shape[1], y_max + 16)
+                    x_min, x_max = max(0, x_min - 16), min(arr_zyx.shape[2], x_max + 16)
                 else:
-                    z_min, z_max = 0, arr.shape[0]
-                    y_min, y_max = int(arr.shape[1] * 0.2), int(arr.shape[1] * 0.8)
-                    x_min, x_max = int(arr.shape[2] * 0.2), int(arr.shape[2] * 0.8)
+                    z_min, z_max = 0, arr_zyx.shape[0]
+                    y_min, y_max = int(arr_zyx.shape[1] * 0.2), int(arr_zyx.shape[1] * 0.8)
+                    x_min, x_max = int(arr_zyx.shape[2] * 0.2), int(arr_zyx.shape[2] * 0.8)
             else:
-                z_min, z_max = 0, arr.shape[0]
-                y_min, y_max = int(arr.shape[1] * 0.2), int(arr.shape[1] * 0.8)
-                x_min, x_max = int(arr.shape[2] * 0.2), int(arr.shape[2] * 0.8)
+                z_min, z_max = 0, arr_zyx.shape[0]
+                y_min, y_max = int(arr_zyx.shape[1] * 0.2), int(arr_zyx.shape[1] * 0.8)
+                x_min, x_max = int(arr_zyx.shape[2] * 0.2), int(arr_zyx.shape[2] * 0.8)
 
-            cropped = arr[z_min:z_max, y_min:y_max, x_min:x_max]
+            cropped = arr_zyx[z_min:z_max, y_min:y_max, x_min:x_max]
             cz, cy, cx = cropped.shape
 
             # Step 2: Resample cropped heart to (112, 128, 128)
@@ -312,9 +320,15 @@ class UnifiedAnatomySegmenter:
 
             # Upsample back to cropped dimensions
             seg_crop_orig = ndi.zoom(seg_mask_small.astype(float), (1.0 / z_f, 1.0 / y_f, 1.0 / x_f), order=0) > 0.5
-            pericardium = np.zeros_like(arr, dtype=bool)
-            pericardium[z_min:z_max, y_min:y_max, x_min:x_max] = seg_crop_orig[:cz, :cy, :cx]
-            pericardium = ndi.binary_fill_holes(pericardium)
+            pericardium_zyx = np.zeros_like(arr_zyx, dtype=bool)
+            pericardium_zyx[z_min:z_max, y_min:y_max, x_min:x_max] = seg_crop_orig[:cz, :cy, :cx]
+            pericardium_zyx = ndi.binary_fill_holes(pericardium_zyx)
+
+            if is_xyz:
+                # Transpose back to (X, Y, Z) to match original volume coordinate frame
+                pericardium = pericardium_zyx.transpose(2, 1, 0)
+            else:
+                pericardium = pericardium_zyx
 
             # Derive chambers and coronaries using DeepHeartSeg pericardium envelope
             return self._derive_chambers_and_vessels(pericardium, arr)
@@ -388,54 +402,107 @@ class UnifiedAnatomySegmenter:
                 )
 
         indices = np.where(pericardium)
-        if len(indices[0]) > 0:
-            cz = float(np.mean(indices[0]))
-            cy = float(np.mean(indices[1]))
-            cx = float(np.mean(indices[2]))
+        is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256
+        if is_xyz:
+            # Axis 0: X (Left/Right), Axis 1: Y (Anterior/Posterior), Axis 2: Z (Inferior/Superior)
+            if len(indices[0]) > 0:
+                cx = float(np.mean(indices[0]))
+                cy = float(np.mean(indices[1]))
+                cz = float(np.mean(indices[2]))
+            else:
+                cx, cy, cz = shape[0] / 2.0, shape[1] / 2.0, shape[2] / 2.0
+
+            grid_x, grid_y, grid_z = np.indices(shape)
+            chamber_voxels = pericardium & (arr >= -30.0)
+
+            is_left = grid_x >= cx
+            is_right = ~is_left
+            is_anterior = grid_y < cy
+            is_posterior = ~is_anterior
+            is_superior = grid_z >= cz
+            is_inferior = ~is_superior
+
+            la = chamber_voxels & is_left & is_posterior & is_superior
+            lv = chamber_voxels & is_left & (is_inferior | (is_posterior & ~is_superior))
+            ra = chamber_voxels & is_right & (is_superior | (is_anterior & is_superior))
+            rv = chamber_voxels & is_right & is_anterior & is_inferior
+
+            if not np.any(la):
+                la = pericardium & is_left & is_posterior
+            if not np.any(lv):
+                lv = pericardium & is_left & is_anterior
+            if not np.any(ra):
+                ra = pericardium & is_right & is_posterior
+            if not np.any(rv):
+                rv = pericardium & is_right & is_anterior
+
+            lad_zone = pericardium & (np.abs(grid_x - cx) <= 12) & is_anterior
+            lad_dilated = ndi.binary_dilation(lad_zone, iterations=1)
+            lad = lad_dilated & (arr >= -30.0)
+            if not np.any(lad):
+                lad = lad_zone
+
+            lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 12) & is_posterior
+            lcx_dilated = ndi.binary_dilation(lcx_zone, iterations=1)
+            lcx = lcx_dilated & (arr >= -30.0)
+            if not np.any(lcx):
+                lcx = lcx_zone
+
+            rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 12) & is_anterior
+            rca_dilated = ndi.binary_dilation(rca_zone, iterations=1)
+            rca = rca_dilated & (arr >= -30.0)
+            if not np.any(rca):
+                rca = rca_zone
         else:
-            cz, cy, cx = nz / 2.0, ny / 2.0, nx / 2.0
+            # Standard (Z, Y, X) orientation
+            if len(indices[0]) > 0:
+                cz = float(np.mean(indices[0]))
+                cy = float(np.mean(indices[1]))
+                cx = float(np.mean(indices[2]))
+            else:
+                cz, cy, cx = shape[0] / 2.0, shape[1] / 2.0, shape[2] / 2.0
 
-        grid_z, grid_y, grid_x = np.indices(shape)
-        chamber_voxels = pericardium & (arr >= -30.0)
+            grid_z, grid_y, grid_x = np.indices(shape)
+            chamber_voxels = pericardium & (arr >= -30.0)
 
-        is_left = grid_x >= cx
-        is_right = ~is_left
-        is_anterior = grid_y < cy
-        is_posterior = ~is_anterior
-        is_superior = grid_z >= cz
-        is_inferior = ~is_superior
+            is_left = grid_x >= cx
+            is_right = ~is_left
+            is_anterior = grid_y < cy
+            is_posterior = ~is_anterior
+            is_superior = grid_z >= cz
+            is_inferior = ~is_superior
 
-        la = chamber_voxels & is_left & is_posterior & is_superior
-        lv = chamber_voxels & is_left & (is_inferior | (is_posterior & ~is_superior))
-        ra = chamber_voxels & is_right & (is_superior | (is_anterior & is_superior))
-        rv = chamber_voxels & is_right & is_anterior & is_inferior
+            la = chamber_voxels & is_left & is_posterior & is_superior
+            lv = chamber_voxels & is_left & (is_inferior | (is_posterior & ~is_superior))
+            ra = chamber_voxels & is_right & (is_superior | (is_anterior & is_superior))
+            rv = chamber_voxels & is_right & is_anterior & is_inferior
 
-        if not np.any(la):
-            la = pericardium & is_left & is_posterior
-        if not np.any(lv):
-            lv = pericardium & is_left & is_anterior
-        if not np.any(ra):
-            ra = pericardium & is_right & is_posterior
-        if not np.any(rv):
-            rv = pericardium & is_right & is_anterior
+            if not np.any(la):
+                la = pericardium & is_left & is_posterior
+            if not np.any(lv):
+                lv = pericardium & is_left & is_anterior
+            if not np.any(ra):
+                ra = pericardium & is_right & is_posterior
+            if not np.any(rv):
+                rv = pericardium & is_right & is_anterior
 
-        lad_zone = pericardium & (np.abs(grid_x - cx) <= 8) & is_anterior
-        lad_dilated = ndi.binary_dilation(lad_zone, iterations=1)
-        lad = lad_dilated & (arr >= -30.0)
-        if not np.any(lad):
-            lad = lad_zone
+            lad_zone = pericardium & (np.abs(grid_x - cx) <= 8) & is_anterior
+            lad_dilated = ndi.binary_dilation(lad_zone, iterations=1)
+            lad = lad_dilated & (arr >= -30.0)
+            if not np.any(lad):
+                lad = lad_zone
 
-        lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 8) & is_posterior
-        lcx_dilated = ndi.binary_dilation(lcx_zone, iterations=1)
-        lcx = lcx_dilated & (arr >= -30.0)
-        if not np.any(lcx):
-            lcx = lcx_zone
+            lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 8) & is_posterior
+            lcx_dilated = ndi.binary_dilation(lcx_zone, iterations=1)
+            lcx = lcx_dilated & (arr >= -30.0)
+            if not np.any(lcx):
+                lcx = lcx_zone
 
-        rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 8) & is_anterior
-        rca_dilated = ndi.binary_dilation(rca_zone, iterations=1)
-        rca = rca_dilated & (arr >= -30.0)
-        if not np.any(rca):
-            rca = rca_zone
+            rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 8) & is_anterior
+            rca_dilated = ndi.binary_dilation(rca_zone, iterations=1)
+            rca = rca_dilated & (arr >= -30.0)
+            if not np.any(rca):
+                rca = rca_zone
 
         return AnatomyMasks(
             pericardium=pericardium.astype(bool),
