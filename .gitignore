@@ -46,6 +46,7 @@ models/*.hdf5
 models/*.onnx
 models/*.pt
 models/*.pth
+models/wholeBody_ct_segmentation/
 
 # Environment secrets & configuration
 .env
