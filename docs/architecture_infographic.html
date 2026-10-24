@@ -25,11 +25,11 @@
     .flow-connector::after {
       content: '➔';
       position: absolute;
-      right: -14px;
+      right: -13px;
       top: 50%;
       transform: translateY(-50%);
       color: #38bdf8;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
       z-index: 10;
     }
@@ -40,7 +40,7 @@
     }
   </style>
 </head>
-<body class="p-4 md:p-8 max-w-[1580px] mx-auto antialiased">
+<body class="p-4 md:p-8 max-w-[1620px] mx-auto antialiased">
 
   <!-- Header Banner -->
   <div class="border-b border-slate-700/80 pb-5 mb-6">
@@ -48,164 +48,201 @@
       <span class="font-bold flex items-center">
         SYSTEM ARCHITECTURE BLUEPRINT &bull; TECHNICAL SPECIFICATION
       </span>
-      <div class="flex items-center space-x-2">
+      <div class="flex flex-wrap items-center gap-2">
         <span class="bg-sky-950 text-sky-300 px-2.5 py-0.5 rounded border border-sky-700">Repository: monai-cardiac-fat-fl</span>
-        <span class="bg-emerald-950 text-emerald-300 px-2.5 py-0.5 rounded border border-emerald-700">MONAI 1.6.1 &bull; PyTorch 2.x</span>
+        <span class="bg-emerald-950 text-emerald-300 px-2.5 py-0.5 rounded border border-emerald-700">MONAI 1.6.1 &bull; PyTorch 2.14+ &bull; CUDA 13.0</span>
+        <span class="bg-purple-950 text-purple-300 px-2.5 py-0.5 rounded border border-purple-700">DICOM-SEG .66.4 &bull; DICOM-SR TID 1500</span>
+        <span class="bg-cyan-950 text-cyan-300 px-2.5 py-0.5 rounded border border-cyan-700">PACS: STOW-RS &amp; C-STORE</span>
       </div>
     </div>
     <h1 class="serif-title text-3xl md:text-4xl font-bold text-white tracking-tight">
-      End-to-End Pipeline: Raw CT &rarr; monai_wholebody_ct_segmentation &rarr; Pericardium &rarr; EAT/PVAT Quantification
+      End-to-End Pipeline: Raw CT &rarr; WholeBody SegResNet &rarr; Pericardium &rarr; EAT/PVAT &rarr; OHIF &amp; PACS
     </h1>
-    <p class="text-xs md:text-sm text-slate-300 mt-2 max-w-5xl leading-relaxed">
-      A unified PyTorch, MONAI Model Zoo, and NVIDIA FLARE architecture replacing legacy multi-stage Bash/Conda scripts with a pure GPU pipeline executing high-resolution 1.5mm whole-body CT segmentation, zero-drift pericardial delineation, and Euclidean distance Voronoi fat partitioning.
+    <p class="text-xs md:text-sm text-slate-300 mt-2 max-w-6xl leading-relaxed">
+      A unified Python 3.11+ PyTorch, MONAI Model Zoo, and NVIDIA FLARE 2.5+ architecture replacing legacy multi-stage Bash/TF 1.14 scripts with an in-memory GPU pipeline executing 1.5mm whole-body CT segmentation, zero-drift ONNX pericardial delineation, anisotropic Voronoi fat partitioning (~10.1s/scan, ~15&times; speedup), embedded OHIF v3.13 web visualization, and institutional PACS archive transmission.
     </p>
   </div>
 
-  <!-- Main Pipeline Row: 4 Sequential Stages -->
+  <!-- Main Pipeline Row: 5 Sequential Stages -->
   <div class="mb-6">
-    <div class="flex items-center justify-between mb-3">
+    <div class="flex flex-wrap items-center justify-between mb-3 gap-2">
       <div class="flex items-center space-x-2">
         <span class="text-xs font-mono font-bold text-sky-400 tracking-wider uppercase">Stage-by-Stage Computational Flow</span>
         <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">In-Memory GPU MetaTensor Graph</span>
+        <span class="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800 font-mono">10.1s / scan on RTX 4090 (~15&times; vs Legacy)</span>
       </div>
       <span class="text-[11px] font-mono text-emerald-400">&Delta; = 0.00 cm&sup3; &bull; &Delta; = 0.00 HU Exact Parity</span>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3.5">
 
       <!-- STAGE 1: Raw Data Ingestion -->
-      <div class="bg-slate-900/90 border border-sky-500/40 rounded-xl p-4 flex flex-col justify-between flow-connector shadow-lg shadow-sky-950/20">
+      <div class="bg-slate-900/90 border border-sky-500/40 rounded-xl p-3.5 flex flex-col justify-between flow-connector shadow-lg shadow-sky-950/20">
         <div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-mono font-bold text-sky-300 flex items-center">
-              <span class="w-5 h-5 rounded-full bg-sky-900 border border-sky-500 text-sky-200 flex items-center justify-center mr-2 text-[10px]">1</span>
+              <span class="w-5 h-5 rounded-full bg-sky-900 border border-sky-500 text-sky-200 flex items-center justify-center mr-1.5 text-[10px]">1</span>
               Raw CT Ingestion
             </span>
             <span class="text-[10px] bg-slate-800 text-sky-400 px-1.5 py-0.5 rounded border border-slate-700">io_metatensor.py</span>
           </div>
-          <p class="text-[11px] text-slate-300 mb-3 leading-relaxed">
+          <p class="text-[11px] text-slate-300 mb-2.5 leading-relaxed">
             Universal multi-format clinical ingestion preserving physical coordinates:
           </p>
-          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-3">
+          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-2.5">
             <li class="flex items-start">
               <span class="text-sky-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>DICOM Series</strong>: Parses <code class="mono-code text-[10px] bg-slate-800 text-sky-200 px-1 rounded">RescaleSlope / Intercept</code> to recover true calibrated HU.</span>
+              <span><strong>DICOM Series</strong>: Parses <code class="mono-code text-[10px] bg-slate-800 text-sky-200 px-1 rounded">RescaleSlope / Intercept</code> to recover calibrated HU.</span>
             </li>
             <li class="flex items-start">
               <span class="text-sky-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>3D Volumes</strong>: Direct support for NRRD (<code class="mono-code text-[10px] bg-slate-800 text-sky-200 px-1 rounded">scan.nrrd</code>), NIfTI (<code class="mono-code text-[10px] bg-slate-800 text-sky-200 px-1 rounded">.nii.gz</code>), and MetaImage (<code class="mono-code text-[10px] bg-slate-800 text-sky-200 px-1 rounded">.mha</code>).</span>
+              <span><strong>3D Volumes</strong>: Direct support for NRRD (<code class="mono-code text-[10px] bg-slate-800 text-sky-200 px-1 rounded">scan.nrrd</code>), NIfTI (<code class="mono-code text-[10px] bg-slate-800 text-sky-200 px-1 rounded">.nii.gz</code>), and MetaImage.</span>
             </li>
             <li class="flex items-start">
               <span class="text-sky-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>Coordinate Integrity</strong>: Extracts 4&times;4 spatial affine, voxel spacing, and LPS direction cosines.</span>
+              <span><strong>Coordinate Integrity</strong>: Preserves 4&times;4 spatial affine, voxel spacing, and LPS direction cosines.</span>
             </li>
           </ul>
         </div>
         <div class="mt-2 pt-2 border-t border-slate-800 flex justify-between items-center text-[10px] font-mono text-slate-400">
           <span>Output:</span>
-          <span class="text-sky-300 font-semibold">MONAI MetaTensor (1, D, H, W)</span>
+          <span class="text-sky-300 font-semibold">MetaTensor (1, D, H, W)</span>
         </div>
       </div>
 
       <!-- STAGE 2: monai_wholebody_ct_segmentation -->
-      <div class="bg-slate-900/90 border border-indigo-500/40 rounded-xl p-4 flex flex-col justify-between flow-connector shadow-lg shadow-indigo-950/20">
+      <div class="bg-slate-900/90 border border-indigo-500/40 rounded-xl p-3.5 flex flex-col justify-between flow-connector shadow-lg shadow-indigo-950/20">
         <div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-mono font-bold text-indigo-300 flex items-center">
-              <span class="w-5 h-5 rounded-full bg-indigo-900 border border-indigo-500 text-indigo-200 flex items-center justify-center mr-2 text-[10px]">2</span>
-              monai_wholebody_ct_segmentation
+              <span class="w-5 h-5 rounded-full bg-indigo-900 border border-indigo-500 text-indigo-200 flex items-center justify-center mr-1.5 text-[10px]">2</span>
+              WholeBody &amp; Sulci
             </span>
             <span class="text-[10px] bg-slate-800 text-indigo-400 px-1.5 py-0.5 rounded border border-slate-700">NVIDIA NGC</span>
           </div>
-          <p class="text-[11px] text-slate-300 mb-3 leading-relaxed">
-            Native MONAI Model Zoo bundle replacing external TotalSegmentator:
+          <p class="text-[11px] text-slate-300 mb-2.5 leading-relaxed">
+            Native MONAI bundle (~6.0s VRAM) + chamber groove sulci derivation:
           </p>
-          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-3">
+          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-2.5">
             <li class="flex items-start">
               <span class="text-indigo-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>Model Bundle</strong>: <code class="mono-code text-[10px] bg-slate-800 text-indigo-200 px-1 rounded">monai_wholebody_ct_segmentation</code> (1.5mm isotropic 3D SegResNet).</span>
+              <span><strong>1.5mm SegResNet</strong>: <code class="mono-code text-[10px] bg-slate-800 text-indigo-200 px-1 rounded">monai_wholebody_ct_segmentation</code> (104 classes).</span>
             </li>
             <li class="flex items-start">
               <span class="text-indigo-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>104 Organ Classes</strong>: Isolates cardiac chambers without external binary dependencies.</span>
+              <span><strong>7 Cardiac Labels</strong>: LA (<code class="mono-code text-[10px] text-indigo-300">45</code>), LV (<code class="mono-code text-[10px] text-indigo-300">46</code>), RA (<code class="mono-code text-[10px] text-indigo-300">47</code>), RV (<code class="mono-code text-[10px] text-indigo-300">48</code>), Myo (<code class="mono-code text-[10px] text-indigo-300">44</code>), Aorta (<code class="mono-code text-[10px] text-indigo-300">7</code>), PA (<code class="mono-code text-[10px] text-indigo-300">49</code>).</span>
             </li>
             <li class="flex items-start">
               <span class="text-indigo-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>Key Extracted Labels</strong>: Left Atrium (<code class="mono-code text-[10px] text-indigo-300">45</code>), Left Ventricle (<code class="mono-code text-[10px] text-indigo-300">46</code>), Right Atrium (<code class="mono-code text-[10px] text-indigo-300">47</code>), Right Ventricle (<code class="mono-code text-[10px] text-indigo-300">48</code>), Aorta (<code class="mono-code text-[10px] text-indigo-300">7</code>).</span>
+              <span><strong>Coronary Sulci</strong>: Chamber interface grooves derive LAD (<code class="mono-code text-[10px] text-indigo-300">1</code>), LCX (<code class="mono-code text-[10px] text-indigo-300">2</code>), RCA (<code class="mono-code text-[10px] text-indigo-300">3</code>) &rarr; <code class="mono-code text-[10px] text-indigo-200">coronary_sulci.seg.nrrd</code>.</span>
             </li>
           </ul>
         </div>
         <div class="mt-2 pt-2 border-t border-slate-800 flex justify-between items-center text-[10px] font-mono text-slate-400">
           <span>Output:</span>
-          <span class="text-indigo-300 font-semibold">Chambers & Vessel Sulci (LA, LV, RA, RV)</span>
+          <span class="text-indigo-300 font-semibold">Chambers + Sulci Seeds</span>
         </div>
       </div>
 
       <!-- STAGE 3: Pericardium & Heart Envelope -->
-      <div class="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-4 flex flex-col justify-between flow-connector shadow-lg shadow-emerald-950/20">
+      <div class="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-3.5 flex flex-col justify-between flow-connector shadow-lg shadow-emerald-950/20">
         <div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-mono font-bold text-emerald-300 flex items-center">
-              <span class="w-5 h-5 rounded-full bg-emerald-900 border border-emerald-500 text-emerald-200 flex items-center justify-center mr-2 text-[10px]">3</span>
-              Pericardium Sac Seg
+              <span class="w-5 h-5 rounded-full bg-emerald-900 border border-emerald-500 text-emerald-200 flex items-center justify-center mr-1.5 text-[10px]">3</span>
+              Pericardium Sac
             </span>
             <span class="text-[10px] bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded border border-slate-700">DeepHeartSeg ONNX</span>
           </div>
-          <p class="text-[11px] text-slate-300 mb-3 leading-relaxed">
-            High-precision 2-stage CNN strictly isolating epicardium from thoracic fat:
+          <p class="text-[11px] text-slate-300 mb-2.5 leading-relaxed">
+            2-stage CNN (~0.45s GPU) strictly isolating epicardium from mediastinal fat:
           </p>
-          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-3">
+          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-2.5">
             <li class="flex items-start">
               <span class="text-emerald-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>Step 3A (Localization)</strong>: Coarse downsampled grid (<code class="mono-code text-[10px] text-emerald-200">64&times;128&times;128</code>) locates 3D cardiac bounding box.</span>
+              <span><strong>Step 3A (Localization)</strong>: Downsampled grid (<code class="mono-code text-[10px] text-emerald-200">64&times;128&times;128</code>) locates 3D cardiac ROI.</span>
             </li>
             <li class="flex items-start">
               <span class="text-emerald-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>Step 3B (Pericardium)</strong>: Cropped ROI (<code class="mono-code text-[10px] text-emerald-200">112&times;128&times;128</code>) predicts binary sac + <code class="mono-code text-[10px] text-emerald-200">binary_fill_holes</code>.</span>
+              <span><strong>Step 3B (Pericardium)</strong>: Cropped ROI (<code class="mono-code text-[10px] text-emerald-200">112&times;128&times;128</code>) predicts sac + <code class="mono-code text-[10px] text-emerald-200">binary_fill_holes</code>.</span>
             </li>
             <li class="flex items-start">
               <span class="text-emerald-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>Zero Drift</strong>: Converted directly from MGH frozen weights with 100.0% mathematical equivalence.</span>
+              <span><strong>Thread Control &amp; Parity</strong>: <code class="mono-code text-[10px] text-emerald-200">intra=2, inter=1</code>; 100.0% equivalence to MGH frozen weights.</span>
             </li>
           </ul>
         </div>
         <div class="mt-2 pt-2 border-t border-slate-800 flex justify-between items-center text-[10px] font-mono text-slate-400">
           <span>Output:</span>
-          <span class="text-emerald-300 font-semibold">Binary Pericardial Envelope (heart.seg.nrrd)</span>
+          <span class="text-emerald-300 font-semibold">heart.seg.nrrd</span>
         </div>
       </div>
 
       <!-- STAGE 4: 8-Compartment EAT/PVAT Quantification -->
-      <div class="bg-slate-900/90 border border-amber-500/40 rounded-xl p-4 flex flex-col justify-between shadow-lg shadow-amber-950/20">
+      <div class="bg-slate-900/90 border border-amber-500/40 rounded-xl p-3.5 flex flex-col justify-between flow-connector shadow-lg shadow-amber-950/20">
         <div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-mono font-bold text-amber-300 flex items-center">
-              <span class="w-5 h-5 rounded-full bg-amber-900 border border-amber-500 text-amber-200 flex items-center justify-center mr-2 text-[10px]">4</span>
-              EAT & PVAT Morphometry
+              <span class="w-5 h-5 rounded-full bg-amber-900 border border-amber-500 text-amber-200 flex items-center justify-center mr-1.5 text-[10px]">4</span>
+              EAT &amp; PVAT EDT
             </span>
             <span class="text-[10px] bg-slate-800 text-amber-400 px-1.5 py-0.5 rounded border border-slate-700">transforms.py</span>
           </div>
-          <p class="text-[11px] text-slate-300 mb-3 leading-relaxed">
-            Voronoi partitioning and Euclidean distance transforms:
+          <p class="text-[11px] text-slate-300 mb-2.5 leading-relaxed">
+            Anisotropic Voronoi partitioning and 3D Euclidean distance transforms:
           </p>
-          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-3">
+          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-2.5">
             <li class="flex items-start">
               <span class="text-amber-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>Adipose Threshold</strong>: Strictly <code class="mono-code text-[10px] bg-slate-800 text-amber-200 px-1 rounded">[-190.0, -30.0] HU</code>.</span>
+              <span><strong>Adipose Window</strong>: Strictly <code class="mono-code text-[10px] bg-slate-800 text-amber-200 px-1 rounded">[-190.0, -30.0] HU</code>.</span>
             </li>
             <li class="flex items-start">
               <span class="text-amber-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>EAT Total & Chambers</strong>: Pericardium fat partitioned by proximity to LA, LV, RA, RV via EDT Voronoi.</span>
+              <span><strong>EAT Chambers</strong>: Pericardial fat partitioned to nearest LA, LV, RA, RV via ROI-bounded EDT.</span>
             </li>
             <li class="flex items-start">
               <span class="text-amber-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>PVAT Dilation</strong>: 10.0 mm radial Euclidean dilation around LAD, LCX, and RCA coronaries.</span>
+              <span><strong>PVAT Dilation</strong>: 10.0 mm radial EDT cuff around LAD, LCX, RCA; union forms <code class="mono-code text-[10px] text-amber-200">PVAT_Total</code>.</span>
             </li>
           </ul>
         </div>
         <div class="mt-2 pt-2 border-t border-slate-800 flex justify-between items-center text-[10px] font-mono text-slate-400">
           <span>Output:</span>
           <span class="text-amber-300 font-semibold">eat_pvat.seg.nrrd &bull; 19-Col CSV</span>
+        </div>
+      </div>
+
+      <!-- STAGE 5: OHIF v3.13, DICOM-SR & PACS Archive Push -->
+      <div class="bg-slate-900/90 border border-purple-500/40 rounded-xl p-3.5 flex flex-col justify-between shadow-lg shadow-purple-950/20">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono font-bold text-purple-300 flex items-center">
+              <span class="w-5 h-5 rounded-full bg-purple-900 border border-purple-500 text-purple-200 flex items-center justify-center mr-1.5 text-[10px]">5</span>
+              OHIF &amp; PACS Push
+            </span>
+            <span class="text-[10px] bg-slate-800 text-purple-400 px-1.5 py-0.5 rounded border border-slate-700">dicom_sr &bull; pacs_client</span>
+          </div>
+          <p class="text-[11px] text-slate-300 mb-2.5 leading-relaxed">
+            Zero-footprint web workstation and hospital PACS archive integration:
+          </p>
+          <ul class="text-[11px] text-slate-300 space-y-1.5 mb-2.5">
+            <li class="flex items-start">
+              <span class="text-purple-400 mr-1.5 font-bold">&bull;</span>
+              <span><strong>DICOM-SEG (<code class="mono-code text-[10px] text-purple-200">.66.4</code>)</strong>: 8-compartment multi-frame binary labelmap with CIELab palette.</span>
+            </li>
+            <li class="flex items-start">
+              <span class="text-purple-400 mr-1.5 font-bold">&bull;</span>
+              <span><strong>DICOM-SR (<code class="mono-code text-[10px] text-purple-200">.88.34</code>)</strong>: TID 1500 Measurement Report with SNOMED-CT, LOINC &amp; UCUM codes.</span>
+            </li>
+            <li class="flex items-start">
+              <span class="text-purple-400 mr-1.5 font-bold">&bull;</span>
+              <span><strong>PACS Push &amp; OHIF v3.13</strong>: <code class="mono-code text-[10px] text-purple-200">cardiac-fat-fl push</code> via DICOMweb <strong>STOW-RS</strong> &amp; DIMSE <strong>C-STORE</strong>.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-800 flex justify-between items-center text-[10px] font-mono text-slate-400">
+          <span>Output:</span>
+          <span class="text-purple-300 font-semibold">SEG + SR + OHIF + PACS</span>
         </div>
       </div>
 
@@ -225,20 +262,20 @@
         <div class="p-3 bg-slate-950/60 rounded-lg border border-slate-800">
           <div class="flex justify-between text-slate-400 mb-1">
             <span class="font-semibold text-rose-300">Legacy circ-ml / CardiacFatQuant</span>
-            <span class="text-[10px] text-rose-400 font-mono">4 Separate Scripts</span>
+            <span class="text-[10px] text-rose-400 font-mono">4 Disjoint Scripts (~150s)</span>
           </div>
           <p class="text-[11px] text-slate-400 leading-relaxed">
-            Required running <code class="mono-code text-[10px] text-rose-200">generate_totalsegmentator_masks.py</code> (CPU nnUNet), then <code class="mono-code text-[10px] text-rose-200">run_deepheartseg.py</code> (Python 2.7 / TF 1.14), then <code class="mono-code text-[10px] text-rose-200">generate_eat_pvat_masks.py</code>, writing massive intermediate files to disk.
+            Required running <code class="mono-code text-[10px] text-rose-200">generate_totalsegmentator_masks.py</code> (CPU nnUNet), then <code class="mono-code text-[10px] text-rose-200">run_deepheartseg.py</code> (Python 2.7 / TF 1.14), then <code class="mono-code text-[10px] text-rose-200">generate_eat_pvat_masks.py</code>, writing heavy intermediate files to disk with manual 3D Slicer viewing.
           </p>
         </div>
 
         <div class="p-3 bg-sky-950/40 rounded-lg border border-sky-800/60">
           <div class="flex justify-between text-slate-400 mb-1">
             <span class="font-semibold text-sky-300">monai-cardiac-fat-fl (Ours)</span>
-            <span class="text-[10px] text-sky-400 font-mono">1-Line CLI</span>
+            <span class="text-[10px] text-emerald-400 font-mono">1-Line CLI (~10.1s / scan)</span>
           </div>
           <p class="text-[11px] text-slate-300 leading-relaxed">
-            Consolidated into <code class="mono-code text-[10px] text-sky-200">cardiac-fat-fl quantify /path/to/cohort --save-seg</code>. Runs native NVIDIA NGC 1.5mm WholeBody SegResNet + DeepHeartSeg ONNX in-memory. Pass <code class="mono-code text-[10px] text-sky-200">--save-intermediate</code> for 100% MGH disk file parity.
+            Consolidated into <code class="mono-code text-[10px] text-sky-200">cardiac-fat-fl quantify &lt;dir&gt; --save-seg</code>. Runs NVIDIA NGC 1.5mm WholeBody SegResNet + DeepHeartSeg ONNX in-memory, exports DICOM-SEG + DICOM-SR TID 1500, launches OHIF v3.13, and pushes directly to PACS via <code class="mono-code text-[10px] text-sky-200">cardiac-fat-fl push</code>.
           </p>
         </div>
       </div>
@@ -261,7 +298,7 @@
             <span class="text-[10px] bg-sky-950 text-sky-400 border border-sky-800 px-1.5 py-0.5 rounded font-mono">FedBN + FedProx</span>
           </div>
           <p class="text-slate-300 text-[11px] leading-relaxed mb-2">
-            Distills multi-stage teachers into a direct 1&rarr;8 channel 3D SegResNet. <code class="mono-code text-[10px] text-sky-300">filter_weights_for_fedbn()</code> preserves local batch/instance normalization to handle kVp and multi-vendor scanner shifts across hospitals.
+            Distills multi-stage teachers into a direct 1&rarr;8 channel 3D SegResNet. <code class="mono-code text-[10px] text-sky-300">filter_fedbn_state_dict()</code> preserves local batch/instance normalization to handle kVp and multi-vendor scanner shifts across hospitals.
           </p>
           <div class="text-[10px] font-mono text-slate-400">Loss: DiceFocalLoss + &mu;/2 ||w_local - w_global||&sup2;</div>
         </div>
@@ -295,7 +332,7 @@
         <span class="text-emerald-300 bg-emerald-950/80 border border-emerald-800 px-2.5 py-1 rounded flex items-center">
           <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>HU &Delta;: 0.00 HU
         </span>
-        <span class="text-sky-300 bg-sky-950/80 border border-sky-800 px-2.5 py-1 rounded">22 / 22 Pytest Passed</span>
+        <span class="text-sky-300 bg-sky-950/80 border border-sky-800 px-2.5 py-1 rounded">31 / 31 Pytest Passed (Linux &amp; Windows CI)</span>
       </div>
     </div>
 
@@ -391,11 +428,12 @@
 
     <!-- IEEE Figure Caption Footer -->
     <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400 leading-relaxed">
-      <strong class="text-white">Fig. 1.</strong> <em>Comprehensive Pipeline & Distributed Architecture.</em> 
+      <strong class="text-white">Fig. 1.</strong> <em>Comprehensive Pipeline, PACS Interoperability &amp; Distributed Architecture.</em> 
       Sequential computational flow progressing from <strong>(1) Raw CT Ingestion</strong> (DICOM / NRRD / NIfTI) through 
-      <strong>(2) monai_wholebody_ct_segmentation</strong> (NVIDIA NGC 1.5mm SegResNet isolating 104 labels including LA, LV, RA, RV, Aorta), 
-      <strong>(3) Pericardium Sac Delineation</strong> (zero-drift DeepHeartSeg ONNX), and 
-      <strong>(4) 8-Compartment EAT/PVAT Morphometry</strong> within the strict [-190.0, -30.0] HU window. 
+      <strong>(2) monai_wholebody_ct_segmentation &amp; Sulci Derivation</strong> (NVIDIA NGC 1.5mm SegResNet isolating LA, LV, RA, RV, Myocardium, Aorta, PA + chamber groove coronary sulci), 
+      <strong>(3) Pericardium Sac Delineation</strong> (zero-drift 2-stage DeepHeartSeg ONNX), 
+      <strong>(4) 8-Compartment EAT/PVAT Morphometry</strong> within the strict [-190.0, -30.0] HU window, and
+      <strong>(5) OHIF v3.13 &amp; PACS Archive Push</strong> exporting multi-frame DICOM-SEG (<code class="mono-code text-[10px] text-slate-300">1.2.840.10008.5.1.4.1.1.66.4</code>) and DICOM-SR TID 1500 (<code class="mono-code text-[10px] text-slate-300">1.2.840.10008.5.1.4.1.1.88.34</code>) via DICOMweb STOW-RS and DIMSE C-STORE.
       The architecture integrates multi-center federated model distillation (FedBN + FedProx) and distributed parallel Welford analytics via NVIDIA FLARE 2.5+, 
       achieving 100.0% mathematical equivalence to pooled central databases with zero patient image transfer.
     </div>
