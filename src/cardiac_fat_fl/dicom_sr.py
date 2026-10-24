@@ -342,3 +342,4 @@ def export_cardiac_fat_sr(
 
     pydicom.dcmwrite(str(out_file), ds, write_like_original=False)
     return out_file
+

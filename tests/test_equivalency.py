@@ -21,14 +21,19 @@ from cardiac_fat_fl.measurement_schema import REPORTED_REGIONS
 from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
 
 
+loc_onnx = Path("models/deepheartseg_loc.onnx")
+heart_onnx = Path("models/deepheartseg_heart.onnx")
+models_exist = loc_onnx.is_file() and heart_onnx.is_file()
+
+
+@pytest.mark.skipif(not models_exist, reason="DeepHeartSeg ONNX models not downloaded (run cardiac-fat-fl download-models)")
 def test_deepheartseg_onnx_model_files_exist() -> None:
     """Verify that converted ONNX weights exist."""
-    loc_onnx = Path("models/deepheartseg_loc.onnx")
-    heart_onnx = Path("models/deepheartseg_heart.onnx")
     assert heart_onnx.is_file(), f"Missing ONNX model at {heart_onnx}"
     assert loc_onnx.is_file(), f"Missing ONNX model at {loc_onnx}"
 
 
+@pytest.mark.skipif(not models_exist, reason="DeepHeartSeg ONNX models not downloaded (run cardiac-fat-fl download-models)")
 def test_deepheartseg_onnx_equivalency(synthetic_ct_fixture) -> None:
     """Verify that UnifiedAnatomySegmenter with backend='onnx' runs and produces valid compartments."""
     ct_vol, header, _, _ = synthetic_ct_fixture
