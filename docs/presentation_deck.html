@@ -30,7 +30,7 @@
         <span>Architecture PDF</span>
       </a>
       <div class="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700" id="slideIndicator">
-        Slide 1 / 14
+        Slide 1 / 15
       </div>
       <button id="toggleNotesBtn" onclick="toggleNotes()" class="text-xs font-medium px-3 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 transition">
         Speaker Notes [N]
@@ -1379,8 +1379,136 @@
       </div>
     </div>
 
-        <!-- SLIDE 12: Autonomous Engineering (/goal Directive) -->
+            <!-- SLIDE 12: Live Benchmark Run on example_source_dir (0506, 0909, 0987) -->
     <div class="slide flex-col justify-center space-y-4" data-slide="12">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Live Repository Benchmark &bull; Included Reference Cohort</span>
+        <span class="text-xs text-slate-500 font-mono">example_source_dir/ (Participants 0506, 0909, 0987)</span>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-2xl md:text-3xl font-bold text-white">End-to-End Execution: <code class="text-cyan-400">example_source_dir</code> Cohort Results</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Executed with <code class="text-cyan-300 font-mono">cardiac-fat-fl quantify "example_source_dir" --save-seg --save-intermediate</code> on NVIDIA RTX 4090 (24 GB VRAM)</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-mono font-semibold">3 / 3 Scans Completed</span>
+          <span class="text-xs px-2.5 py-1 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800 font-mono">19-Col Schema Verified</span>
+        </div>
+      </div>
+
+      <!-- Top Summary KPI Cards from Federated Welford Stats (N=3) -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-slate-900/90 border border-cyan-800/60 rounded-xl p-3">
+          <div class="text-[10px] uppercase font-bold text-cyan-400">Cohort Mean EAT Total</div>
+          <div class="text-lg font-extrabold text-white font-mono">60.70 &plusmn; 14.25 cm&sup3;</div>
+          <div class="text-[11px] text-slate-400 font-mono">Mean HU: -72.58 &plusmn; 6.15 HU</div>
+        </div>
+        <div class="bg-slate-900/90 border border-amber-800/60 rounded-xl p-3">
+          <div class="text-[10px] uppercase font-bold text-amber-400">Cohort Mean PVAT Total</div>
+          <div class="text-lg font-extrabold text-white font-mono">40.35 &plusmn; 9.46 cm&sup3;</div>
+          <div class="text-[11px] text-slate-400 font-mono">Mean HU: -73.95 &plusmn; 6.27 HU</div>
+        </div>
+        <div class="bg-slate-900/90 border border-emerald-800/60 rounded-xl p-3">
+          <div class="text-[10px] uppercase font-bold text-emerald-400">Dominant EAT Chamber</div>
+          <div class="text-lg font-extrabold text-white font-mono">RA: 28.07 &plusmn; 5.97 cm&sup3;</div>
+          <div class="text-[11px] text-slate-400 font-mono">Range: [22.49, 34.37] cm&sup3;</div>
+        </div>
+        <div class="bg-slate-900/90 border border-purple-800/60 rounded-xl p-3">
+          <div class="text-[10px] uppercase font-bold text-purple-400">Per-Patient Artifacts</div>
+          <div class="text-lg font-extrabold text-white font-mono">4 NRRD Masks + CSV</div>
+          <div class="text-[11px] text-slate-400 font-mono">eat_pvat + heart + wholebody + sulci</div>
+        </div>
+      </div>
+
+      <!-- Full 9-Compartment Quantitative Table for 0506, 0909, 0987 -->
+      <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl">
+        <table class="w-full text-left text-[11px] font-mono">
+          <thead class="bg-slate-950 text-slate-300 border-b border-slate-800">
+            <tr>
+              <th class="py-2 px-2.5">Compartment / Metric</th>
+              <th class="py-2 px-2.5 text-cyan-300">Participant 0506</th>
+              <th class="py-2 px-2.5 text-indigo-300">Participant 0909</th>
+              <th class="py-2 px-2.5 text-emerald-300">Participant 0987</th>
+              <th class="py-2 px-2.5 text-amber-300">Federated Welford (N=3)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/80 text-slate-300">
+            <tr class="bg-slate-950/40">
+              <td class="py-1.5 px-2.5 font-bold text-white">EAT Total (Vol / Mean HU)</td>
+              <td class="py-1.5 px-2.5 text-cyan-300 font-bold">53.32 cm&sup3; <span class="text-slate-400">(-66.3 HU)</span></td>
+              <td class="py-1.5 px-2.5 text-indigo-300 font-bold">77.13 cm&sup3; <span class="text-slate-400">(-78.6 HU)</span></td>
+              <td class="py-1.5 px-2.5 text-emerald-300 font-bold">51.65 cm&sup3; <span class="text-slate-400">(-72.9 HU)</span></td>
+              <td class="py-1.5 px-2.5 text-amber-300 font-bold">60.70 &plusmn; 14.25 cm&sup3; <span class="text-slate-400">(-72.6 HU)</span></td>
+            </tr>
+            <tr>
+              <td class="py-1.5 px-2.5">EAT Left Atrium (LA)</td>
+              <td class="py-1.5 px-2.5">11.54 cm&sup3; <span class="text-slate-400">(-70.4 HU)</span></td>
+              <td class="py-1.5 px-2.5">19.08 cm&sup3; <span class="text-slate-400">(-86.7 HU)</span></td>
+              <td class="py-1.5 px-2.5">8.16 cm&sup3; <span class="text-slate-400">(-72.2 HU)</span></td>
+              <td class="py-1.5 px-2.5">12.93 &plusmn; 5.59 cm&sup3; <span class="text-slate-400">(-76.4 HU)</span></td>
+            </tr>
+            <tr class="bg-slate-950/30">
+              <td class="py-1.5 px-2.5">EAT Left Ventricle (LV)</td>
+              <td class="py-1.5 px-2.5">10.69 cm&sup3; <span class="text-slate-400">(-68.9 HU)</span></td>
+              <td class="py-1.5 px-2.5">17.08 cm&sup3; <span class="text-slate-400">(-75.1 HU)</span></td>
+              <td class="py-1.5 px-2.5">14.22 cm&sup3; <span class="text-slate-400">(-73.3 HU)</span></td>
+              <td class="py-1.5 px-2.5">14.00 &plusmn; 3.20 cm&sup3; <span class="text-slate-400">(-72.4 HU)</span></td>
+            </tr>
+            <tr>
+              <td class="py-1.5 px-2.5">EAT Right Atrium (RA)</td>
+              <td class="py-1.5 px-2.5">27.36 cm&sup3; <span class="text-slate-400">(-64.0 HU)</span></td>
+              <td class="py-1.5 px-2.5">34.37 cm&sup3; <span class="text-slate-400">(-78.2 HU)</span></td>
+              <td class="py-1.5 px-2.5">22.49 cm&sup3; <span class="text-slate-400">(-71.5 HU)</span></td>
+              <td class="py-1.5 px-2.5">28.07 &plusmn; 5.97 cm&sup3; <span class="text-slate-400">(-71.2 HU)</span></td>
+            </tr>
+            <tr class="bg-slate-950/30">
+              <td class="py-1.5 px-2.5">EAT Right Ventricle (RV)</td>
+              <td class="py-1.5 px-2.5">3.73 cm&sup3; <span class="text-slate-400">(-63.3 HU)</span></td>
+              <td class="py-1.5 px-2.5">6.59 cm&sup3; <span class="text-slate-400">(-66.2 HU)</span></td>
+              <td class="py-1.5 px-2.5">6.79 cm&sup3; <span class="text-slate-400">(-77.4 HU)</span></td>
+              <td class="py-1.5 px-2.5">5.70 &plusmn; 1.71 cm&sup3; <span class="text-slate-400">(-69.0 HU)</span></td>
+            </tr>
+            <tr class="bg-slate-950/50">
+              <td class="py-1.5 px-2.5 font-bold text-white">PVAT Total (LAD &cup; LCX &cup; RCA)</td>
+              <td class="py-1.5 px-2.5 text-cyan-300 font-bold">32.82 cm&sup3; <span class="text-slate-400">(-67.1 HU)</span></td>
+              <td class="py-1.5 px-2.5 text-indigo-300 font-bold">50.96 cm&sup3; <span class="text-slate-400">(-79.5 HU)</span></td>
+              <td class="py-1.5 px-2.5 text-emerald-300 font-bold">37.27 cm&sup3; <span class="text-slate-400">(-75.2 HU)</span></td>
+              <td class="py-1.5 px-2.5 text-amber-300 font-bold">40.35 &plusmn; 9.46 cm&sup3; <span class="text-slate-400">(-74.0 HU)</span></td>
+            </tr>
+            <tr>
+              <td class="py-1.5 px-2.5">PVAT LAD (10 mm Radial Cuff)</td>
+              <td class="py-1.5 px-2.5">2.89 cm&sup3; <span class="text-slate-400">(-59.6 HU)</span></td>
+              <td class="py-1.5 px-2.5">6.55 cm&sup3; <span class="text-slate-400">(-76.3 HU)</span></td>
+              <td class="py-1.5 px-2.5">5.05 cm&sup3; <span class="text-slate-400">(-69.9 HU)</span></td>
+              <td class="py-1.5 px-2.5">4.83 &plusmn; 1.84 cm&sup3; <span class="text-slate-400">(-68.6 HU)</span></td>
+            </tr>
+            <tr class="bg-slate-950/30">
+              <td class="py-1.5 px-2.5">PVAT LCX (10 mm Radial Cuff)</td>
+              <td class="py-1.5 px-2.5">16.55 cm&sup3; <span class="text-slate-400">(-70.1 HU)</span></td>
+              <td class="py-1.5 px-2.5">28.88 cm&sup3; <span class="text-slate-400">(-83.4 HU)</span></td>
+              <td class="py-1.5 px-2.5">13.25 cm&sup3; <span class="text-slate-400">(-72.9 HU)</span></td>
+              <td class="py-1.5 px-2.5">19.56 &plusmn; 8.24 cm&sup3; <span class="text-slate-400">(-75.5 HU)</span></td>
+            </tr>
+            <tr>
+              <td class="py-1.5 px-2.5">PVAT RCA (10 mm Radial Cuff)</td>
+              <td class="py-1.5 px-2.5">15.61 cm&sup3; <span class="text-slate-400">(-64.3 HU)</span></td>
+              <td class="py-1.5 px-2.5">21.08 cm&sup3; <span class="text-slate-400">(-74.8 HU)</span></td>
+              <td class="py-1.5 px-2.5">21.83 cm&sup3; <span class="text-slate-400">(-76.6 HU)</span></td>
+              <td class="py-1.5 px-2.5">19.51 &plusmn; 3.39 cm&sup3; <span class="text-slate-400">(-71.9 HU)</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Bottom Provenance Bar -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-wrap items-center justify-between text-[11px] text-slate-400 font-mono">
+        <span>Exported CSV: <strong class="text-emerald-400">example_source_dir/cardiac_fat_measurements.csv</strong></span>
+        <span>Per-Case Masks: <strong class="text-cyan-300">eat_pvat.seg.nrrd</strong> &bull; <strong class="text-amber-300">heart.seg.nrrd</strong> &bull; <strong class="text-indigo-300">monai_wholebody...masks.seg.nrrd</strong> &bull; <strong class="text-purple-300">coronary_sulci.seg.nrrd</strong></span>
+      </div>
+    </div>
+
+        <!-- SLIDE 13: Autonomous Engineering (/goal Directive) -->
+    <div class="slide flex-col justify-center space-y-4" data-slide="13">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Agentic Software Engineering</span>
         <span class="text-xs text-slate-500 font-mono">Antigravity /goal Mode</span>
@@ -1498,8 +1626,8 @@
       </div>
     </div>
 
-    <!-- SLIDE 13: Zero-Code Clinician & Agent Experience -->
-    <div class="slide flex-col justify-center space-y-6" data-slide="13">
+    <!-- SLIDE 14: Zero-Code Clinician & Agent Experience -->
+    <div class="slide flex-col justify-center space-y-6" data-slide="14">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Cardiologist Experience</span>
         <span class="text-xs text-slate-500">Autonomous Agent Workflow</span>
@@ -1549,9 +1677,9 @@
               <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs">
                 <span class="font-bold text-white block mb-1">Standardized 19-Column Metric Preview</span>
                 <div class="text-slate-300 space-y-0.5 font-mono text-[11px]">
-                  <div>&bull; Master CSV: <span class="text-emerald-300 font-bold">&lt;cohort&gt;/cardiac_fat_measurements.csv</span></div>
-                  <div>&bull; EAT Total Volume: <span class="text-cyan-300 font-bold">50.8 cm&sup3;</span> (-68.2 HU)</div>
-                  <div>&bull; PVAT Total Volume: <span class="text-amber-300 font-bold">35.1 cm&sup3;</span> (-70.0 HU &rarr; Verified Invariant)</div>
+                  <div>&bull; Master CSV: <span class="text-emerald-300 font-bold">example_source_dir/cardiac_fat_measurements.csv</span></div>
+                  <div>&bull; Case 0506 EAT / PVAT: <span class="text-cyan-300 font-bold">53.32 cm&sup3;</span> (-66.3 HU) / <span class="text-amber-300 font-bold">32.82 cm&sup3;</span> (-67.1 HU)</div>
+                  <div>&bull; Case 0909 &amp; 0987 EAT: <span class="text-indigo-300 font-bold">77.13 cm&sup3;</span> (-78.6 HU) &amp; <span class="text-emerald-300 font-bold">51.65 cm&sup3;</span> (-72.9 HU)</div>
                 </div>
               </div>
             </div>
@@ -1564,8 +1692,8 @@
       </div>
     </div>
 
-    <!-- SLIDE 14: Summary & Key Takeaways -->
-    <div class="slide flex-col justify-center space-y-6" data-slide="14">
+    <!-- SLIDE 15: Summary & Key Takeaways -->
+    <div class="slide flex-col justify-center space-y-6" data-slide="15">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Summary</span>
         <span class="text-xs text-slate-500">15-Minute Takeaway</span>
@@ -1641,9 +1769,10 @@
       9: "Here we validate the pipeline on the Stanford AIMI COCA cohort of 787 patients and over 54,000 DICOMs. A crucial question clinical PIs ask is: Can we definitively verify whether this dataset is non-contrast or contrast-enhanced? The answer is unambiguous: Stanford COCA is 100% non-contrast CT. We establish this through three independent empirical proofs and one major clinical research advantage. First, by clinical protocol mandate: these scans are coronary artery calcium (Agatston) scoring acquisitions, which strictly require non-contrast CT because iodinated contrast enhancements exceed 250 to 450 HU, which would completely obscure calcified plaques above the 130 HU threshold and invalidate Agatston scoring. Second, DICOM metadata: the series folders are explicitly designated 'Pro_Gated_CS' where 'CS' stands for Calcium Scoring, and the DICOM ContrastBolusAgent tag is completely absent. Third, physical radiodensity proof: we directly measured the aortic and left ventricular blood pool across the cohort, yielding a mean attenuation of exactly 34.1 HU in gated and 33.4 HU in non-gated scans. Unenhanced native blood is physically 30 to 50 HU, whereas contrast CCTA blood pool is 250 to 450+ HU—this provides conclusive, quantitative proof of zero contrast agent. Fourth, this confers a landmark clinical advantage: as demonstrated in the 2025 PROMISE trial in the European Heart Journal, non-contrast gated CT provides pure native adipose radiodensity measurements, completely eliminating contrast timing, bolus arrival variability, renal clearance differences, and interstitial contrast diffusion artifacts. On the multi-vendor side, notice the breakdown on the left: Siemens represents 87.6% and GE Healthcare represents 11.5%, perfectly justifying our FedBN architecture. And on the right, plaque prevalence shows LAD involvement in 95% of patients, with an exceptional correlation (r = 0.986, p < 10^-68) between PVAT and EAT attenuation across the cohort. In addition, total PVAT averages 25.30 cm3 and EAT averages 36.31 cm3, matching standard clinical literature.",
       10: "This slide directly addresses scan quality and acquisition physics. Many clinical databases and epidemiological screening cohorts like COCA rely on standard non-contrast acquisition protocols with 3.0 mm gated slices and 5.0 mm non-gated screening CTs. In fact, 3.0 mm is the official SCCT consensus standard for non-contrast calcium scoring to minimize radiation dose while maintaining Agatston score calibration. While modern cutting-edge scanners achieve sub-millimeter isotropic resolution, this graph demonstrates an essential strength of our architecture: extreme resilience to partial volume averaging. Our deep learning pericardial isolation and bounded distance transforms successfully segment EAT and PVAT even on 5.0 mm thick slices with 100% completion, proving the pipeline can be deployed immediately on legacy trial archives and routine screening databases without needing specialized high-radiation or contrast-enhanced scans.",
       11: "Next is cohort and batch scalability. The pipeline handles any mix of DICOM folders, NRRDs, and NIfTIs. When an agent runs batch quantification, it produces three distinct deliverables: First, a single master CSV with all 19 columns for Excel, R, and SPSS. Second, 3D segmentation masks—both NRRD for 3D Slicer and standard DICOM-SEG for PACS. Third, an interactive OHIF workstation with a dynamic patient switcher dropdown to toggle across hundreds of cases.",
-      12: "This slide pulls back the curtain on how this repository was engineered. Rather than months of manual rewriting and debugging, the entire codebase was generated autonomously using Antigravity's /goal directive. The input was a rigorous, 4-point autonomous specification: first, zero human interruption—execute end-to-end without stopping for confirmation. Second, a strict zero-placeholder mandate—no TODOs, no stubs, and no pass statements anywhere. Third, complete elimination of legacy Python 2.7 and TensorFlow 1.14 by building a unified PyTorch, MONAI, and ONNX runtime wrapper. And fourth, test-driven self-healing: the agent autonomously wrote a synthetic 3D cardiac CT phantom fixture in conftest.py, ran pytest through the terminal, debugged edge cases such as empty mask NaN handling and coordinate preservation, and iterated until all 31 unit and integration tests passed with 100% success. What would traditionally take a research engineering team 6 months was delivered as a production-grade, clinically verified codebase in a single automated session.",
-      13: "Here is how this translates to a zero-code experience: a cardiologist can simply prompt an agent: 'Use this repo on these CTs in folder X to show me results and where I can get an output.' The agent executes the entire batch, outputs the master spreadsheet, and returns the interactive viewer URL. No terminal commands, no Python scripts, no DevOps friction.",
-      14: "In summary, monai-cardiac-fat-fl delivers a complete, production-ready, zero-placeholder medical AI engine. It honors the clinical lineage of the original Harvard/MGH research while bringing it into the modern era of PyTorch, MONAI, federated learning, and zero-footprint web visualization. Thank you, and I welcome any questions."
+      12: "Here is the live execution output from running our pipeline on the repository's included reference cohort in example_source_dir across participants 0506, 0909, and 0987 on our NVIDIA RTX 4090 GPU. Using a single CLI command with --save-seg and --save-intermediate, the pipeline automatically profiles host hardware, launches parallel workers, and generates all four 3D NRRD masks per patient—eat_pvat.seg.nrrd, heart.seg.nrrd from DeepHeartSeg ONNX, monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd from NVIDIA NGC SegResNet, and coronary_sulci.seg.nrrd—plus the validated 19-column CSV. Across the three benchmark scans, EAT Total Volume is 53.32 cm3 (-66.3 HU) for 0506, 77.13 cm3 (-78.6 HU) for 0909, and 51.65 cm3 (-72.9 HU) for 0987, yielding a Federated Welford cohort mean of 60.70 ± 14.25 cm3 and PVAT Total mean of 40.35 ± 9.46 cm3.",
+      13: "This slide pulls back the curtain on how this repository was engineered. Rather than months of manual rewriting and debugging, the entire codebase was generated autonomously using Antigravity's /goal directive. The input was a rigorous, 4-point autonomous specification: first, zero human interruption—execute end-to-end without stopping for confirmation. Second, a strict zero-placeholder mandate—no TODOs, no stubs, and no pass statements anywhere. Third, complete elimination of legacy Python 2.7 and TensorFlow 1.14 by building a unified PyTorch, MONAI, and ONNX runtime wrapper. And fourth, test-driven self-healing: the agent autonomously wrote a synthetic 3D cardiac CT phantom fixture in conftest.py, ran pytest through the terminal, debugged edge cases such as empty mask NaN handling and coordinate preservation, and iterated until all 31 unit and integration tests passed with 100% success. What would traditionally take a research engineering team 6 months was delivered as a production-grade, clinically verified codebase in a single automated session.",
+      14: "Here is how this translates to a zero-code experience: a cardiologist can simply prompt an agent: 'Use this repo on these CTs in folder X to show me results and where I can get an output.' The agent executes the entire batch, outputs the master spreadsheet, and returns the interactive viewer URL. No terminal commands, no Python scripts, no DevOps friction.",
+      15: "In summary, monai-cardiac-fat-fl delivers a complete, production-ready, zero-placeholder medical AI engine. It honors the clinical lineage of the original Harvard/MGH research while bringing it into the modern era of PyTorch, MONAI, federated learning, DICOM-SR TID 1500, PACS archive push, and zero-footprint web visualization. Thank you, and I welcome any questions."
     };
 
     function updateSlide() {
