@@ -464,11 +464,38 @@ measurements = result["metrics"]  # Exact 19-column dictionary
 from cardiac_fat_fl.ohif_exporter import export_sample_to_ohif
 from cardiac_fat_fl.ohif_viewer import launch_viewer
 
-# Export study into DICOM slices + DICOM-SEG (eat_pvat_seg.dcm)
+# Export study into DICOM slices + DICOM-SEG (eat_pvat_seg.dcm) + DICOM-SR (eat_pvat_sr.dcm)
 export_dir = export_sample_to_ohif("/path/to/participant_dir")
 
 # Launch local OHIF v3.13 workstation
 launch_viewer("/path/to/participant_dir", port=8000)
+```
+
+#### Transmitting Results to Institutional PACS (STOW-RS & C-STORE)
+```python
+from cardiac_fat_fl.pacs_client import (
+    find_dicom_instances_to_push,
+    push_to_dicomweb_stow,
+    push_to_dimse_cstore,
+)
+
+# Discover generated DICOM-SEG and DICOM-SR files
+instances = find_dicom_instances_to_push("/path/to/participant_dir", include_ct=False)
+
+# Option A: Store to Orthanc / Cloud PACS via DICOMweb STOW-RS
+push_to_dicomweb_stow(
+    files=instances,
+    stow_url="http://localhost:8042/dicom-web/studies",
+)
+
+# Option B: Store to hospital PACS via traditional DIMSE C-STORE
+push_to_dimse_cstore(
+    files=instances,
+    host="192.168.1.50",
+    port=104,
+    called_aet="CENTRAL_PACS",
+    calling_aet="CARDIAC_FAT_FL",
+)
 ```
 
 ### 3. Federated Learning Mechanics ([NVIDIA FLARE](https://developer.nvidia.com/flare))
