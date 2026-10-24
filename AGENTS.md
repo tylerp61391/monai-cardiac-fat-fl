@@ -40,6 +40,10 @@ cardiac-fat-fl quantify example_source_dir --save-seg
 # Launch local OHIF MPR viewer for a patient:
 cardiac-fat-fl view "example_source_dir/0506" --port 8000 --no-browser
 
+# Push DICOM-SEG to PACS archive (DICOMweb STOW-RS or DIMSE C-STORE):
+cardiac-fat-fl push "example_source_dir/0506" --url "http://localhost:8042/dicom-web/studies"
+cardiac-fat-fl push "example_source_dir/0506" --host 192.168.1.50 --port 104 --called-aet PACS_AET
+
 # Run federated client mock step:
 cardiac-fat-fl federated-train --data-dir "example_source_dir"
 ```

@@ -323,6 +323,7 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `quantify` | `cardiac-fat-fl quantify <cohort_dir> [--workers 0] [--limit N]` | End-to-end batch quantification over DICOM/NRRD/NIfTI cohort (auto-sized). |
 | `view` | `cardiac-fat-fl view <sample_dir> [--port 8000]` | Prepares study and launches authentic OHIF v3.13 2x2 medical workstation. |
 | `export-ohif` | `cardiac-fat-fl export-ohif <sample_dir> [-o dest]` | Generates standard CT DICOM series and multi-frame `eat_pvat_seg.dcm`. |
+| `push` | `cardiac-fat-fl push <sample_dir> [--url ... / --host ...]` | Stores DICOM-SEG and CT slices to PACS via DICOMweb (STOW-RS) or DIMSE (C-STORE). |
 | `compare-models`| `cardiac-fat-fl compare-models <scan_path>` | Side-by-side equivalency test: MONAI vs frozen DeepHeartSeg ONNX. |
 | `federated-train`| `cardiac-fat-fl federated-train --data-dir <dir>` | Runs local NVFLARE client distillation round with FedProx and FedBN. |
 | `federated-stats`| `cardiac-fat-fl federated-stats -c <csv_path>` | Extracts multi-site privacy-preserving cohort statistical moments. |
@@ -342,6 +343,15 @@ To process a new cardiac CT scan and inspect the 8-compartment segmentations in 
    cardiac-fat-fl view /path/to/cohort/participant_id --port 8000
    ```
    Navigate to `http://127.0.0.1:8000/patient/<participant_id>/` to evaluate the 3D Slicer 4-quadrant layout with interactive crosshairs, density sliders, and real-time volumetric metrics.
+
+3. **Step 3: Push Results to Clinical or Research PACS (Optional)**:
+   ```bash
+   # DICOMweb STOW-RS (Orthanc, dcm4chee, Cloud PACS):
+   cardiac-fat-fl push /path/to/cohort/participant_id --url "http://localhost:8042/dicom-web/studies"
+
+   # Or traditional DICOM DIMSE C-STORE:
+   cardiac-fat-fl push /path/to/cohort/participant_id --host 192.168.1.50 --port 104 --called-aet CENTRAL_PACS
+   ```
 
 
 ---

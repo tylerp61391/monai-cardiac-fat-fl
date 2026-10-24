@@ -622,6 +622,128 @@ def download_models_cmd(
             console.print("[dim]Note: Ensure release assets are published or specify custom --repo / --tag.[/dim]")
 
 
+
+
+@app.command("push")
+def push_pacs(
+    target_path: Path = typer.Argument(
+        ...,
+        help="Path to participant directory, ohif_export directory, or eat_pvat_seg.dcm file to push to PACS.",
+        exists=True,
+    ),
+    url: Optional[str] = typer.Option(
+        None,
+        "--url",
+        "-u",
+        help="Target DICOMweb STOW-RS URL (e.g., http://localhost:8042/dicom-web/studies or http://localhost:8042/instances).",
+    ),
+    host: Optional[str] = typer.Option(
+        None,
+        "--host",
+        "-h",
+        help="Target PACS hostname or IP address for DIMSE C-STORE (e.g., 192.168.1.50).",
+    ),
+    port: int = typer.Option(
+        104,
+        "--port",
+        "-p",
+        help="Target PACS port for DIMSE C-STORE (common: 104, 4242, 11112).",
+    ),
+    called_aet: str = typer.Option(
+        "ANY-SCP",
+        "--called-aet",
+        help="Target PACS Application Entity Title (AET).",
+    ),
+    calling_aet: str = typer.Option(
+        "CARDIAC_FAT_FL",
+        "--calling-aet",
+        help="Local Application Entity Title (AET).",
+    ),
+    include_ct: bool = typer.Option(
+        False,
+        "--include-ct",
+        help="Push full CT slice series along with the DICOM-SEG (default: DICOM-SEG only).",
+    ),
+    username: Optional[str] = typer.Option(
+        None,
+        "--username",
+        help="HTTP Basic Auth username for DICOMweb STOW-RS.",
+    ),
+    password: Optional[str] = typer.Option(
+        None,
+        "--password",
+        help="HTTP Basic Auth password for DICOMweb STOW-RS.",
+    ),
+    token: Optional[str] = typer.Option(
+        None,
+        "--token",
+        help="Bearer Authorization token for DICOMweb STOW-RS.",
+    ),
+    timeout: int = typer.Option(
+        120,
+        "--timeout",
+        help="Network timeout in seconds.",
+    ),
+) -> None:
+    """Store DICOM-SEG and cardiac CT volumes to a PACS archive via DICOMweb (STOW-RS) or DIMSE (C-STORE)."""
+    from cardiac_fat_fl.pacs_client import (
+        find_dicom_instances_to_push,
+        push_to_dicomweb_stow,
+        push_to_dimse_cstore,
+    )
+
+    if not url and not host:
+        console.print("[bold red]Error:[/bold red] You must specify either a DICOMweb endpoint (--url) or a DIMSE PACS host (--host).")
+        console.print("[dim]Example DICOMweb: cardiac-fat-fl push ./0 --url http://localhost:8042/dicom-web/studies[/dim]")
+        console.print("[dim]Example DIMSE:    cardiac-fat-fl push ./0 --host 192.168.1.50 --port 104 --called-aet PACSSERVER[/dim]")
+        raise typer.Exit(code=1)
+
+    try:
+        instances = find_dicom_instances_to_push(target_path, include_ct=include_ct)
+    except Exception as e:
+        console.print(f"[bold red]Discovery Error:[/bold red] {e}")
+        raise typer.Exit(code=1)
+
+    console.print(f"[bold cyan]Found {len(instances)} DICOM instance(s) to store:[/bold cyan]")
+    for inst in instances[:5]:
+        console.print(f"  • {inst.name} ({inst.stat().st_size / 1024:.1f} KB)")
+    if len(instances) > 5:
+        console.print(f"  ... and {len(instances) - 5} more files.")
+
+    # 1. DICOMweb STOW-RS
+    if url:
+        console.print(f"[cyan]Connecting to DICOMweb STOW-RS endpoint:[/cyan] {url}")
+        auth = (username, password) if username and password else None
+        res = push_to_dicomweb_stow(instances, stow_url=url, auth=auth, token=token, timeout=timeout)
+        
+        if res["failed_count"] == 0:
+            console.print(f"[bold green]Success: Stored {res['success_count']} instance(s) to PACS via STOW-RS.[/bold green]")
+        else:
+            console.print(f"[bold yellow]Warning: Transmitted with issues:[/bold yellow] {res['success_count']} succeeded, {res['failed_count']} failed.")
+            console.print(f"[dim]{res['details']}[/dim]")
+            raise typer.Exit(code=1)
+        return
+
+    # 2. DIMSE C-STORE
+    if host:
+        console.print(f"[cyan]Initiating DICOM DIMSE C-STORE association:[/cyan] {calling_aet} -> {called_aet}@{host}:{port}")
+        res = push_to_dimse_cstore(
+            instances,
+            host=host,
+            port=port,
+            called_aet=called_aet,
+            calling_aet=calling_aet,
+            timeout=timeout,
+        )
+
+        if res["failed_count"] == 0:
+            console.print(f"[bold green]Success: Stored {res['success_count']} instance(s) to PACS via C-STORE.[/bold green]")
+        else:
+            console.print(f"[bold yellow]Warning: C-STORE issues:[/bold yellow] {res['success_count']} succeeded, {res['failed_count']} failed.")
+            console.print(f"[dim]{res['details']}[/dim]")
+            raise typer.Exit(code=1)
+
+
 if __name__ == "__main__":
     app()
 
