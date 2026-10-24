@@ -2189,6 +2189,28 @@ def export_sample_to_ohif(
             patient_id=participant_id,
         )
 
+        # Generate DICOM-SR (TID 1500 Measurement Report)
+        try:
+            from cardiac_fat_fl.dicom_sr import export_cardiac_fat_sr
+            csv_candidates = [
+                sample_path / "cardiac_fat_measurements.csv",
+                sample_path.parent / "cardiac_fat_measurements.csv",
+                dest_dir.parent / "cardiac_fat_measurements.csv",
+            ]
+            csv_path = next((p for p in csv_candidates if p.is_file()), None)
+            if csv_path is not None:
+                sr_output = dest_dir / "eat_pvat_sr.dcm"
+                ref_slice = copied_ct_paths[0] if copied_ct_paths else None
+                export_cardiac_fat_sr(
+                    measurements=csv_path,
+                    output_path=sr_output,
+                    source_ct_dcm=ref_slice,
+                    seg_dcm=dicom_seg_path if dicom_seg_path.is_file() else None,
+                    participant_id=participant_id,
+                )
+        except Exception:
+            pass
+
     # 2b. Generate OHIF v3.11 naturalized DICOM JSON manifest (studies.json)
     seg_file_candidate = dest_dir / "eat_pvat_seg.dcm"
     generate_ohif_dicom_json(
