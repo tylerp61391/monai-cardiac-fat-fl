@@ -5,7 +5,9 @@
 [![CUDA 13.0+](https://img.shields.io/badge/CUDA-13.0%2B-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
 [![MONAI](https://img.shields.io/badge/MONAI-1.6.1-green.svg)](https://project-monai.github.io/)
 [![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://developer.nvidia.com/flare)
+[![CI Test Suite](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml/badge.svg)](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
+[![DICOM-SR](https://img.shields.io/badge/DICOM--SR-TID%201500-blueviolet.svg)](https://dicom.nema.org/)
 [![OHIF Viewer](https://img.shields.io/badge/OHIF%20Viewer-v3.13%20Next-0284c7.svg)](https://ohif.org/release-notes/3p13)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED.svg?logo=docker&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-fl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -69,7 +71,8 @@ participant_001/
 ├── coronary_sulci.seg.nrrd                             # Derived coronary groove centerlines (LAD 1, LCX 2, RCA 3)
 ├── heart.seg.nrrd                                       # Pericardial sac binary segmentation (DeepHeartSeg ONNX)
 ├── eat_pvat.seg.nrrd                                    # 8-channel final EAT & PVAT segmentation
-└── eat_pvat_seg.dcm (optional via export)               # Multi-frame standard DICOM-SEG (SOP .66.4) for OHIF
+├── eat_pvat_seg.dcm (optional via export)               # Multi-frame standard DICOM-SEG (SOP .66.4) for OHIF & PACS
+└── eat_pvat_sr.dcm (optional via export)                # Standard DICOM-SR TID 1500 quantitative report (SOP .88.34)
 ```
 
 ### 2. Cohort-Level Aggregation Output
@@ -83,7 +86,7 @@ Outputs:
 
 ### 3. Institutional PACS Archive Integration (DICOMweb STOW-RS & DIMSE C-STORE)
 
-The pipeline features a native PACS transmission client (`cardiac-fat-fl push`) capable of sending generated multi-frame DICOM-SEG objects (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`) and original or exported CT series to clinical and research archives:
+The pipeline features a native PACS transmission client (`cardiac-fat-fl push`) capable of sending generated multi-frame DICOM-SEG objects (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 quantitative measurement reports (SOP Class `1.2.840.10008.5.1.4.1.1.88.34`), and original or exported CT series to clinical and research archives:
 
 - **DICOMweb STOW-RS**:
   ```bash

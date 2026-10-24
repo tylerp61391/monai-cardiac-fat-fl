@@ -10,7 +10,7 @@ This document provides concise instructions, environment setup, clinical invaria
 - **Core Task**: Automated 3D segmentation and volumetric/attenuation quantification of Epicardial Adipose Tissue (EAT) and Pericoronary Adipose Tissue (PVAT) from cardiac CT scans.
 - **Privacy & FL**: Coordinates multi-hospital federated model distillation (FedProx + FedBN) and cohort moment aggregation (Welford) with zero patient DICOM/image transfer.
 - **Visualization & PACS**: Converts studies into web-ready DICOM + DICOM-SEG volumes served via a local DCM4CHEE-compatible static JSON-DICOM server for interactive OHIF 2D MPR and 3D Slicer rendering.
-- **PACS Archive Push**: Natively exports and transmits standard multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`) and CT volumes to institutional PACS via DICOMweb (STOW-RS) and DIMSE (C-STORE).
+- **PACS Archive Push**: Natively exports and transmits standard multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), and CT volumes to institutional PACS via DICOMweb (STOW-RS) and DIMSE (C-STORE).
 
 ---
 
@@ -87,7 +87,7 @@ Verify that `cardiac_fat_measurements.csv` contains the exact 19-column schema.
 
 #### Recipe 4: "Push study results to a PACS archive"
 When a user asks to store or transmit results to a hospital or research PACS:
-1. **Verify DICOM-SEG exists**: Ensure `eat_pvat_seg.dcm` exists in the participant directory (or run `export-ohif` first if missing).
+1. **Verify DICOM-SEG & DICOM-SR exist**: Ensure `eat_pvat_seg.dcm` and `eat_pvat_sr.dcm` exist in the participant directory (or run `export-ohif` first if missing).
 2. **DICOMweb STOW-RS (Orthanc, dcm4chee-arc, Cloud PACS)**:
    ```bash
    cardiac-fat-fl push "<study_or_export_dir>" --url "http://localhost:8042/dicom-web/studies"
@@ -128,6 +128,7 @@ Whenever modifying preprocessing, segmentation, transforms, or reporting:
 4. **Coordinate & Header Integrity**:
    - Origin, spacing, direction cosines, and coordinate systems must be preserved exactly between input NRRD/DICOM, intermediate tensors, and output segmentation files.
    - DICOM-SEG exports must adhere to SOP Class UID `1.2.840.10008.5.1.4.1.1.66.4`.
+   - DICOM-SR measurement reports must adhere to Comprehensive 3D SR SOP Class UID `1.2.840.10008.5.1.4.1.1.88.34` with TID 1500 template compliance.
 
 ---
 
