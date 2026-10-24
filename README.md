@@ -42,9 +42,9 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 
 ## Pipeline Execution & Output File Structure
 
-### 1. Per-Participant Output Files (100% Equivalent to MGH `CardiacFatQuant`)
+### 1. Per-Participant Output Files (Clean Clinical & Model Provenance)
 
-In the reference MGH pipeline, running the multiple steps generated intermediate segmentations inside each participant folder:
+In the reference MGH pipeline, running multiple legacy steps produced intermediate segmentations inside each participant folder:
 ```text
 # MGH Legacy Pipeline Output:
 participant_001/
@@ -54,21 +54,22 @@ participant_001/
 └── eat_pvat.seg.nrrd                       # 8-channel final EAT & PVAT segmentation
 ```
 
-In `monai-cardiac-fat-fl`, the default execution is streamlined to output the primary clinical endpoint (`eat_pvat.seg.nrrd`) in-memory to save disk space and maximize I/O throughput. 
+In `monai-cardiac-fat-fl`, the default execution is streamlined to output the primary clinical endpoint (`eat_pvat.seg.nrrd`).
 
-However, if you want **100% full per-file disk parity** with the MGH legacy research pipeline, pass the `--save-intermediate` flag:
+When the `--save-intermediate` flag is passed, the pipeline exports intermediate files with **strict clinical provenance**, separating pure neural network inferences from downstream derived geometric sulci:
 ```bash
 cardiac-fat-fl quantify /path/to/cohort --save-seg --save-intermediate
 ```
-This writes the full suite of MGH-compatible intermediate segmentation volumes into each participant folder:
+This writes the full suite of intermediate anatomical, sulcus, and fat segmentation volumes into each participant folder:
 ```text
 # With --save-intermediate:
 participant_001/
-├── scan.nrrd                               # Raw input CT volume
-├── totalsegmentator_1-5mm_masks.seg.nrrd   # Multi-label chamber & vessel segmentation (1.5mm)
-├── heart.seg.nrrd                          # Pericardial sac binary segmentation
-├── eat_pvat.seg.nrrd                       # 8-channel final EAT & PVAT segmentation
-└── eat_pvat_seg.dcm (optional via export)  # Multi-frame standard DICOM-SEG (SOP .66.4) for OHIF
+├── scan.nrrd                                            # Raw input CT volume
+├── monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd # Pure SegResNet neural network anatomy (Aorta 7, Pulm. Artery 49, Myocardium 44, LA 45, LV 46, RA 47, RV 48)
+├── coronary_sulci.seg.nrrd                             # Derived coronary groove centerlines (LAD 1, LCX 2, RCA 3)
+├── heart.seg.nrrd                                       # Pericardial sac binary segmentation (DeepHeartSeg ONNX)
+├── eat_pvat.seg.nrrd                                    # 8-channel final EAT & PVAT segmentation
+└── eat_pvat_seg.dcm (optional via export)               # Multi-frame standard DICOM-SEG (SOP .66.4) for OHIF
 ```
 
 ### 2. Cohort-Level Aggregation Output
@@ -174,7 +175,8 @@ The pipeline eliminates legacy Python 2.7 / TensorFlow 1.14 subprocess scripts, 
 1. **NVIDIA NGC / MONAI Model Zoo `monai_wholebody_ct_segmentation` (1.5 mm Isotropic)**:
    - Replaces external TotalSegmentator CLI with NVIDIA's official `monai_wholebody_ct_segmentation` SegResNet bundle ([NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation)).
    - Evaluates at high-resolution **1.5 mm isotropic resolution** ($1.5 \times 1.5 \times 1.5\,\text{mm}$ voxel spacing), matching the exact spatial resolution and label definitions of the manuscript TotalSegmentator reference model.
-   - Natively segments 104 whole-body structures on GPU, including Left Atrium (label 45), Left Ventricle (46), Right Atrium (47), Right Ventricle (48), and Aorta (7).
+   - Natively segments 104 whole-body structures on GPU, including Aorta (label 7), Pulmonary Artery (49), Myocardium (44), Left Atrium (45), Left Ventricle (46), Right Atrium (47), and Right Ventricle (48).
+   - Downstream coronary sulci (LAD 1, LCX 2, RCA 3) are derived geometrically from chamber boundary grooves and exported separately as `coronary_sulci.seg.nrrd` to maintain 100% neural network model provenance.
    - Loadable directly via `monai.bundle`:
      ```python
      import monai.bundle
