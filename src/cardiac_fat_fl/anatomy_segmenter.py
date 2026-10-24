@@ -49,6 +49,8 @@ class AnatomyMasks:
     lcx: np.ndarray
     rca: np.ndarray
     aorta: Optional[np.ndarray] = None
+    pulmonary_artery: Optional[np.ndarray] = None
+    myocardium: Optional[np.ndarray] = None
 
     def to_dict(self) -> Dict[str, np.ndarray]:
         """Convert masks to a dictionary of numpy arrays."""
@@ -64,6 +66,10 @@ class AnatomyMasks:
         }
         if self.aorta is not None:
             d["aorta"] = self.aorta
+        if self.pulmonary_artery is not None:
+            d["pulmonary_artery"] = self.pulmonary_artery
+        if self.myocardium is not None:
+            d["myocardium"] = self.myocardium
         return d
 
     def to_torch_dict(self, device: Optional[torch.device] = None) -> Dict[str, torch.Tensor]:
@@ -385,6 +391,8 @@ class UnifiedAnatomySegmenter:
             ra_seg = (multilabel_map == 47) & pericardium
             rv_seg = (multilabel_map == 48) & pericardium
             aorta_seg = (multilabel_map == 7)
+            pa_seg = (multilabel_map == 49)
+            myo_seg = (multilabel_map == 44)
 
             if np.any(la_seg) and np.any(lv_seg) and np.any(ra_seg) and np.any(rv_seg):
                 # Coronaries from coronary sulci around aorta / anterior groove
@@ -404,6 +412,8 @@ class UnifiedAnatomySegmenter:
                     lcx=lcx.astype(bool),
                     rca=rca.astype(bool),
                     aorta=aorta_seg.astype(bool) if np.any(aorta_seg) else None,
+                    pulmonary_artery=pa_seg.astype(bool) if np.any(pa_seg) else None,
+                    myocardium=myo_seg.astype(bool) if np.any(myo_seg) else None,
                 )
 
         indices = np.where(pericardium)

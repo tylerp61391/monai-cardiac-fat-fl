@@ -104,19 +104,18 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
             )
 
             # 2. totalsegmentator_1-5mm_masks.seg.nrrd (multi-label chamber & vessel mask)
+            # 2. monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd (strictly neural network anatomy)
             tot_seg = np.zeros_like(anatomy.pericardium, dtype=np.uint16)
             if anatomy.aorta is not None:
                 tot_seg[anatomy.aorta] = 7
+            if anatomy.pulmonary_artery is not None:
+                tot_seg[anatomy.pulmonary_artery] = 49
+            if anatomy.myocardium is not None:
+                tot_seg[anatomy.myocardium] = 44
             tot_seg[anatomy.la] = 45
             tot_seg[anatomy.lv] = 46
             tot_seg[anatomy.ra] = 47
             tot_seg[anatomy.rv] = 48
-            if anatomy.lad is not None:
-                tot_seg[anatomy.lad] = 5
-            if anatomy.lcx is not None:
-                tot_seg[anatomy.lcx] = 6
-            if anatomy.rca is not None:
-                tot_seg[anatomy.rca] = 8
 
             monai_tot_path = participant_dir / "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
             write_monai_wholebody_ct_segmentation_seg_nrrd(
@@ -126,6 +125,24 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
                 spacing=spacing,
                 origin=origin,
             )
+
+            # 3. Optional coronary_sulci.seg.nrrd (derived geometric sulci seeds)
+            from cardiac_fat_fl.io_nrrd import write_coronary_sulci_seg_nrrd
+            sulci_seg = np.zeros_like(anatomy.pericardium, dtype=np.uint16)
+            if anatomy.lad is not None:
+                sulci_seg[anatomy.lad] = 1
+            if anatomy.lcx is not None:
+                sulci_seg[anatomy.lcx] = 2
+            if anatomy.rca is not None:
+                sulci_seg[anatomy.rca] = 3
+            if np.any(sulci_seg > 0):
+                write_coronary_sulci_seg_nrrd(
+                    seg_data=sulci_seg,
+                    output_path=participant_dir / "coronary_sulci.seg.nrrd",
+                    reference_header=ref_header,
+                    spacing=spacing,
+                    origin=origin,
+                )
 
         # Step 2: Quantify volumes and mean attenuation
         data_dict = quant_transform(data_dict)

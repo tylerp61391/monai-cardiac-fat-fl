@@ -65,15 +65,17 @@ When a user provides a CT scan or participant directory and asks to process and 
 # Standard high-throughput run:
 cardiac-fat-fl quantify "/path/to/cohort" --output-dir "/path/to/cohort" --save-seg
 
-# With full 1:1 MGH intermediate files (heart.seg.nrrd + totalsegmentator_1-5mm_masks.seg.nrrd):
+# With full intermediate anatomical files (heart.seg.nrrd + monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd + coronary_sulci.seg.nrrd):
 cardiac-fat-fl quantify "/path/to/cohort" --output-dir "/path/to/cohort" --save-seg --save-intermediate
 ```
 Verify that `cardiac_fat_measurements.csv` contains the exact 19-column schema.
 
 #### Recipe 3: "Use NVIDIA NGC monai_wholebody_ct_segmentation for Cardiac Chambers"
 - The anatomy segmentation engine uses NVIDIA NGC's official `monai_wholebody_ct_segmentation` bundle (1.5 mm isotropic SegResNet).
-- Relevant cardiac chamber labels: Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Aorta (`7`).
-- Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights.
+- Relevant macro-vascular and cardiac chamber labels predicted directly by neural network:
+  - Aorta (`7`), Pulmonary Artery (`49`), Myocardium (`44`), Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`).
+- Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights (`heart.seg.nrrd`).
+- Coronary sulci centerlines (LAD `1`, LCX `2`, RCA `3`) are derived downstream from chamber boundary grooves and exported separately as `coronary_sulci.seg.nrrd` to preserve pristine model provenance.
 
 
 ---

@@ -303,15 +303,22 @@ SLICER_COMPARTMENT_COLORS = [
 ]
 
 # Cardiac anatomical labels matching monai_wholebody_ct_segmentation & MGH convention
+# Cardiac and thoracic vascular labels predicted directly by monai_wholebody_ct_segmentation
 MONAI_WHOLEBODY_CT_CARDIAC_LABELS = [
     {"id": "aorta", "name": "aorta", "label": 7, "color": "0.850 0.150 0.150"},
+    {"id": "pulmonary_artery", "name": "pulmonary_artery", "label": 49, "color": "0.658 0.333 0.968"},
+    {"id": "heart_myocardium", "name": "heart_myocardium", "label": 44, "color": "0.925 0.282 0.596"},
     {"id": "heart_atrium_left", "name": "heart_atrium_left", "label": 45, "color": "0.231 0.510 0.965"},
     {"id": "heart_ventricle_left", "name": "heart_ventricle_left", "label": 46, "color": "0.024 0.714 0.831"},
     {"id": "heart_atrium_right", "name": "heart_atrium_right", "label": 47, "color": "0.063 0.725 0.506"},
     {"id": "heart_ventricle_right", "name": "heart_ventricle_right", "label": 48, "color": "0.918 0.702 0.031"},
-    {"id": "coronary_artery_lad", "name": "coronary_artery_lad", "label": 5, "color": "0.976 0.451 0.086"},
-    {"id": "coronary_artery_lcx", "name": "coronary_artery_lcx", "label": 6, "color": "0.937 0.267 0.267"},
-    {"id": "coronary_artery_rca", "name": "coronary_artery_rca", "label": 8, "color": "0.925 0.282 0.596"},
+]
+
+# Derived coronary sulci seeds/trajectories (downstream geometric stage)
+CORONARY_SULCI_LABELS = [
+    {"id": "coronary_sulcus_lad", "name": "coronary_sulcus_lad", "label": 1, "color": "0.976 0.451 0.086"},
+    {"id": "coronary_sulcus_lcx", "name": "coronary_sulcus_lcx", "label": 2, "color": "0.937 0.267 0.267"},
+    {"id": "coronary_sulcus_rca", "name": "coronary_sulcus_rca", "label": 3, "color": "0.925 0.282 0.596"},
 ]
 TOTALSEGMENTATOR_CARDIAC_LABELS = MONAI_WHOLEBODY_CT_CARDIAC_LABELS
 
@@ -324,6 +331,7 @@ def write_eat_pvat_seg_nrrd(
     origin: Optional[Tuple[float, float, float]] = None,
     space_directions: Optional[Any] = None,
     is_totalseg: bool = False,
+    labels_def: Optional[List[Dict[str, Any]]] = None,
 ) -> Path:
     """Write an EAT/PVAT or anatomical segmentation to `.seg.nrrd` compatible with 3D Slicer.
 
@@ -440,7 +448,8 @@ def write_eat_pvat_seg_nrrd(
         if has_multilabel:
             # Multi-label monai_wholebody_ct_segmentation chamber and vessel segmentation
             seg_idx = 0
-            for item in TOTALSEGMENTATOR_CARDIAC_LABELS:
+            effective_labels = labels_def if labels_def is not None else TOTALSEGMENTATOR_CARDIAC_LABELS
+            for item in effective_labels:
                 lbl = item["label"]
                 if np.any(seg_np == lbl):
                     out_header[f"Segment{seg_idx}_ID"] = item["id"]
@@ -492,3 +501,24 @@ def write_monai_wholebody_ct_segmentation_seg_nrrd(
 
 
 write_totalsegmentator_seg_nrrd = write_monai_wholebody_ct_segmentation_seg_nrrd
+
+
+def write_coronary_sulci_seg_nrrd(
+    seg_data: Union[np.ndarray, torch.Tensor],
+    output_path: Union[str, Path],
+    reference_header: Optional[Dict[str, Any]] = None,
+    spacing: Optional[Tuple[float, float, float]] = None,
+    origin: Optional[Tuple[float, float, float]] = None,
+    space_directions: Optional[Any] = None,
+) -> Path:
+    """Write derived coronary sulci/centerlines to .seg.nrrd for 3D Slicer."""
+    return write_eat_pvat_seg_nrrd(
+        seg_data=seg_data,
+        output_path=output_path,
+        reference_header=reference_header,
+        spacing=spacing,
+        origin=origin,
+        space_directions=space_directions,
+        is_totalseg=True,
+        labels_def=CORONARY_SULCI_LABELS,
+    )
