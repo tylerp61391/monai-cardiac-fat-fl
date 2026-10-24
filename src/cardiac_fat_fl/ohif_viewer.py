@@ -180,7 +180,7 @@ def launch_viewer(
         if d.is_dir() and not d.name.startswith(".") and d.name != "ohif_export"
         and ((d / "eat_pvat.seg.nrrd").is_file() or (d / "ohif_export").is_dir() or any(f.name.endswith(".nrrd") for f in d.iterdir()))
     ]
-    all_pids.sort(key=lambda x: int(x) if x.isdigit() else str(x))
+    all_pids.sort(key=lambda x: (0, int(x)) if x.isdigit() else (1, str(x)))
     if not all_pids:
         all_pids = [sample_path.name]
 
