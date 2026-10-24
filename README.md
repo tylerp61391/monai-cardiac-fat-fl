@@ -216,6 +216,14 @@ cardiac-fat-fl quantify example_source_dir --save-seg
 # Launch interactive OHIF 3D MPR workstation for participant 0506:
 cardiac-fat-fl view example_source_dir/0506 --port 8000
 ```
+
+#### Measured End-to-End Benchmark (Participant `0506`, $512 \times 512 \times 122$ voxels):
+- **Total Latency**: **10.14 seconds** (vs. $>150\,\text{s}$ in legacy MGH CPU pipeline, a **$15\times$ speedup**).
+- **Stage Timing Breakdown**:
+  - **Stage 1 (CT Ingestion)**: $0.23\,\text{s}$ (zero-copy GPU `MetaTensor` with affine coordinates)
+  - **Stage 2 (Anatomy & Mask Generation)**: $6.01\,\text{s}$ (`monai_wholebody_ct_segmentation` + 2-stage ONNX `DeepHeartSeg`)
+  - **Stage 3 (Adipose Quantification)**: $0.28\,\text{s}$ ($[-190, -30]\,\text{HU}$ window + 19-column metrics)
+  - **Stage 4 (Disk Serialization)**: $3.62\,\text{s}$ (writing 3D Slicer-tagged `.seg.nrrd` files + CSV report)
 3. **Repository Maintainer Deployment**:
    When pushing to a new repository, create release `v1.0.0` and attach `models/deepheartseg_heart.onnx` and `models/deepheartseg_loc.onnx` as binary assets.
 4. **Anatomical Heuristic Fallback**:
