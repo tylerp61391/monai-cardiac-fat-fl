@@ -70,8 +70,8 @@ cardiac-fat-fl quantify "/path/to/cohort" --output-dir "/path/to/cohort" --save-
 ```
 Verify that `cardiac_fat_measurements.csv` contains the exact 19-column schema.
 
-#### Recipe 3: "Use NVIDIA NGC WholeBody CT Segmentation for Cardiac Chambers"
-- The anatomy segmentation engine uses NVIDIA NGC's official `wholeBody_ct_segmentation` bundle (1.5 mm isotropic SegResNet).
+#### Recipe 3: "Use NVIDIA NGC monai_wholebody_ct_segmentation for Cardiac Chambers"
+- The anatomy segmentation engine uses NVIDIA NGC's official `monai_wholebody_ct_segmentation` bundle (1.5 mm isotropic SegResNet).
 - Relevant cardiac chamber labels: Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Aorta (`7`).
 - Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights.
 

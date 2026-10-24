@@ -4,7 +4,7 @@ Eliminates the legacy Python 2.7 / TensorFlow 1.14 `DeepHeartSeg` and external
 subprocess TotalSegmentator dependencies completely.
 
 Supports:
-  1. Native MONAI Model Zoo / NVIDIA NGC `wholeBody_ct_segmentation` (104 whole-body labels
+  1. Native MONAI Model Zoo / NVIDIA NGC `monai_wholebody_ct_segmentation` (104 whole-body labels
      including Left/Right Atrium, Left/Right Ventricle, Aorta, and Myocardium).
   2. Optimized ONNX Runtime graphs for 2-step DeepHeartSeg pericardial sac segmentation.
   3. Single-stage 8-channel distilled MONAI SegResNet.
@@ -347,7 +347,7 @@ class UnifiedAnatomySegmenter:
     ) -> AnatomyMasks:
         """Derive cardiac chamber and coronary vessel masks within a given pericardium.
 
-        If `multilabel_map` from MONAI / TotalSegmentator WholeBody CT is provided:
+        If `multilabel_map` from `monai_wholebody_ct_segmentation` is provided:
           - Label 45: Left Atrium (`heart_atrium_left`)
           - Label 46: Left Ventricle (`heart_ventricle_left`)
           - Label 47: Right Atrium (`heart_atrium_right`)
@@ -360,7 +360,7 @@ class UnifiedAnatomySegmenter:
         shape = arr.shape
         nz, ny, nx = shape  # Axis 0: Z (axial), Axis 1: Y (coronal), Axis 2: X (sagittal)
 
-        # 1. Check if WholeBody CT multi-label masks are present
+        # 1. Check if monai_wholebody_ct_segmentation multi-label masks are present
         if multilabel_map is not None:
             la_seg = (multilabel_map == 45) & pericardium
             lv_seg = (multilabel_map == 46) & pericardium

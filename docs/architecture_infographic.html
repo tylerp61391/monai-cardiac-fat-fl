@@ -54,7 +54,7 @@
       </div>
     </div>
     <h1 class="serif-title text-3xl md:text-4xl font-bold text-white tracking-tight">
-      End-to-End Pipeline: Raw CT &rarr; WholeBody CT &rarr; Pericardium &rarr; EAT/PVAT Quantification
+      End-to-End Pipeline: Raw CT &rarr; monai_wholebody_ct_segmentation &rarr; Pericardium &rarr; EAT/PVAT Quantification
     </h1>
     <p class="text-xs md:text-sm text-slate-300 mt-2 max-w-5xl leading-relaxed">
       A unified PyTorch, MONAI Model Zoo, and NVIDIA FLARE architecture replacing legacy multi-stage Bash/Conda scripts with a pure GPU pipeline executing high-resolution 1.5mm whole-body CT segmentation, zero-drift pericardial delineation, and Euclidean distance Voronoi fat partitioning.
@@ -107,13 +107,13 @@
         </div>
       </div>
 
-      <!-- STAGE 2: WholeBody CT Segmentation -->
+      <!-- STAGE 2: monai_wholebody_ct_segmentation -->
       <div class="bg-slate-900/90 border border-indigo-500/40 rounded-xl p-4 flex flex-col justify-between flow-connector shadow-lg shadow-indigo-950/20">
         <div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-mono font-bold text-indigo-300 flex items-center">
               <span class="w-5 h-5 rounded-full bg-indigo-900 border border-indigo-500 text-indigo-200 flex items-center justify-center mr-2 text-[10px]">2</span>
-              WholeBody CT Seg
+              monai_wholebody_ct_segmentation
             </span>
             <span class="text-[10px] bg-slate-800 text-indigo-400 px-1.5 py-0.5 rounded border border-slate-700">NVIDIA NGC</span>
           </div>
@@ -123,7 +123,7 @@
           <ul class="text-[11px] text-slate-300 space-y-1.5 mb-3">
             <li class="flex items-start">
               <span class="text-indigo-400 mr-1.5 font-bold">&bull;</span>
-              <span><strong>Model Bundle</strong>: <code class="mono-code text-[10px] bg-slate-800 text-indigo-200 px-1 rounded">wholeBody_ct_segmentation</code> (1.5mm isotropic 3D SegResNet).</span>
+              <span><strong>Model Bundle</strong>: <code class="mono-code text-[10px] bg-slate-800 text-indigo-200 px-1 rounded">monai_wholebody_ct_segmentation</code> (1.5mm isotropic 3D SegResNet).</span>
             </li>
             <li class="flex items-start">
               <span class="text-indigo-400 mr-1.5 font-bold">&bull;</span>
@@ -393,7 +393,7 @@
     <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400 leading-relaxed">
       <strong class="text-white">Fig. 1.</strong> <em>Comprehensive Pipeline & Distributed Architecture.</em> 
       Sequential computational flow progressing from <strong>(1) Raw CT Ingestion</strong> (DICOM / NRRD / NIfTI) through 
-      <strong>(2) WholeBody CT Segmentation</strong> (NVIDIA NGC 1.5mm SegResNet isolating 104 labels including LA, LV, RA, RV, Aorta), 
+      <strong>(2) monai_wholebody_ct_segmentation</strong> (NVIDIA NGC 1.5mm SegResNet isolating 104 labels including LA, LV, RA, RV, Aorta), 
       <strong>(3) Pericardium Sac Delineation</strong> (zero-drift DeepHeartSeg ONNX), and 
       <strong>(4) 8-Compartment EAT/PVAT Morphometry</strong> within the strict [-190.0, -30.0] HU window. 
       The architecture integrates multi-center federated model distillation (FedBN + FedProx) and distributed parallel Welford analytics via NVIDIA FLARE 2.5+, 

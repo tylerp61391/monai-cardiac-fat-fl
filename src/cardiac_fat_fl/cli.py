@@ -124,6 +124,9 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
                 spacing=spacing,
                 origin=origin,
             )
+            # Also write alias with exact model name: monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd
+            monai_tot_path = participant_dir / "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
+            shutil.copy2(tot_path, monai_tot_path)
 
         # Step 2: Quantify volumes and mean attenuation
         data_dict = quant_transform(data_dict)

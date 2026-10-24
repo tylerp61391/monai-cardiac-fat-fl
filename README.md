@@ -32,7 +32,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 | :--- | :--- | :--- |
 | **Language & Runtime** | Python 2.7 / TensorFlow 1.14 (Frozen Keras `.pb`/`.hdf5`) | Python 3.11+ / PyTorch 2.x & ONNX Runtime GPU |
 | **Image Ingestion** | Folder structure (`scan.nrrd`) | Universal: DICOM Series (with slope/intercept), NIfTI, NRRD, MHA |
-| **Segmentation Engine** | Multi-step external tools: subprocess `TotalSegmentator` (nnUNet 1.5 mm isotropic) + 2-stage `DeepHeartSeg` (TF 1.14 `.pb`) | **Native MONAI & GPU Stack**: NVIDIA NGC / MONAI Model Zoo [`wholeBody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation) (1.5 mm isotropic SegResNet, 104 labels: LA, LV, RA, RV, Aorta) + 2-stage `DeepHeartSeg` ONNX (`loc` + `heart`) + distilled 8-ch SegResNet |
+| **Segmentation Engine** | Multi-step external tools: subprocess `TotalSegmentator` (nnUNet 1.5 mm isotropic) + 2-stage `DeepHeartSeg` (TF 1.14 `.pb`) | **Native MONAI & GPU Stack**: NVIDIA NGC / MONAI Model Zoo [`monai_wholebody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation) (1.5 mm isotropic SegResNet, 104 labels: LA, LV, RA, RV, Aorta) + 2-stage `DeepHeartSeg` ONNX (`loc` + `heart`) + distilled 8-ch SegResNet |
 | **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$, $r = 1.000$) |
 | **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
 | **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
@@ -171,15 +171,15 @@ pip install -e .
 
 The pipeline eliminates legacy Python 2.7 / TensorFlow 1.14 subprocess scripts, supporting native MONAI and ONNX backends:
 
-1. **NVIDIA NGC / MONAI Model Zoo `wholeBody_ct_segmentation` (1.5 mm Isotropic)**:
-   - Replaces external TotalSegmentator CLI with NVIDIA's official SegResNet bundle ([NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation)).
+1. **NVIDIA NGC / MONAI Model Zoo `monai_wholebody_ct_segmentation` (1.5 mm Isotropic)**:
+   - Replaces external TotalSegmentator CLI with NVIDIA's official `monai_wholebody_ct_segmentation` SegResNet bundle ([NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation)).
    - Evaluates at high-resolution **1.5 mm isotropic resolution** ($1.5 \times 1.5 \times 1.5\,\text{mm}$ voxel spacing), matching the exact spatial resolution and label definitions of the manuscript TotalSegmentator reference model.
    - Natively segments 104 whole-body structures on GPU, including Left Atrium (label 45), Left Ventricle (46), Right Atrium (47), Right Ventricle (48), and Aorta (7).
    - Loadable directly via `monai.bundle`:
      ```python
      import monai.bundle
-     # Downloads or loads the official wholeBody_ct_segmentation bundle
-     bundle = monai.bundle.load("wholeBody_ct_segmentation")
+     # Downloads or loads the official monai_wholebody_ct_segmentation bundle
+     bundle = monai.bundle.load("monai_wholebody_ct_segmentation")
      ```
 
 2. **Pretrained Pericardium DeepHeartSeg ONNX Models (GitHub Releases)**:

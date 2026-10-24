@@ -302,8 +302,9 @@ SLICER_COMPARTMENT_COLORS = [
     "0.925 0.282 0.596",  # PVAT_RCA (Pink)
 ]
 
-# TotalSegmentator cardiac anatomical labels matching TotalSegmentator & MGH convention
-TOTALSEGMENTATOR_CARDIAC_LABELS = [
+# Cardiac anatomical labels matching monai_wholebody_ct_segmentation & MGH convention
+MONAI_WHOLEBODY_CT_CARDIAC_LABELS = [
+
     {"id": "heart_atrium_left", "name": "heart_atrium_left", "label": 45, "color": "0.231 0.510 0.965"},
     {"id": "heart_ventricle_left", "name": "heart_ventricle_left", "label": 46, "color": "0.024 0.714 0.831"},
     {"id": "heart_atrium_right", "name": "heart_atrium_right", "label": 47, "color": "0.063 0.725 0.506"},
@@ -312,6 +313,7 @@ TOTALSEGMENTATOR_CARDIAC_LABELS = [
     {"id": "coronary_artery_lcx", "name": "coronary_artery_lcx", "label": 6, "color": "0.937 0.267 0.267"},
     {"id": "coronary_artery_rca", "name": "coronary_artery_rca", "label": 7, "color": "0.925 0.282 0.596"},
 ]
+TOTALSEGMENTATOR_CARDIAC_LABELS = MONAI_WHOLEBODY_CT_CARDIAC_LABELS
 
 
 def write_eat_pvat_seg_nrrd(
@@ -460,7 +462,7 @@ def write_eat_pvat_seg_nrrd(
     return output_path
 
 
-def write_totalsegmentator_seg_nrrd(
+def write_monai_wholebody_ct_segmentation_seg_nrrd(
     seg_data: Union[np.ndarray, torch.Tensor],
     output_path: Union[str, Path],
     reference_header: Optional[Dict[str, Any]] = None,
@@ -478,3 +480,6 @@ def write_totalsegmentator_seg_nrrd(
         space_directions=space_directions,
         is_totalseg=True,
     )
+
+
+write_totalsegmentator_seg_nrrd = write_monai_wholebody_ct_segmentation_seg_nrrd

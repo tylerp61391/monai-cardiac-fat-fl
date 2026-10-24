@@ -3,14 +3,14 @@
 This directory stores the deep learning model weights used for cardiac anatomy and fat compartment segmentation.
 
 The repository supports two complementary deep learning model tracks:
-1. **NVIDIA NGC / MONAI Model Zoo**: `wholeBody_ct_segmentation` (104 whole-body organ and cardiac chamber structures at 1.5 mm isotropic resolution).
+1. **NVIDIA NGC / MONAI Model Zoo**: `monai_wholebody_ct_segmentation` (104 whole-body organ and cardiac chamber structures at 1.5 mm isotropic resolution).
 2. **DeepHeartSeg Converted ONNX Models**: `deepheartseg_loc.onnx` & `deepheartseg_heart.onnx` (100% mathematical equivalency to reference MGH pericardial sac delineation).
 
 ---
 
-## 1. NVIDIA NGC / MONAI Model Zoo: `wholeBody_ct_segmentation`
+## 1. NVIDIA NGC / MONAI Model Zoo: `monai_wholebody_ct_segmentation`
 
-NVIDIA's official **[`wholeBody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation)** bundle is a high-resolution 1.5 mm isotropic SegResNet trained on whole-body CT scans to segment 104 anatomical classes. It replaces external command-line TotalSegmentator calls with a native in-memory MONAI pipeline.
+NVIDIA's official **[`monai_wholebody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation)** bundle is a high-resolution 1.5 mm isotropic SegResNet trained on whole-body CT scans to segment 104 anatomical classes. It replaces external command-line TotalSegmentator calls with a native in-memory MONAI pipeline.
 
 ### Relevant Cardiac Chamber & Sulci Labels:
 - Label 45: Left Atrium (`heart_atrium_left`)
@@ -26,16 +26,16 @@ NVIDIA's official **[`wholeBody_ct_segmentation`](https://catalog.ngc.nvidia.com
 ```python
 import monai.bundle
 
-# Downloads the official NGC / MONAI Model Zoo bundle into models/wholeBody_ct_segmentation
+# Downloads the official NGC / MONAI Model Zoo bundle into models/monai_wholebody_ct_segmentation
 bundle_path = monai.bundle.download(
-    name="wholeBody_ct_segmentation",
+    name="monai_wholebody_ct_segmentation",
     bundle_dir="models"
 )
 ```
 
 **Option B: Via MONAI CLI**:
 ```bash
-python -m monai.bundle download --name "wholeBody_ct_segmentation" --bundle_dir "models"
+python -m monai.bundle download --name "monai_wholebody_ct_segmentation" --bundle_dir "models"
 ```
 
 **Option C: Direct NGC / Hugging Face Download**:
