@@ -29,6 +29,7 @@ from cardiac_fat_fl.io_nrrd import (
     discover_participants,
     read_nrrd_as_metatensor,
     write_eat_pvat_seg_nrrd,
+    write_totalsegmentator_seg_nrrd,
 )
 from cardiac_fat_fl.measurement_schema import (
     DEFAULT_PVAT_RADIAL_DISTANCE_MM,
@@ -116,7 +117,7 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
                 tot_seg[anatomy.rca] = 7
 
             tot_path = participant_dir / "totalsegmentator_1-5mm_masks.seg.nrrd"
-            write_eat_pvat_seg_nrrd(
+            write_totalsegmentator_seg_nrrd(
                 seg_data=tot_seg,
                 output_path=tot_path,
                 reference_header=ref_header,
