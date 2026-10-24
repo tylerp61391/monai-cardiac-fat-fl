@@ -2042,8 +2042,12 @@ def export_sample_to_ohif(
     ct_dest_dir = dest_dir / "ct"
     slices_dir = dest_dir / "slices"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    ct_dest_dir.mkdir(parents=True, exist_ok=True)
-    slices_dir.mkdir(parents=True, exist_ok=True)
+
+    # Clean old destination subdirectories if they exist to prevent mixing stale slices
+    for sub in [ct_dest_dir, slices_dir, dest_dir / "coronal", dest_dir / "sagittal", dest_dir / "volume3d"]:
+        if sub.exists():
+            shutil.rmtree(sub, ignore_errors=True)
+        sub.mkdir(parents=True, exist_ok=True)
 
     # 1. Discover or convert CT slices
     raw_dcm = [
@@ -2123,14 +2127,24 @@ def export_sample_to_ohif(
             raise FileNotFoundError(f"No DICOM, NRRD, or NIfTI scan found in {sample_path}")
 
         scan_file = sample_path / "scan.nrrd" if (sample_path / "scan.nrrd").exists() else scan_candidates[0]
-        meta_tensor = read_medical_image_as_metatensor(scan_file)
-        ct_array = meta_tensor.squeeze().cpu().numpy()
-        header = meta_tensor.meta
-        spacing = tuple(header.get("spatial_shape", (1.0, 1.0, 1.0)))
+        ct_array, nrrd_hdr = nrrd.read(str(scan_file))
+        sd = nrrd_hdr.get("space directions")
+        if sd is not None:
+            sx = float(np.linalg.norm(sd[0]))
+            sy = float(np.linalg.norm(sd[1]))
+            sz = float(np.linalg.norm(sd[2]))
+            spacing = (sx, sy, sz)
+        else:
+            spacing = (0.68, 0.68, 2.5)
+
+        # In NRRD, 3D shape is (X, Y, Z). Transpose to (Depth, Height, Width) = (Z, Y, X)
+        if ct_array.ndim == 3 and ct_array.shape[0] >= 256 and ct_array.shape[0] > ct_array.shape[2]:
+            ct_array = np.transpose(ct_array, (2, 1, 0))
+
         if ct_array.ndim == 3:
             copied_ct_paths = export_ct_to_dicom_series(
                 ct_array=ct_array,
-                spacing=(1.0, 1.0, 1.0),
+                spacing=spacing,
                 output_dir=ct_dest_dir,
                 patient_id=participant_id,
             )
@@ -2138,18 +2152,27 @@ def export_sample_to_ohif(
             raise ValueError(f"Expected 3D CT volume, got shape {ct_array.shape}")
 
     # 2. Check for eat_pvat.seg.nrrd
-    seg_nrrd_candidates = list(sample_path.glob("*.seg.nrrd"))
-    if not seg_nrrd_candidates:
-        seg_nrrd_candidates = [sample_path / "eat_pvat.seg.nrrd"]
+    seg_nrrd_candidates = [
+        sample_path / "eat_pvat.seg.nrrd",
+    ] + [p for p in sample_path.glob("*.seg.nrrd") if p.name != "eat_pvat.seg.nrrd"]
 
-    seg_nrrd_path = seg_nrrd_candidates[0]
+    seg_nrrd_path = None
+    for cand in seg_nrrd_candidates:
+        if cand.exists():
+            seg_nrrd_path = cand
+            break
+
     seg_data: Optional[np.ndarray] = None
-    if seg_nrrd_path.exists():
+    if seg_nrrd_path is not None and seg_nrrd_path.exists():
         seg_data, seg_header = nrrd.read(str(seg_nrrd_path))
         if seg_data.shape[0] != 8 and seg_data.shape[-1] == 8:
             seg_data = np.moveaxis(seg_data, -1, 0)
         elif seg_data.ndim == 3:
             seg_data = np.stack([seg_data] * 8, axis=0)
+
+        # In NRRD, 4D seg is (8, X, Y, Z). Transpose to (8, Z, Y, X) to match (8, depth, height, width)
+        if seg_data.ndim == 4 and seg_data.shape[1] >= 256 and seg_data.shape[1] > seg_data.shape[3]:
+            seg_data = np.transpose(seg_data, (0, 3, 2, 1))
 
         num_slices = len(copied_ct_paths)
         if seg_data.shape[1] != num_slices:
