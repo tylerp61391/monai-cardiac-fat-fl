@@ -31,7 +31,7 @@ pytest -v
 # End-to-end quantification across a cohort directory:
 cardiac-fat-fl quantify /path/to/cohort --output-dir /path/to/cohort --save-seg
 
-# With full MGH legacy intermediate file parity (heart.seg.nrrd + totalsegmentator_1-5mm_masks.seg.nrrd):
+# With intermediate anatomical masks (heart.seg.nrrd + monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd + coronary_sulci.seg.nrrd):
 cardiac-fat-fl quantify /path/to/cohort --save-seg --save-intermediate
 
 # Run quantification on included benchmark scans:

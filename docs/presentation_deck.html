@@ -1301,12 +1301,13 @@
             <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] text-cyan-300 font-mono mb-2 space-y-0.5">
               <div class="text-emerald-400 font-semibold">&bull; eat_pvat.seg.nrrd (8-Ch EAT/PVAT)</div>
               <div>&bull; eat_pvat_seg.dcm (SOP .66.4)</div>
-              <div class="text-amber-300/90">&bull; heart.seg.nrrd (Optional MGH)</div>
-              <div class="text-amber-300/90 truncate">&bull; totalsegmentator_1-5mm_masks.seg.nrrd</div>
+              <div class="text-amber-300/90">&bull; heart.seg.nrrd (DeepHeartSeg Pericardium)</div>
+              <div class="text-amber-300/90 truncate">&bull; monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd</div>
+              <div class="text-amber-300/90 truncate">&bull; coronary_sulci.seg.nrrd (LAD/LCX/RCA)</div>
             </div>
             <ul class="text-[11px] text-slate-300 space-y-1 list-disc list-inside">
-              <li>Primary masks saved inside participant folder.</li>
-              <li>Pass <code class="mono-code text-[10px] text-amber-300 bg-slate-950 px-1 py-0.5 rounded">--save-intermediate</code> to write full MGH legacy chamber &amp; pericardial NRRD files.</li>
+              <li>Primary 8-channel quantification mask saved inside participant folder.</li>
+              <li>Pass <code class="mono-code text-[10px] text-amber-300 bg-slate-950 px-1 py-0.5 rounded">--save-intermediate</code> to write chamber/aorta, pericardial, and coronary sulci NRRD files.</li>
               <li>Drag &amp; drop directly into <strong class="text-white">3D Slicer / ITK-SNAP / OHIF</strong>.</li>
             </ul>
           </div>
