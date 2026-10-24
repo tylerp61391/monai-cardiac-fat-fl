@@ -5,6 +5,7 @@ This document is automatically loaded into agent context. It provides the codeba
 ---
 
 ## 1. Project Overview & Architecture
+
 `monai-cardiac-fat-fl` modernizes the legacy Harvard / MGH `CardiacFatQuant` pipeline into a unified **Python 3.11+ MONAI / PyTorch** and **NVIDIA FLARE 2.5+** federated learning system with embedded **OHIF v3.13** zero-footprint web visualization.
 
 - **Core Task**: Automated 3D segmentation and volumetric/attenuation quantification of Epicardial Adipose Tissue (EAT) and Pericoronary Adipose Tissue (PVAT) from cardiac CT scans.
@@ -19,6 +20,7 @@ This document is automatically loaded into agent context. It provides the codeba
 To minimize token usage, **do not read `README.md` (583 lines) or full large files** unless explicitly editing them. Jump directly to the relevant module and line range below:
 
 ### Source Modules (`src/cardiac_fat_fl/`)
+
 | File | Lines | Key Symbols & Line Ranges | Responsibility |
 | :--- | :---: | :--- | :--- |
 | `measurement_schema.py` | 148 | `ADIPOSE_HU_MIN/MAX`, `SegmentationCompartment`, `ReportedRegion`, `MEASUREMENT_CSV_COLUMNS`, `calculate_volume_cm3` | **Read first** for data contracts, enums, and 19-column CSV validation. |
@@ -27,15 +29,16 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 | `io_metatensor.py` | 551 | `discover_participants`, `read_nrrd_as_metatensor`, `write_eat_pvat_seg_nrrd` | Header-preserving 3D I/O for NRRD, NIfTI, and DICOM series. |
 | `dicom_sr.py` | 345 | `create_cardiac_fat_sr`, `export_cardiac_fat_sr` | DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`) structured report builder using SNOMED-CT / LOINC / UCUM codes. |
 | `pacs_client.py` | 320 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
-| `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`<br>**L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*<br>**L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
+| `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
 | `ohif_viewer.py` | 244 | `launch_ohif_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
-| `cli.py` | 749 | **L51**: `_process_one_participant`<br>**L176**: `quantify`<br>**L361**: `federated-train` / **L399**: `federated-stats`<br>**L418**: `compare-models`<br>**L501**: `view` / **L524**: `export-ohif`<br>**L546**: `hardware` / **L553**: `download-models`<br>**L627**: `push` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cli.py` | 749 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `fl_client_algo.py` | 409 | `CardiacFatClientAlgo` | NVFLARE client training/evaluation executor (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
 | `hardware.py` | 219 | `detect_hardware`, `validate_worker_concurrency` | Host CPU/RAM/GPU profiler and OOM-safe worker concurrency throttling. |
 
 ### Test Suite (`tests/`)
+
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
 - Unit/Integration tests: `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_dicom_sr.py` (119L), `test_cli.py` (101L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L).
 
@@ -44,44 +47,55 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 ## 3. Environment, Testing & Task Recipes
 
 ### Virtual Environment & Test Execution
+
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
 - **Run Full Test Suite** (31 tests; run before committing):
+
   ```bash
   .venv\Scripts\python.exe -m pytest -v
   ```
 
 ### Recipe 1: Process a CT Scan and Launch OHIF Viewer
+
 When a user provides a CT scan or participant directory and asks to process and visualize it:
+
 1. **Check for Existing Segmentations**: Inspect if `<patient_dir>/eat_pvat.seg.nrrd` already exists.
-2. **Quantify First (if missing)**: Run quantification on the parent cohort directory:
+2. **Quantify First (if missing)**: Run quantification on the parent cohort directory (add `--save-intermediate` for `heart.seg.nrrd`, `monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd`, and `coronary_sulci.seg.nrrd`):
+
    ```bash
    python -m cardiac_fat_fl.cli quantify "<cohort_or_study_dir>" --save-seg
    ```
-   *(With intermediate masks `heart.seg.nrrd`, `monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd`, and `coronary_sulci.seg.nrrd`, add `--save-intermediate`).*
+
 3. **Launch OHIF Viewer (Background)**:
+
    ```bash
    python -m cardiac_fat_fl.cli view "<patient_dir>" --port 8000 --no-browser
    ```
+
 4. **Respond to User**: Provide `http://127.0.0.1:8000/patient/<patient_id>/` and summarize computed EAT/PVAT volumes ($\text{cm}^3$) and mean attenuation (HU).
 
 ### Recipe 2: Anatomy Segmentation Provenance (`monai_wholebody_ct_segmentation`)
+
 - Neural network chamber/vessel labels from NGC `monai_wholebody_ct_segmentation` (1.5 mm isotropic SegResNet):
   - Aorta (`7`), Myocardium (`44`), Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Pulmonary Artery (`49`).
 - Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights (`heart.seg.nrrd`).
 - Coronary sulci centerlines (LAD `1`, LCX `2`, RCA `3`) are derived geometrically from chamber boundary grooves and exported separately as `coronary_sulci.seg.nrrd`.
 
 ### Recipe 3: Push Study Results to a PACS Archive
+
 1. **Verify Exports**: Ensure `eat_pvat_seg.dcm` and `eat_pvat_sr.dcm` exist in `<study_dir>/ohif_export` (or run `cardiac-fat-fl export-ohif "<study_dir>"` if missing).
 2. **DICOMweb STOW-RS (Orthanc, dcm4chee-arc, Cloud PACS)**:
+
    ```bash
    cardiac-fat-fl push "<study_dir>" --url "http://localhost:8042/dicom-web/studies"
    ```
-3. **Traditional DICOM DIMSE C-STORE (Hospital PACS)**:
+
+3. **Traditional DICOM DIMSE C-STORE (Hospital PACS)** (add `--include-ct` if the destination archive also requires the underlying CT series):
+
    ```bash
    cardiac-fat-fl push "<study_dir>" --host 192.168.1.50 --port 104 --called-aet CENTRAL_PACS
    ```
-   *(Add `--include-ct` if the destination archive also requires the underlying CT series).*
 
 ---
 
@@ -117,8 +131,10 @@ Whenever modifying preprocessing, segmentation, transforms, or reporting:
 ## 6. Git & Commit Guidelines
 
 - **Commit Author**: All commits must be authored as:
+
   ```bash
   git commit --author="Tyler Patay <tcpatay123@gmail.com>" -m "<message>"
   ```
+
 - **Branch & Target**: Primary branch is `main`.
 - **Documentation Math**: Use GitHub Flavored Markdown math blocks (`$$ ... $$`) with named TeX tokens (`\lbrace`, `\rbrace`) inside `\left` and `\right`.
