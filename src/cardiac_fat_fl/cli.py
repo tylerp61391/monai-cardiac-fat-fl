@@ -105,6 +105,8 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
 
             # 2. totalsegmentator_1-5mm_masks.seg.nrrd (multi-label chamber & vessel mask)
             tot_seg = np.zeros_like(anatomy.pericardium, dtype=np.uint16)
+            if anatomy.aorta is not None:
+                tot_seg[anatomy.aorta] = 7
             tot_seg[anatomy.la] = 45
             tot_seg[anatomy.lv] = 46
             tot_seg[anatomy.ra] = 47
@@ -114,7 +116,7 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
             if anatomy.lcx is not None:
                 tot_seg[anatomy.lcx] = 6
             if anatomy.rca is not None:
-                tot_seg[anatomy.rca] = 7
+                tot_seg[anatomy.rca] = 8
 
             monai_tot_path = participant_dir / "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
             write_monai_wholebody_ct_segmentation_seg_nrrd(

@@ -48,10 +48,11 @@ class AnatomyMasks:
     lad: np.ndarray
     lcx: np.ndarray
     rca: np.ndarray
+    aorta: Optional[np.ndarray] = None
 
     def to_dict(self) -> Dict[str, np.ndarray]:
         """Convert masks to a dictionary of numpy arrays."""
-        return {
+        d = {
             "pericardium": self.pericardium,
             "la": self.la,
             "lv": self.lv,
@@ -61,6 +62,9 @@ class AnatomyMasks:
             "lcx": self.lcx,
             "rca": self.rca,
         }
+        if self.aorta is not None:
+            d["aorta"] = self.aorta
+        return d
 
     def to_torch_dict(self, device: Optional[torch.device] = None) -> Dict[str, torch.Tensor]:
         """Convert masks to dictionary of PyTorch tensors."""
@@ -399,6 +403,7 @@ class UnifiedAnatomySegmenter:
                     lad=lad.astype(bool),
                     lcx=lcx.astype(bool),
                     rca=rca.astype(bool),
+                    aorta=aorta_seg.astype(bool) if np.any(aorta_seg) else None,
                 )
 
         indices = np.where(pericardium)

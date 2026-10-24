@@ -304,14 +304,14 @@ SLICER_COMPARTMENT_COLORS = [
 
 # Cardiac anatomical labels matching monai_wholebody_ct_segmentation & MGH convention
 MONAI_WHOLEBODY_CT_CARDIAC_LABELS = [
-
+    {"id": "aorta", "name": "aorta", "label": 7, "color": "0.850 0.150 0.150"},
     {"id": "heart_atrium_left", "name": "heart_atrium_left", "label": 45, "color": "0.231 0.510 0.965"},
     {"id": "heart_ventricle_left", "name": "heart_ventricle_left", "label": 46, "color": "0.024 0.714 0.831"},
     {"id": "heart_atrium_right", "name": "heart_atrium_right", "label": 47, "color": "0.063 0.725 0.506"},
     {"id": "heart_ventricle_right", "name": "heart_ventricle_right", "label": 48, "color": "0.918 0.702 0.031"},
     {"id": "coronary_artery_lad", "name": "coronary_artery_lad", "label": 5, "color": "0.976 0.451 0.086"},
     {"id": "coronary_artery_lcx", "name": "coronary_artery_lcx", "label": 6, "color": "0.937 0.267 0.267"},
-    {"id": "coronary_artery_rca", "name": "coronary_artery_rca", "label": 7, "color": "0.925 0.282 0.596"},
+    {"id": "coronary_artery_rca", "name": "coronary_artery_rca", "label": 8, "color": "0.925 0.282 0.596"},
 ]
 TOTALSEGMENTATOR_CARDIAC_LABELS = MONAI_WHOLEBODY_CT_CARDIAC_LABELS
 
