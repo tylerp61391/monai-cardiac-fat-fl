@@ -452,15 +452,19 @@
                   </span>
                   <span class="text-blue-400 text-xs font-bold">&rarr;</span>
                 </div>
-                <div class="text-xs font-bold text-white mb-1">Dual NGC + ONNX Pipeline</div>
+                <div class="text-xs font-bold text-white mb-1">Dual Model Synergy &amp; Sulci</div>
                 <div class="space-y-1 text-[10px] text-slate-300">
                   <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800 flex justify-between">
-                    <span class="text-slate-400">NGC monai_wholebody_ct_segmentation</span>
-                    <span class="text-cyan-300 font-mono">104 labels in VRAM</span>
+                    <span class="text-slate-400">NGC WholeBody (SegResNet)</span>
+                    <span class="text-cyan-300 font-mono">Chambers 44-48 + Aorta 7</span>
                   </div>
                   <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800 flex justify-between">
-                    <span class="text-slate-400">DeepHeartSeg ONNX (2-stage)</span>
-                    <span class="text-blue-300 font-mono">Zero-drift Pericardium</span>
+                    <span class="text-slate-400">DeepHeartSeg ONNX (2-Stage)</span>
+                    <span class="text-blue-300 font-mono">Pericardial Sac Container</span>
+                  </div>
+                  <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800 flex justify-between">
+                    <span class="text-slate-400">Derived Sulci Centerlines</span>
+                    <span class="text-purple-300 font-mono">LAD / LCX / RCA Grooves</span>
                   </div>
                 </div>
               </div>
@@ -744,98 +748,128 @@
 
 
     <!-- SLIDE 6: Voronoi Partitioning & Radial Dilation -->
-    <div class="slide flex-col justify-center space-y-4" data-slide="6">
+    <div class="slide flex-col justify-center space-y-3" data-slide="6">
       <div class="flex items-center justify-between">
-        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Clinical Derivation &amp; Math</span>
-        <span class="text-xs text-slate-500">Physics &plus; 3D Voronoi Geometry</span>
+        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Algorithmic Foundation &amp; Mathematical Cascade</span>
+        <span class="text-xs text-slate-500">Dual Neural Network Synergy &plus; 3D Voronoi Geometry</span>
       </div>
       <div class="flex items-center justify-between">
-        <h2 class="text-2xl md:text-3xl font-bold text-white">What Are EAT &amp; PVAT Based On?</h2>
-        <span class="text-xs px-2.5 py-1 rounded bg-slate-800 text-cyan-300 border border-slate-700 font-mono">Strict Adipose Window: [-190.0, -30.0] HU</span>
+        <h2 class="text-2xl md:text-3xl font-bold text-white">How MONAI WholeBody &amp; DeepHeartSeg Drive EAT &amp; PVAT</h2>
+        <span class="text-xs px-2.5 py-1 rounded bg-slate-800 text-cyan-300 border border-slate-700 font-mono">Adipose Attenuation: [-190.0, -30.0] HU</span>
       </div>
 
-      <!-- Core Clinical Principle Banner -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs text-slate-300">
-        <div class="flex items-center space-x-2">
-          <span class="px-2 py-0.5 rounded bg-blue-950 border border-blue-800 text-blue-300 font-bold uppercase text-[10px]">Harvard / MGH Invariant</span>
-          <span>Fat is <strong class="text-white">not</strong> directly segmented by raw neural net pixels. The network localizes <strong class="text-cyan-300">anatomical boundaries</strong>; fat is then extracted via <strong class="text-emerald-300">physical CT attenuation thresholding</strong> intersected with <strong class="text-purple-300">3D Euclidean distance transforms</strong>.</span>
+      <!-- Neural Network Synergy: Container vs Internal Seeds -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="bg-blue-950/40 border border-blue-800/80 rounded-xl p-3 flex items-start space-x-3">
+          <div class="w-7 h-7 rounded-lg bg-blue-900 border border-blue-600 flex items-center justify-center text-blue-200 font-bold text-xs shrink-0">1</div>
+          <div class="text-xs">
+            <div class="font-bold text-blue-300 flex items-center justify-between">
+              <span>DeepHeartSeg ONNX: The Pericardial Container</span>
+              <span class="font-mono text-[10px] text-blue-400">heart.seg.nrrd</span>
+            </div>
+            <p class="text-slate-300 text-[11px] mt-0.5 leading-relaxed">
+              Provides the <strong class="text-white">outer fibrous pericardial boundary</strong>. By clinical law, only fat <em>inside</em> the pericardium is true EAT; fat outside is mediastinal/thoracic fat. <em>Limitation:</em> Binary mask with <strong>no internal chamber or coronary landmarks</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div class="bg-cyan-950/40 border border-cyan-800/80 rounded-xl p-3 flex items-start space-x-3">
+          <div class="w-7 h-7 rounded-lg bg-cyan-900 border border-cyan-600 flex items-center justify-center text-cyan-200 font-bold text-xs shrink-0">2</div>
+          <div class="text-xs">
+            <div class="font-bold text-cyan-300 flex items-center justify-between">
+              <span>MONAI WholeBody SegResNet: The Internal Seeds</span>
+              <span class="font-mono text-[10px] text-cyan-400">monai_wholebody...masks.seg.nrrd</span>
+            </div>
+            <p class="text-slate-300 text-[11px] mt-0.5 leading-relaxed">
+              Predicts 7 cardiac anatomical labels: <strong class="text-white">LA (45), LV (46), RA (47), RV (48), Myo (44), Aorta (7), PA (49)</strong>. Provides internal seeds for Voronoi partitioning &amp; groove boundaries. <em>Limitation:</em> Does not predict the thin pericardial sac.
+            </p>
+          </div>
         </div>
       </div>
 
       <!-- 3 Algorithmic Pillars -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <!-- Pillar 1: HU Window -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
           <div>
-            <div class="text-xs font-bold text-emerald-400 uppercase mb-1.5 flex items-center space-x-1.5">
+            <div class="text-[11px] font-bold text-emerald-400 uppercase mb-1 flex items-center space-x-1.5">
               <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
               <span>1. Adipose Attenuation Physics</span>
             </div>
-            <h4 class="font-bold text-white text-sm mb-1.5">Hard Physical Window</h4>
-            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-xs font-mono text-emerald-300 mb-2">
+            <h4 class="font-bold text-white text-sm mb-1">Hard Physical HU Filter</h4>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] font-mono text-emerald-300 mb-1.5">
               -190.0 &le; HU &le; -30.0
             </div>
-            <p class="text-xs text-slate-400 leading-relaxed">
-              Standard non-contrast &amp; contrast threshold. Strictly isolates triglyceride lipid vacuoles while rejecting water/edema (> -30 HU), blood pool, and bone/calcium (> 130 HU).
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              Standard non-contrast &amp; contrast threshold. Strictly isolates triglyceride lipid vacuoles while rejecting water/edema (&gt; -30 HU), blood pool (&gt; 40 HU), and calcified plaque (&gt; 130 HU).
             </p>
           </div>
-          <div class="text-[11px] text-slate-500 pt-2 border-t border-slate-800 font-mono">Defined: measurement_schema.py</div>
+          <div class="text-[10px] text-slate-500 pt-2 border-t border-slate-800 font-mono flex justify-between">
+            <span>Harvard Invariant</span>
+            <span class="text-emerald-400">Zero Raw NN Fat Pixels</span>
+          </div>
         </div>
 
         <!-- Pillar 2: EAT Voronoi -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
           <div>
-            <div class="text-xs font-bold text-cyan-400 uppercase mb-1.5 flex items-center space-x-1.5">
+            <div class="text-[11px] font-bold text-cyan-400 uppercase mb-1 flex items-center space-x-1.5">
               <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-              <span>2. EAT: Pericardium &plus; Voronoi EDT</span>
+              <span>2. 3D Anisotropic Voronoi Partitioning</span>
             </div>
-            <h4 class="font-bold text-white text-sm mb-1.5">Nearest Chamber Wall Partition</h4>
-            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] font-mono text-cyan-300 mb-2">
-              EAT_Total = pericardium &amp; fat_window<br>
-              voxel_c = argmin_c [ D_LA, D_LV, D_RA, D_RV ]
+            <h4 class="font-bold text-white text-sm mb-1">Nearest-Chamber Euclidean Transform</h4>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[10px] font-mono text-cyan-300 mb-1.5">
+              EAT_Total = Pericardium &amp; Fat_Window<br>
+              Zone(x,y,z) = argmin_c [ D_LA, D_LV, D_RA, D_RV ]
             </div>
-            <p class="text-xs text-slate-400 leading-relaxed">
-              All fat within the pericardial sac is partitioned into 4 chambers via 3D Euclidean Distance Transform with anisotropic sampling <code class="text-cyan-300">(sz, sy, sx)</code>. Guarantees 0 overlap and 0 gaps.
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              Every fat voxel inside the pericardium is assigned to the nearest MONAI chamber using SciPy EDT with true voxel spacing <code class="text-cyan-300">(sz, sy, sx)</code> in mm. Guarantees 0 overlap, 0 gaps, and continuous anatomical sub-compartments.
             </p>
           </div>
-          <div class="text-[11px] text-slate-500 pt-2 border-t border-slate-800 font-mono">Speedup: 12.8x via bounded ROI</div>
+          <div class="text-[10px] text-slate-500 pt-2 border-t border-slate-800 font-mono flex justify-between">
+            <span>ROI Bounding Box</span>
+            <span class="text-cyan-400">12.8x Speedup</span>
+          </div>
         </div>
 
         <!-- Pillar 3: PVAT Radial Envelope -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
           <div>
-            <div class="text-xs font-bold text-blue-400 uppercase mb-1.5 flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-blue-400"></span>
-              <span>3. PVAT: 10.0mm Radial Envelope</span>
+            <div class="text-[11px] font-bold text-purple-400 uppercase mb-1 flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+              <span>3. Sulci Grooves &amp; 10 mm PVAT Envelopes</span>
             </div>
-            <h4 class="font-bold text-white text-sm mb-1.5">Coronary Adipose Cuff</h4>
-            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] font-mono text-blue-300 mb-2">
-              PVAT_v = (D_v &le; 10.0mm) &amp; (~vessel) &amp; EAT<br>
-              PVAT_Total = LAD &cup; LCX &cup; RCA
+            <h4 class="font-bold text-white text-sm mb-1">Pericoronary Adipose Cuff</h4>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[10px] font-mono text-purple-300 mb-1.5">
+              LAD = Groove(LV, RV) &bull; LCX = (LA, LV) &bull; RCA = (RA, RV)<br>
+              PVAT_v = (EDT &le; 10mm) &amp; (~Vessel) &amp; EAT_Total
             </div>
-            <p class="text-xs text-slate-400 leading-relaxed">
-              Computes radial 10.0 mm EDT envelope around coronary centerlines. Vessel lumen is strictly subtracted (<code class="text-blue-300">~sub_v</code>), bounded within pericardium, and intersected with fat window.
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              MONAI chamber boundary interfaces derive coronary sulci centerlines (<code class="text-purple-300 font-mono">coronary_sulci.seg.nrrd</code>). Anisotropic 10.0 mm radial dilation captures the pericoronary fat cuff (CRISP-CT / Harvard MGH protocol).
             </p>
           </div>
-          <div class="text-[11px] text-slate-500 pt-2 border-t border-slate-800 font-mono">Sampling: anisotropic (sz, sy, sx)</div>
+          <div class="text-[10px] text-slate-500 pt-2 border-t border-slate-800 font-mono flex justify-between">
+            <span>PVAT_Total</span>
+            <span class="text-purple-400">LAD &cup; LCX &cup; RCA Union</span>
+          </div>
         </div>
       </div>
 
       <!-- 8-Compartment NRRD Channels Map -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
-        <div class="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
-          <span class="text-purple-400 font-semibold uppercase">The 8 Discrete Compartments Saved to eat_pvat.seg.nrrd:</span>
-          <span class="text-slate-500 font-mono text-[11px]">Empty Mask Invariant: Volume = 0.0 cm³, Mean HU = NaN</span>
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+        <div class="text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+          <span class="text-purple-400 font-semibold uppercase text-[11px]">8 Discrete Compartments Saved to eat_pvat.seg.nrrd:</span>
+          <span class="text-slate-500 font-mono text-[10px]">Strict Schema: Empty Mask = 0.0 cm³ Vol / NaN Mean HU</span>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-8 gap-2 text-center text-xs font-mono">
-          <div class="bg-slate-950 p-2 rounded border border-purple-900/60"><span class="text-purple-400 font-bold block">Ch 0</span><span class="text-slate-300 text-[11px]">EAT Total</span></div>
-          <div class="bg-slate-950 p-2 rounded border border-blue-900/60"><span class="text-blue-400 font-bold block">Ch 1</span><span class="text-slate-300 text-[11px]">EAT LA</span></div>
-          <div class="bg-slate-950 p-2 rounded border border-cyan-900/60"><span class="text-cyan-400 font-bold block">Ch 2</span><span class="text-slate-300 text-[11px]">EAT LV</span></div>
-          <div class="bg-slate-950 p-2 rounded border border-emerald-900/60"><span class="text-emerald-400 font-bold block">Ch 3</span><span class="text-slate-300 text-[11px]">EAT RA</span></div>
-          <div class="bg-slate-950 p-2 rounded border border-yellow-900/60"><span class="text-yellow-400 font-bold block">Ch 4</span><span class="text-slate-300 text-[11px]">EAT RV</span></div>
-          <div class="bg-slate-950 p-2 rounded border border-orange-900/60"><span class="text-orange-400 font-bold block">Ch 5</span><span class="text-slate-300 text-[11px]">PVAT LAD</span></div>
-          <div class="bg-slate-950 p-2 rounded border border-red-900/60"><span class="text-red-400 font-bold block">Ch 6</span><span class="text-slate-300 text-[11px]">PVAT LCX</span></div>
-          <div class="bg-slate-950 p-2 rounded border border-pink-900/60"><span class="text-pink-400 font-bold block">Ch 7</span><span class="text-slate-300 text-[11px]">PVAT RCA</span></div>
+          <div class="bg-slate-950 p-1.5 rounded border border-purple-900/60"><span class="text-purple-400 font-bold block text-[11px]">Ch 0</span><span class="text-slate-300 text-[10px]">EAT Total</span></div>
+          <div class="bg-slate-950 p-1.5 rounded border border-blue-900/60"><span class="text-blue-400 font-bold block text-[11px]">Ch 1</span><span class="text-slate-300 text-[10px]">EAT LA</span></div>
+          <div class="bg-slate-950 p-1.5 rounded border border-cyan-900/60"><span class="text-cyan-400 font-bold block text-[11px]">Ch 2</span><span class="text-slate-300 text-[10px]">EAT LV</span></div>
+          <div class="bg-slate-950 p-1.5 rounded border border-emerald-900/60"><span class="text-emerald-400 font-bold block text-[11px]">Ch 3</span><span class="text-slate-300 text-[10px]">EAT RA</span></div>
+          <div class="bg-slate-950 p-1.5 rounded border border-yellow-900/60"><span class="text-yellow-400 font-bold block text-[11px]">Ch 4</span><span class="text-slate-300 text-[10px]">EAT RV</span></div>
+          <div class="bg-slate-950 p-1.5 rounded border border-orange-900/60"><span class="text-orange-400 font-bold block text-[11px]">Ch 5</span><span class="text-slate-300 text-[10px]">PVAT LAD</span></div>
+          <div class="bg-slate-950 p-1.5 rounded border border-red-900/60"><span class="text-red-400 font-bold block text-[11px]">Ch 6</span><span class="text-slate-300 text-[10px]">PVAT LCX</span></div>
+          <div class="bg-slate-950 p-1.5 rounded border border-pink-900/60"><span class="text-pink-400 font-bold block text-[11px]">Ch 7</span><span class="text-slate-300 text-[10px]">PVAT RCA</span></div>
         </div>
       </div>
     </div>
