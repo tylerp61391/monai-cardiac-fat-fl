@@ -30,6 +30,8 @@ from cardiac_fat_fl.io_nrrd import (
     read_nrrd_as_metatensor,
     write_eat_pvat_seg_nrrd,
     write_totalsegmentator_seg_nrrd,
+    write_monai_wholebody_ct_segmentation_seg_nrrd,
+    write_coronary_sulci_seg_nrrd,
 )
 from cardiac_fat_fl.measurement_schema import (
     DEFAULT_PVAT_RADIAL_DISTANCE_MM,
@@ -72,7 +74,7 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
         anatomy = data_dict.get("anatomy_masks")
 
         if scan_path.is_dir():
-            participant_dir = scan_path if scan_path.parent == source_dir else scan_path.parent
+            participant_dir = scan_path.parent if (scan_path.parent.name == pid or scan_path.parent == source_dir) else scan_path
         else:
             participant_dir = scan_path.parent
 

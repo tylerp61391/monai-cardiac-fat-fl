@@ -70,7 +70,12 @@ def discover_participants(
         raise FileNotFoundError(f"Source directory does not exist: {root}")
 
     if ignore_patterns is None:
-        ignore_patterns = [".seg.", "_seg.", ".mask.", "eat_pvat", "calcium_xml", "graphs"]
+        ignore_patterns = [".seg.", "_seg.", ".mask.", "eat_pvat", "calcium_xml", "graphs", "ohif_export"]
+
+    # Check if root itself is a single participant study directory (contains DICOM series or direct volume)
+    dcm_root = _find_dicom_series_dir(root)
+    if dcm_root is not None and (dcm_root == root or dcm_root.parent == root):
+        return [(root.name, dcm_root)]
 
     participants: List[Tuple[str, Path]] = []
 
@@ -120,6 +125,28 @@ def discover_participants(
             if ext in [".nrrd", ".mha"] or entry.name.lower().endswith(".nii.gz"):
                 pid = entry.name.split(".")[0]
                 participants.append((pid, entry))
+
+    # Fallback: check if root itself is a single participant study directory
+    if not participants:
+        dcm_dir = _find_dicom_series_dir(root)
+        if dcm_dir is not None:
+            participants.append((root.name, dcm_dir))
+        else:
+            vol_candidates = [
+                f for f in root.glob("*.*")
+                if f.suffix.lower() in [".nrrd", ".nii", ".gz", ".mha", ".mhd"]
+                and not any(pat.lower() in f.name.lower() for pat in ignore_patterns)
+            ]
+            if vol_candidates:
+                ranked = sorted(
+                    vol_candidates,
+                    key=lambda p: (
+                        "scan" not in p.name.lower(),
+                        "ct" not in p.name.lower(),
+                        len(p.name),
+                    ),
+                )
+                participants.append((root.name, ranked[0]))
 
     return participants
 
