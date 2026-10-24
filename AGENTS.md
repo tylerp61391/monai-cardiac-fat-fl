@@ -9,7 +9,8 @@ This document provides concise instructions, environment setup, clinical invaria
 
 - **Core Task**: Automated 3D segmentation and volumetric/attenuation quantification of Epicardial Adipose Tissue (EAT) and Pericoronary Adipose Tissue (PVAT) from cardiac CT scans.
 - **Privacy & FL**: Coordinates multi-hospital federated model distillation (FedProx + FedBN) and cohort moment aggregation (Welford) with zero patient DICOM/image transfer.
-- **Visualization**: Converts studies into web-ready DICOM + DICOM-SEG volumes served via a local DCM4CHEE-compatible static JSON-DICOM server for interactive OHIF 2D MPR and 3D Slicer rendering.
+- **Visualization & PACS**: Converts studies into web-ready DICOM + DICOM-SEG volumes served via a local DCM4CHEE-compatible static JSON-DICOM server for interactive OHIF 2D MPR and 3D Slicer rendering.
+- **PACS Archive Push**: Natively exports and transmits standard multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`) and CT volumes to institutional PACS via DICOMweb (STOW-RS) and DIMSE (C-STORE).
 
 ---
 
@@ -83,6 +84,23 @@ Verify that `cardiac_fat_measurements.csv` contains the exact 19-column schema.
 
 
 ---
+
+#### Recipe 4: "Push study results to a PACS archive"
+When a user asks to store or transmit results to a hospital or research PACS:
+1. **Verify DICOM-SEG exists**: Ensure `eat_pvat_seg.dcm` exists in the participant directory (or run `export-ohif` first if missing).
+2. **DICOMweb STOW-RS (Orthanc, dcm4chee-arc, Cloud PACS)**:
+   ```bash
+   cardiac-fat-fl push "<study_or_export_dir>" --url "http://localhost:8042/dicom-web/studies"
+   ```
+3. **Traditional DICOM DIMSE C-STORE (Hospital PACS)**:
+   ```bash
+   cardiac-fat-fl push "<study_or_export_dir>" --host 192.168.1.50 --port 104 --called-aet CENTRAL_PACS
+   ```
+4. **Include Full CT Series**: Add `--include-ct` if the destination archive requires both the CT volume and segmentation overlay together:
+   ```bash
+   cardiac-fat-fl push "<study_or_export_dir>" --include-ct --url "http://localhost:8042/dicom-web/studies"
+   ```
+
 
 ## 3. Strict Clinical & Mathematical Invariants
 

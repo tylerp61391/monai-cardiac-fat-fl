@@ -36,7 +36,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 | **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$, $r = 1.000$) |
 | **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
 | **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
-| **Visualization & PACS** | Manual 3D Slicer import | Native **OHIF v3.13 Workstation** with 3D Slicer Four-Up 2x2 MPR grid, Smart Scrollbars & **DICOM-SEG** export |
+| **Visualization & PACS** | Manual 3D Slicer import | Native **OHIF v3.13 Workstation** + **Direct PACS Push** (DICOMweb STOW-RS & DIMSE C-STORE) + **DICOM-SEG** (SOP .66.4) |
 
 ---
 
@@ -80,6 +80,27 @@ cardiac-fat-fl quantify /path/to/cohort --output-dir /path/to/cohort --save-seg
 Outputs:
 1. **Per-Participant Masks**: Written to each participant subfolder (`/path/to/cohort/<participant_id>/eat_pvat.seg.nrrd`).
 2. **Cohort Summary Table**: Written to the `--output-dir` (defaults to cohort root) as `cardiac_fat_measurements.csv` conforming to the exact 19-column clinical schema.
+
+### 3. Institutional PACS Archive Integration (DICOMweb STOW-RS & DIMSE C-STORE)
+
+The pipeline features a native PACS transmission client (`cardiac-fat-fl push`) capable of sending generated multi-frame DICOM-SEG objects (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`) and original or exported CT series to clinical and research archives:
+
+- **DICOMweb STOW-RS**:
+  ```bash
+  # Push DICOM-SEG to Orthanc, dcm4chee, or Cloud PACS:
+  cardiac-fat-fl push /path/to/participant_dir --url "http://localhost:8042/dicom-web/studies"
+
+  # With authentication:
+  cardiac-fat-fl push /path/to/participant_dir --url "https://pacs.hospital.org/studies" --username rad_tech --password secret
+  ```
+- **DICOM DIMSE C-STORE**:
+  ```bash
+  # Push directly to hospital PACS via standard DICOM C-STORE:
+  cardiac-fat-fl push /path/to/participant_dir --host 192.168.1.50 --port 104 --called-aet CENTRAL_PACS
+  ```
+- **Include CT Volume**: Add `--include-ct` to upload the underlying 3D CT slice series alongside the DICOM-SEG mask.
+
+
 
 ---
 
