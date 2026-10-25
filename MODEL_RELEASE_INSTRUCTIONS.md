@@ -25,6 +25,7 @@ Choose either **Method A** (for automated agents / terminal) or **Method B** (fo
 ### Method A: Automated via GitHub CLI or Python Script (Ideal for AI Agents)
 
 **Using GitHub CLI (`gh`)**:
+
 ```bash
 gh release create v1.0.0 \
   models/deepheartseg_loc.onnx \
@@ -34,12 +35,14 @@ gh release create v1.0.0 \
 ```
 
 **Using the included Python script**:
+
 ```bash
 # Requires GITHUB_TOKEN environment variable set
 python scripts/publish_release.py v1.0.0
 ```
 
 ### Method B: Manual Web UI (Drag & Drop)
+
 1. Navigate to `https://github.com/tylerp61391/monai-cardiac-fat-fl/releases`.
 2. Click **Draft a new release**.
 3. Set Tag: `v1.0.0`, Title: `v1.0.0 - Production MONAI & ONNX Pretrained Models`.
