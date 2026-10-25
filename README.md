@@ -252,8 +252,8 @@ cardiac-fat-fl view example_source_dir/0506 --port 8000
   - **Stage 4 (Disk Serialization)**: $3.62\,\text{s}$ (writing 3D Slicer-tagged `.seg.nrrd` files + CSV report)
 3. **Repository Maintainer Deployment**:
    When pushing to a new repository, create release `v1.0.0` and attach `models/deepheartseg_heart.onnx` and `models/deepheartseg_loc.onnx` as binary assets.
-4. **Anatomical Heuristic Fallback**:
-   If deep learning model weights are not pre-downloaded, the pipeline automatically activates the anatomical heuristic segmenter for immediate evaluation.
+4. **Strict Clinical Neural-Network Guardrail**:
+   Clinical CT volumes ($\max(D, H, W) \ge 128$) strictly require neural-network weights (`monai_wholebody_ct_segmentation` 1.5 mm SegResNet + `DeepHeartSeg` ONNX) and never silently substitute geometric heuristic approximations. Deterministic morphological fallback is restricted exclusively to tiny synthetic unit-test phantoms ($< 128^3$ in `pytest`).
 
 ### Docker & Containerized Deployment
 
@@ -388,8 +388,9 @@ This section provides explicit architectural and API details for autonomous codi
 
 ```text
 monai-cardiac-fat-fl/
-├── pyproject.toml                 # Package specs, dependencies (torch, monai, nvflare, pydicom, pynrrd)
-├── README.md                      # Technical specifications, architecture, and agent instructions
+├── pyproject.toml                 # Package specs, dependencies (torch, monai, nvflare, pydicom, pynetdicom, pynrrd)
+├── README.md                      # Technical specifications, architecture, and clinical usage guide
+├── AGENTS.md                      # Autonomous agent codebase map, clinical invariants, and task recipes
 ├── configs/
 │   ├── monai_bundle/
 │   │   ├── metadata.json          # 1-ch CT input -> 8-ch EAT/PVAT output MONAI Bundle spec
@@ -398,27 +399,41 @@ monai-cardiac-fat-fl/
 │   └── nvflare/
 │       ├── config_fed_server.json # ScatterAndGather + FedProx & FedStats workflows
 │       └── config_fed_client.json # MonaiAlgo + CardiacFatQuant local analytics executor
+├── docs/                          # Architectural specifications, slide deck, and cohort validation reports
+│   ├── Cardiac_Segmentation_Architecture.pdf
+│   ├── ARCHITECTURE_CODE_REVIEW.md
+│   ├── architecture_infographic.html
+│   └── presentation_deck.html
+├── monai_deploy_roadmap/          # MONAI Deploy Application Package (MAP) scoping & operator skeleton
+│   ├── MONAI_DEPLOY_SCOPING.md
+│   ├── app_skeleton.py
+│   └── app.yaml
 ├── src/
 │   └── cardiac_fat_fl/
 │       ├── __init__.py            # Package root exports
 │       ├── measurement_schema.py  # ADIPOSE_HU_MIN/MAX, SegmentationCompartment, REPORTED_REGIONS, volume math
-│       ├── io_metatensor.py       # Universal loader (DICOM/NRRD/NIfTI -> MetaTensor) (read_medical_image_as_metatensor), NRRD/NIfTI/DICOM writer
-│       ├── anatomy_segmenter.py   # UnifiedAnatomySegmenter (DeepHeartSeg ONNX, MONAI deep model, fallback)
-│       ├── transforms.py          # ComputeEatPvatMasksd (Voronoi & radial dilation) & QuantifyAdiposeMetricsd
+│       ├── io_metatensor.py       # Universal loader (DICOM/NRRD/NIfTI -> MetaTensor), nested cohort discovery & NRRD writer
+│       ├── anatomy_segmenter.py   # UnifiedAnatomySegmenter (NGC 1.5mm WholeBody SegResNet + DeepHeartSeg ONNX + GPU sulci)
+│       ├── transforms.py          # ComputeEatPvatMasksd (Voronoi & 10mm radial dilation) & QuantifyAdiposeMetricsd
+│       ├── dicom_sr.py            # DICOM-SR TID 1500 (SOP .88.34) structured report builder (SNOMED-CT / LOINC / UCUM)
+│       ├── pacs_client.py         # Institutional PACS archive push via DICOMweb (STOW-RS) and DIMSE (C-STORE)
 │       ├── model.py               # 3D SegResNet / SwinUNETR factory and FedBN layer filtering
 │       ├── fl_client_algo.py      # monai.fl.client.ClientAlgo subclass for distillation and local analytics
-│       ├── fl_stats_executor.py   # NVFLARE Executor for privacy-preserving federated summary statistics
-│       ├── ohif_exporter.py       # DICOM series generator, DICOM-SEG builder, and OHIF v3.13 workstation generator
-│       ├── ohif_viewer.py         # Local CORS-enabled HTTP server and browser launcher
+│       ├── fl_stats_executor.py   # NVFLARE Executor for privacy-preserving federated Welford summary statistics
+│       ├── ohif_exporter.py       # DICOM series generator, DICOM-SEG (.66.4), DICOM-SR, and OHIF v3.13 workstation builder
+│       ├── ohif_viewer.py         # Local CORS-enabled multi-threaded HTTP server and browser launcher
 │       ├── hardware.py            # Dynamic hardware auto-detection (CPU/RAM/GPU) & safe concurrency sizing
-│       └── cli.py                 # Typer CLI reproducing all quantification, comparison, and viewing tasks
+│       └── cli.py                 # Typer CLI (quantify, view, export-ohif, push, federated-train, federated-stats, hardware)
 └── tests/
     ├── conftest.py                # Synthetic 3D cardiac CT phantom fixtures with known HU values
-    ├── test_hardware.py           # Auto-detection, safe concurrency throttling & CLI hardware checks
-    ├── test_transforms.py         # Transforms, HU thresholding, cm3 volume & schema validation
-    ├── test_fl_client.py          # Unit tests for ClientAlgo, FedProx, FedBN, and Federated Stats
+    ├── test_cli.py                # End-to-end CLI tests (quantify, federated-stats, compare-models)
+    ├── test_dicom_sr.py           # DICOM-SR TID 1500 SOP Class, SNOMED-CT/LOINC/UCUM, and NaN empty-mask tests
     ├── test_equivalency.py        # Numerical equivalency test between ONNX and modernized pipeline
-    └── test_ohif.py               # DICOM & DICOM-SEG SOP class validation tests
+    ├── test_fl_client.py          # Unit tests for ClientAlgo, FedProx, FedBN, and Federated Stats
+    ├── test_hardware.py           # Auto-detection, safe concurrency throttling & CLI hardware checks
+    ├── test_ohif.py               # DICOM & DICOM-SEG SOP class (.66.4) validation tests
+    ├── test_pacs_client.py        # DICOMweb STOW-RS multipart/related & DIMSE C-STORE association tests
+    └── test_transforms.py         # Transforms, HU thresholding, cm3 volume & 19-column schema validation
 ```
 
 ### 2. Programmatic Python API
