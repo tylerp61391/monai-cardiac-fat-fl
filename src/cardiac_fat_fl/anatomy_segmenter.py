@@ -83,6 +83,9 @@ class AnatomyMasks:
         return res
 
 
+NGC_WHOLEBODY_MODEL_SHA256 = "80b429fb4b080df11c9ed0b0bdaa8a615ff083921bb213a512cf285afbc4e3fe"
+
+
 class UnifiedAnatomySegmenter:
     """Unified segmentation wrapper for cardiac chambers, pericardium, and coronary vessels.
 
@@ -174,6 +177,23 @@ class UnifiedAnatomySegmenter:
                 if alt_wb.is_file():
                     default_wb = alt_wb.resolve()
             if default_wb.is_file():
+                try:
+                    import hashlib
+                    hasher = hashlib.sha256()
+                    with open(default_wb, "rb") as f:
+                        while chunk := f.read(65536):
+                            hasher.update(chunk)
+                    if hasher.hexdigest().lower() != NGC_WHOLEBODY_MODEL_SHA256.lower():
+                        logger.warning(
+                            "NGC wholeBody_ct_segmentation checkpoint integrity mismatch (got %s..., expected %s...).",
+                            hasher.hexdigest()[:8],
+                            NGC_WHOLEBODY_MODEL_SHA256[:8],
+                        )
+                    else:
+                        logger.debug("NGC wholeBody_ct_segmentation SHA-256 integrity verified.")
+                except Exception as exc:
+                    logger.debug("Could not verify NGC model checksum: %s", exc)
+
                 try:
                     from monai.inferers import SlidingWindowInferer
                     wb_net = SegResNet(

@@ -50,7 +50,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (33 tests; run before committing):
+- **Run Full Test Suite** (34 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v

@@ -82,7 +82,11 @@ When exporting cardiac fat segmentations and structured reports to institutional
 The repository implements automated safeguards to maintain supply chain security and software integrity:
 
 1. **Cryptographic Checksums (SHA-256)**:
-   - Pretrained ONNX model files (`deepheartseg_heart.onnx`, `deepheartseg_loc.onnx`) downloaded via `cardiac-fat-fl download-models` are verified against hardcoded SHA-256 cryptographic digests before being accepted or executed.
+   - Pretrained ONNX model files and NVIDIA NGC / MONAI Model Zoo bundle checkpoints are verified against hardcoded SHA-256 cryptographic digests before deserialization or execution:
+     - `deepheartseg_heart.onnx`: `4015c53fa3fcdaa8b93e9d528f2410b8d34cdba07286e69b4f09a6e3c9644553`
+     - `deepheartseg_loc.onnx`: `94fbafee767d872f3fb0bae364d5922387963034bf59f75e8ea5971ba0306c93`
+     - `monai_wholebody_ct_segmentation` (NVIDIA NGC SegResNet `model.pt`): `80b429fb4b080df11c9ed0b0bdaa8a615ff083921bb213a512cf285afbc4e3fe`
+     - `monai_wholebody_ct_segmentation` (`model_lowres.pt`): `c3ab55eb979785fdcb30690872c210bbeee73d79a170c32fdaa1eca117779f90`
 2. **Automated Vulnerability Scanning**:
    - Continuous dependency vulnerability audits using `pip-audit`.
    - Static Application Security Testing (SAST) for common Python vulnerabilities using `bandit`.

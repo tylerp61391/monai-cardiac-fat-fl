@@ -615,6 +615,8 @@ def hardware_info() -> None:
 KNOWN_MODEL_SHA256: dict[str, str] = {
     "deepheartseg_heart.onnx": "4015c53fa3fcdaa8b93e9d528f2410b8d34cdba07286e69b4f09a6e3c9644553",
     "deepheartseg_loc.onnx": "94fbafee767d872f3fb0bae364d5922387963034bf59f75e8ea5971ba0306c93",
+    "wholeBody_ct_segmentation/models/model.pt": "80b429fb4b080df11c9ed0b0bdaa8a615ff083921bb213a512cf285afbc4e3fe",
+    "wholeBody_ct_segmentation/models/model_lowres.pt": "c3ab55eb979785fdcb30690872c210bbeee73d79a170c32fdaa1eca117779f90",
 }
 
 
@@ -659,6 +661,12 @@ def download_models_cmd(
         False,
         "--skip-verify",
         help="Skip SHA-256 integrity verification against known release digests.",
+    ),
+    include_wholebody: bool = typer.Option(
+        False,
+        "--include-wholebody",
+        "-w",
+        help="Download and verify official NVIDIA NGC / MONAI Model Zoo wholeBody_ct_segmentation bundle.",
     ),
 ) -> None:
     """Download validated DeepHeartSeg ONNX models from GitHub Release assets."""
@@ -722,6 +730,46 @@ def download_models_cmd(
         except Exception as e:
             console.print(f"[yellow]Could not download {model_name} from {url}: {e}[/yellow]")
             console.print("[dim]Note: Ensure release assets are published or specify custom --repo / --tag.[/dim]")
+
+    # Verify or download NVIDIA NGC wholeBody_ct_segmentation bundle
+    wb_target = output_dir / "wholeBody_ct_segmentation" / "models" / "model.pt"
+    wb_hash = KNOWN_MODEL_SHA256["wholeBody_ct_segmentation/models/model.pt"]
+
+    if include_wholebody:
+        if wb_target.exists() and not force:
+            if not skip_verify:
+                if _verify_model_file_sha256(wb_target, wb_hash):
+                    console.print(f"[green]NGC WholeBody model already present and verified:[/green] {wb_target} [dim](SHA-256 valid)[/dim]")
+                else:
+                    console.print(f"[bold red]Warning: Integrity mismatch for NGC WholeBody model:[/bold red] {wb_target}. Use --force to re-download.")
+            else:
+                console.print(f"[green]NGC WholeBody model already present:[/green] {wb_target}")
+        else:
+            console.print("[cyan]Downloading monai_wholebody_ct_segmentation from NVIDIA NGC / MONAI Model Zoo...[/cyan]")
+            try:
+                import monai.bundle
+                monai.bundle.download(
+                    name="monai_wholebody_ct_segmentation",
+                    bundle_dir=output_dir,
+                )
+                if not skip_verify and wb_target.exists():
+                    if _verify_model_file_sha256(wb_target, wb_hash):
+                        console.print(f"[bold green]Integrity verified:[/bold green] NGC WholeBody model.pt SHA-256 matches official release digest.")
+                    else:
+                        console.print(f"[bold red]Security Error: Checksum mismatch for NGC WholeBody model.pt![/bold red]")
+                        wb_target.unlink(missing_ok=True)
+                        raise typer.Exit(code=1)
+                console.print(f"[bold green]Successfully installed NGC bundle to:[/bold green] {output_dir / 'wholeBody_ct_segmentation'}")
+            except typer.Exit:
+                raise
+            except Exception as e:
+                console.print(f"[yellow]Could not download monai_wholebody_ct_segmentation bundle: {e}[/yellow]")
+    elif wb_target.exists():
+        if not skip_verify:
+            if _verify_model_file_sha256(wb_target, wb_hash):
+                console.print(f"[green]NGC WholeBody model present and verified:[/green] {wb_target} [dim](SHA-256 valid)[/dim]")
+            else:
+                console.print(f"[bold red]Warning: Integrity mismatch for NGC WholeBody model:[/bold red] {wb_target}.")
 
 
 

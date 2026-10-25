@@ -69,3 +69,15 @@ def test_deepheartseg_onnx_equivalency(synthetic_ct_fixture) -> None:
         assert f"{region.value} Volume (cm3)" in metrics
         assert f"{region.value} Mean Attenuation (HU)" in metrics
 
+
+
+def test_model_checksum_verification():
+    """Verify that all downloaded models match their known cryptographic SHA-256 digests."""
+    from cardiac_fat_fl.cli import KNOWN_MODEL_SHA256, _verify_model_file_sha256
+
+    for rel_path, expected_hash in KNOWN_MODEL_SHA256.items():
+        model_path = Path("models") / rel_path
+        if model_path.is_file():
+            assert _verify_model_file_sha256(model_path, expected_hash), (
+                f"Model checksum mismatch for {rel_path}"
+            )
