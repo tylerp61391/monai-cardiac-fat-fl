@@ -88,11 +88,11 @@ The orchestrator resolves a fundamental anatomical tension:
 3. **Critical Optimization — ONNX Explicit Thread Control**:
    - Prevents multi-worker CPU thread oversubscription ($8\text{ workers} \times 16\text{ threads} = 128\text{ threads}$) by enforcing:
 
-```python
-session_options = ort.SessionOptions()
-session_options.intra_op_num_threads = 2
-session_options.inter_op_num_threads = 1
-```
+   ```python
+   session_options = ort.SessionOptions()
+   session_options.intra_op_num_threads = 2
+   session_options.inter_op_num_threads = 1
+   ```
 
 4. **Fallback & Clinical Guardrail Policy**:
    - **Federated Distilled Student (`SegResNet`)**: Direct 1-pass $1\rightarrow 8$ channel inference via `SlidingWindowInferer`.
@@ -165,4 +165,3 @@ Evaluated across the repository reference cohort (`0506`, `0909`, `0987`) and al
 | **PVAT LCX** ($39.4\%$) | $10.31\text{ cm}^3$ ($-66.5\text{ HU}$) | $17.12\text{ cm}^3$ ($-82.8\text{ HU}$) | $7.20\text{ cm}^3$ ($-72.3\text{ HU}$) | $11.54 \pm 5.07\text{ cm}^3$ | $6.93 \pm 3.32\text{ cm}^3$ ($-69.8\text{ HU}$) | $9.65 \pm 5.49\text{ cm}^3$ ($-64.0\text{ HU}$) | $7.51 \pm 4.03\text{ cm}^3$ ($-68.6\text{ HU}$) |
 | **PVAT RCA** ($30.5\%$) | $6.36\text{ cm}^3$ ($-66.7\text{ HU}$) | $8.85\text{ cm}^3$ ($-74.0\text{ HU}$) | $9.23\text{ cm}^3$ ($-74.5\text{ HU}$) | $8.15 \pm 1.56\text{ cm}^3$ | $5.16 \pm 2.85\text{ cm}^3$ ($-71.4\text{ HU}$) | $8.28 \pm 4.46\text{ cm}^3$ ($-63.4\text{ HU}$) | $5.82 \pm 3.50\text{ cm}^3$ ($-69.7\text{ HU}$) |
 | **PVAT LAD** ($30.1\%$) | $5.36\text{ cm}^3$ ($-67.0\text{ HU}$) | $9.42\text{ cm}^3$ ($-82.2\text{ HU}$) | $5.56\text{ cm}^3$ ($-70.6\text{ HU}$) | $6.78 \pm 2.29\text{ cm}^3$ | $4.99 \pm 2.81\text{ cm}^3$ ($-67.7\text{ HU}$) | $8.52 \pm 5.27\text{ cm}^3$ ($-62.5\text{ HU}$) | $5.74 \pm 3.77\text{ cm}^3$ ($-66.6\text{ HU}$) |
-
