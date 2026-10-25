@@ -277,6 +277,34 @@ docker compose up viewer    # CardioFat OHIF Workstation at http://localhost:800
 docker compose up -d ohif   # Official OHIF Web Platform at http://localhost:3000
 ```
 
+### University HPC & SLURM Cluster Deployment (Apptainer / Singularity)
+
+Institutional research clusters (e.g., SLURM, PBS, LSF) typically disallow Docker daemon root access. Use **Apptainer / Singularity** for rootless, unprivileged execution with direct GPU passthrough (`--nv`):
+
+```bash
+# 1-Line Direct Execution on GPU Node (Pulls image automatically from GitHub Container Registry):
+apptainer run --nv --bind /path/to/data:/data docker://ghcr.io/tylerp61391/monai-cardiac-fat-fl:latest \
+    quantify /data/patients -o /data/results --workers 8 --save-seg
+```
+
+#### Example SLURM Batch Script (`submit_cardiofat.sh`)
+```bash
+#!/bin/bash
+#SBATCH --job-name=cardiofat
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
+#SBATCH --time=02:00:00
+#SBATCH --output=cardiofat_%j.log
+
+# Run cohort quantification inside the container with GPU passthrough
+apptainer run --nv \
+    --bind /scratch/users/shared/cohort:/data \
+    docker://ghcr.io/tylerp61391/monai-cardiac-fat-fl:latest \
+    quantify /data -o /data/results --workers 8 --save-seg
+```
+
 ---
 
 ## High-Throughput Computational Optimizations
