@@ -429,6 +429,8 @@ monai-cardiac-fat-fl/
 │       ├── config_fed_server.json # ScatterAndGather + FedProx & FedStats workflows
 │       └── config_fed_client.json # MonaiAlgo + CardiacFatQuant local analytics executor
 ├── docs/                          # Architectural specifications, slide deck, and cohort validation reports
+│   ├── regulatory/
+│   │   └── FDA_SAMD_REGULATORY_DOSSIER.md # FDA 510(k) SaMD dossier, IEC 62304 matrix, ISO 14971 FMEA & PCCP
 │   ├── Cardiac_Segmentation_Architecture.pdf
 │   ├── ARCHITECTURE_CODE_REVIEW.md
 │   ├── architecture_infographic.html
@@ -614,6 +616,8 @@ The test suite validates:
 ## Security & Healthcare Compliance
 
 For institutional security policies, HIPAA Technical Safeguards (45 CFR § 164.312), GDPR privacy-preserving boundaries, and responsible vulnerability disclosure, please refer to [`SECURITY.md`](SECURITY.md).
+
+For FDA Class II 510(k) Software as a Medical Device (SaMD) traceability (IEC 62304), clinical risk management (ISO 14971 FMEA), and Predetermined Change Control Plan (PCCP) specifications, see [`docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md`](docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md).
 
 ---
 
