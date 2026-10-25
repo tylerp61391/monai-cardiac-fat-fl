@@ -21,6 +21,17 @@ def main() -> None:
         model_dir / "deepheartseg_heart.onnx",
     ]
 
+    # Generate or verify checksums.sha256 manifest
+    checksum_lines = []
+    for f in files_to_upload:
+        if f.is_file():
+            h = hashlib.sha256(f.read_bytes()).hexdigest()
+            checksum_lines.append(f"{h}  {f.name}")
+    
+    checksum_file = model_dir / "checksums.sha256"
+    checksum_file.write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
+    files_to_upload.append(checksum_file)
+
     for f in files_to_upload:
         if not f.is_file():
             print(f"Error: Required model file not found: {f}")
@@ -53,7 +64,11 @@ def main() -> None:
             "tag_name": tag,
             "target_commitish": "master",
             "name": f"{tag} - Production MONAI & ONNX Pretrained Models",
-            "body": "Pretrained DeepHeartSeg ONNX models matching foundational MGH CardiacFatQuant with 0.00 delta.",
+            "body": (
+                "Pretrained DeepHeartSeg ONNX models matching foundational MGH CardiacFatQuant with 0.00 delta.\n\n"
+                "### Cryptographic SHA-256 Checksums\n"
+                + "\n".join(f"- `{line.split()[1]}`: `{line.split()[0]}`" for line in checksum_lines)
+            ),
             "draft": False,
             "prerelease": False,
         }
