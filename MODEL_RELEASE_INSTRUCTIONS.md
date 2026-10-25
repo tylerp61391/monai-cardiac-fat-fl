@@ -92,15 +92,23 @@ cd monai-cardiac-fat-fl
 # Step 2: Install package dependencies
 pip install -e .
 
-# Step 3: Automatically download release ONNX weights & verify SHA-256 checksums
-cardiac-fat-fl download-models
-
-# (Optional): Also download and verify NVIDIA NGC wholebody segmentation bundle
+# Step 3: Automatically download & verify SHA-256 checksums for all four models (ONNX + NVIDIA NGC)
 cardiac-fat-fl download-models --include-wholebody
 
 # Step 4: Run hardware probe and safe batch quantification
 cardiac-fat-fl hardware
 cardiac-fat-fl quantify /path/to/cohort --workers 0
+```
+
+### Verified Terminal Integrity Output
+
+When running `cardiac-fat-fl download-models --include-wholebody`, the CLI automatically computes and verifies SHA-256 digests for all four neural models:
+
+```text
+Model already present and verified: models/deepheartseg_heart.onnx (SHA-256 valid)
+Model already present and verified: models/deepheartseg_loc.onnx (SHA-256 valid)
+NGC WholeBody model present and verified: models/wholeBody_ct_segmentation/models/model.pt (SHA-256 valid)
+NGC WholeBody low-res model verified: models/wholeBody_ct_segmentation/models/model_lowres.pt (SHA-256 valid)
 ```
 
 ### Manual Integrity Verification

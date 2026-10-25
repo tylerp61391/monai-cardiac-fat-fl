@@ -770,6 +770,14 @@ def download_models_cmd(
                 console.print(f"[green]NGC WholeBody model present and verified:[/green] {wb_target} [dim](SHA-256 valid)[/dim]")
             else:
                 console.print(f"[bold red]Warning: Integrity mismatch for NGC WholeBody model:[/bold red] {wb_target}.")
+            
+            wb_low_target = output_dir / "wholeBody_ct_segmentation" / "models" / "model_lowres.pt"
+            wb_low_hash = KNOWN_MODEL_SHA256.get("wholeBody_ct_segmentation/models/model_lowres.pt")
+            if wb_low_target.exists() and wb_low_hash:
+                if _verify_model_file_sha256(wb_low_target, wb_low_hash):
+                    console.print(f"[green]NGC WholeBody low-res model verified:[/green] {wb_low_target} [dim](SHA-256 valid)[/dim]")
+                else:
+                    console.print(f"[bold red]Warning: Integrity mismatch for NGC WholeBody low-res model:[/bold red] {wb_low_target}.")
 
 
 
