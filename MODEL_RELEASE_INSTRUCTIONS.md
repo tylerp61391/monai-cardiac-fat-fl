@@ -30,7 +30,7 @@ gh release create v1.0.0 \
   models/deepheartseg_loc.onnx \
   models/deepheartseg_heart.onnx \
   --title "v1.0.0 - Production MONAI & ONNX Pretrained Models" \
-  --notes "Pretrained DeepHeartSeg ONNX models matching legacy MGH CardiacFatQuant with 0.00 delta."
+  --notes "Pretrained DeepHeartSeg ONNX models matching foundational MGH CardiacFatQuant with 0.00 delta."
 ```
 
 **Using the included Python script**:

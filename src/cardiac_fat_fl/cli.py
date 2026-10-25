@@ -495,7 +495,7 @@ def compare_models(
         help="Path to converted DeepHeartSeg ONNX localization model.",
     ),
 ) -> None:
-    """Run side-by-side comparison between Modernized pipeline and frozen legacy DeepHeartSeg ONNX model."""
+    """Run side-by-side comparison between Modernized pipeline and frozen foundational DeepHeartSeg ONNX model."""
     import numpy as np
     from cardiac_fat_fl.measurement_schema import REPORTED_REGIONS
 
@@ -522,7 +522,7 @@ def compare_models(
         backend="onnx",
     )
     anat_onnx = seg_onnx.segment(ct_arr, spacing=spacing)
-    res_onnx = quant_tx(mask_tx({"image": meta_ct, "anatomy": anat_onnx, "participant_id": "ONNX_Legacy"}))["metrics"]
+    res_onnx = quant_tx(mask_tx({"image": meta_ct, "anatomy": anat_onnx, "participant_id": "ONNX_Foundational"}))["metrics"]
 
     # Calculate Dice overlap of Pericardium
     inter = np.sum(anat_heur.pericardium & anat_onnx.pericardium)

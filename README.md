@@ -46,9 +46,9 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 
 ### 1. Per-Participant Output Files (Clean Clinical & Model Provenance)
 
-In the reference MGH pipeline, running multiple legacy steps produced intermediate segmentations inside each participant folder:
+In the reference MGH pipeline, running the foundational multi-step workflow produced intermediate segmentations inside each participant folder:
 ```text
-# MGH Legacy Pipeline Output:
+# MGH Foundational Pipeline Output:
 participant_001/
 ├── scan.nrrd                               # Raw 3D input CT volume
 ├── totalsegmentator_1-5mm_masks.seg.nrrd   # Multi-label chamber & vessel segmentation (1.5mm)
@@ -194,7 +194,7 @@ pip install -e .
 
 ### Pretrained Deep Learning Weights & MONAI Model Zoo
 
-The pipeline eliminates legacy Python 2.7 / TensorFlow 1.14 subprocess scripts, supporting native MONAI and ONNX backends:
+The pipeline modernizes foundational Python 2.7 / TensorFlow 1.14 subprocess scripts, supporting native MONAI and ONNX backends:
 
 1. **NVIDIA NGC / MONAI Model Zoo `monai_wholebody_ct_segmentation` (1.5 mm Isotropic)**:
    - Replaces external TotalSegmentator CLI with NVIDIA's official `monai_wholebody_ct_segmentation` SegResNet bundle ([NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation)).
@@ -244,7 +244,7 @@ cardiac-fat-fl view example_source_dir/0506 --port 8000
 ```
 
 #### Measured End-to-End Benchmark (Participant `0506`, $512 \times 512 \times 122$ voxels):
-- **Total Latency**: **10.14 seconds** (vs. $>150\,\text{s}$ in legacy MGH CPU pipeline, a **$15\times$ speedup**).
+- **Total Latency**: **10.14 seconds** (vs. $>150\,\text{s}$ in foundational MGH CPU pipeline, a **$15\times$ speedup**).
 - **Stage Timing Breakdown**:
   - **Stage 1 (CT Ingestion)**: $0.23\,\text{s}$ (zero-copy GPU `MetaTensor` with affine coordinates)
   - **Stage 2 (Anatomy & Mask Generation)**: $6.01\,\text{s}$ (`monai_wholebody_ct_segmentation` + 2-stage ONNX `DeepHeartSeg`)

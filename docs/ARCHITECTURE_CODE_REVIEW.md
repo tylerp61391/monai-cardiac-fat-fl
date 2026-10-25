@@ -5,15 +5,15 @@
 > **Reference Document**: [`docs/Cardiac_Segmentation_Architecture.pdf`](./Cardiac_Segmentation_Architecture.pdf)  
 > **Source Modules**: [`src/cardiac_fat_fl/anatomy_segmenter.py`](../src/cardiac_fat_fl/anatomy_segmenter.py), [`transforms.py`](../src/cardiac_fat_fl/transforms.py), [`dicom_sr.py`](../src/cardiac_fat_fl/dicom_sr.py), [`pacs_client.py`](../src/cardiac_fat_fl/pacs_client.py)  
 > **Target Equivalence**: Harvard / MGH `CardiacFatQuant` ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$)  
-> **Performance Milestone**: $\sim 10.1\text{s}$ / scan end-to-end ($\sim 15\times$ speedup vs. $>150\text{s}$ legacy MGH pipeline; $\sim 6.0\text{s}$ WholeBody SegResNet + $\sim 0.45\text{s}$ DeepHeartSeg ONNX on NVIDIA RTX 4090)
+> **Performance Milestone**: $\sim 10.1\text{s}$ / scan end-to-end ($\sim 15\times$ speedup vs. $>150\text{s}$ foundational MGH pipeline; $\sim 6.0\text{s}$ WholeBody SegResNet + $\sim 0.45\text{s}$ DeepHeartSeg ONNX on NVIDIA RTX 4090)
 
 ---
 
 ## 1. Executive Summary & Architectural Imperative
 
-The original Harvard / MGH `CardiacFatQuant` pipeline was clinically groundbreaking but constrained by legacy infrastructure:
+The original Harvard / MGH `CardiacFatQuant` pipeline established the foundational clinical science for automated cardiac fat quantification:
 
-- **Legacy Stack**: 4 disjoint CLI scripts across Python 2.7, TensorFlow 1.14 frozen `.pb` graphs, and CPU `nnUNet` (`TotalSegmentator`), mandatory disk I/O between steps ($\sim 150\text{s}$/patient), severe CPU thread contention, and manual desktop imports into 3D Slicer.
+- **Foundational Stack**: 4 disjoint CLI scripts across Python 2.7, TensorFlow 1.14 frozen `.pb` graphs, and CPU `nnUNet` (`TotalSegmentator`), mandatory disk I/O between steps ($\sim 150\text{s}$/patient), severe CPU thread contention, and manual desktop imports into 3D Slicer.
 - **Modernized Architecture**: Unified single-command pipeline in **Python 3.11+**, **PyTorch 2.14+ (CUDA 13.0)**, **MONAI 1.6.1**, and **NVIDIA FLARE 2.5+**, combining **NVIDIA NGC `monai_wholebody_ct_segmentation` (1.5 mm SegResNet)** and **2-Stage `DeepHeartSeg` ONNX**, with embedded **OHIF v3.13** web visualization, **DICOM-SEG** (`1.2.840.10008.5.1.4.1.1.66.4`), **DICOM-SR TID 1500** (`1.2.840.10008.5.1.4.1.1.88.34`), and native **PACS Archive Push** (DICOMweb STOW-RS & DIMSE C-STORE).
 
 ```text
@@ -68,7 +68,7 @@ CT radiodensity fidelity is paramount for valid clinical fat quantification:
 
 - **Clinical Adipose Window**: Strictly bounded at $[-190.0, -30.0]\text{ HU}$ (`ADIPOSE_HU_MIN = -190.0`, `ADIPOSE_HU_MAX = -30.0`).
 - **MONAI WholeBody & Student Normalization**: Standard intensity scaling and orientation (`RAS` / `LPS` affine tracking) at $1.5\text{ mm}$ isotropic resolution.
-- **DeepHeartSeg ONNX Normalization**: Legacy calibration $[-1024, 3071]\text{ HU}$ mapped via:
+- **DeepHeartSeg ONNX Normalization**: Foundational calibration $[-1024, 3071]\text{ HU}$ mapped via:
 
 $$\text{Normalized} = \frac{\text{clip}(HU, -1024, 3071) - 1023.5}{2047.5}$$
 
@@ -139,9 +139,9 @@ class AnatomyMasks:
 
 ## 7. Step 5: Clinical Reporting, OHIF v3.13 & PACS Archive Push
 
-| Deliverable / Metric | Legacy MGH Baseline | Modernized `monai-cardiac-fat-fl` | Status |
+| Deliverable / Metric | Foundational MGH Baseline | Modernized `monai-cardiac-fat-fl` | Status |
 | :--- | :--- | :--- | :--- |
-| **Runtime & Stack** | Python 2.7 / TF 1.14 / 4 CLI scripts | **Python 3.12 / PyTorch 2.14+ (CUDA 13.0) / MONAI 1.6.1** | **Modernized** |
+| **Runtime & Stack** | Python 2.7 / TF 1.14 (Foundational) | **Python 3.12 / PyTorch 2.14+ (CUDA 13.0) / MONAI 1.6.1** | **Modernized** |
 | **End-to-End Speed** | $>150\text{s}$ / scan (disk-bound) | **$\sim 10.1\text{s}$ / scan ($\sim 6.0\text{s}$ WholeBody + $0.45\text{s}$ ONNX)** | **$\sim 15\times$ Faster** |
 | **Clinical Equivalence** | Reference baseline | **$\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$ (19-Col CSV)** | **100.0% Exact** |
 | **DICOM Standards** | NRRD masks only | **DICOM-SEG (`SOP .66.4`) + DICOM-SR TID 1500 (`SOP .88.34`)** | **Full PACS Compliance** |

@@ -53,7 +53,7 @@ def main() -> None:
             "tag_name": tag,
             "target_commitish": "master",
             "name": f"{tag} - Production MONAI & ONNX Pretrained Models",
-            "body": "Pretrained DeepHeartSeg ONNX models matching legacy MGH CardiacFatQuant with 0.00 delta.",
+            "body": "Pretrained DeepHeartSeg ONNX models matching foundational MGH CardiacFatQuant with 0.00 delta.",
             "draft": False,
             "prerelease": False,
         }

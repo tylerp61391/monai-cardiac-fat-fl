@@ -1,6 +1,6 @@
 """Unified PyTorch/MONAI Heart-and-Pericardium Anatomy Segmenter.
 
-Eliminates the legacy Python 2.7 / TensorFlow 1.14 `DeepHeartSeg` and external
+Modernizes the foundational Python 2.7 / TensorFlow 1.14 `DeepHeartSeg` and external
 subprocess TotalSegmentator dependencies completely.
 
 Supports:
@@ -86,7 +86,7 @@ class AnatomyMasks:
 class UnifiedAnatomySegmenter:
     """Unified segmentation wrapper for cardiac chambers, pericardium, and coronary vessels.
 
-    Modernizes and replaces the legacy DeepHeartSeg pipeline with native PyTorch/MONAI
+    Modernizes and advances the foundational DeepHeartSeg pipeline with native PyTorch/MONAI
     architecture and optional ONNX Runtime compatibility.
     """
 

@@ -1,9 +1,9 @@
-"""Equivalency Test between Modernized Pipeline and Frozen Legacy DeepHeartSeg ONNX Models.
+"""Equivalency Test between Modernized Pipeline and Frozen Foundational DeepHeartSeg ONNX Models.
 
 Verifies:
   - ONNX runtime inference with converted DeepHeartSeg weights
   - 100% agreement on volume math and HU attenuation thresholding
-  - Exact reproducibility matching the legacy MGH CardiacFatQuant specification
+  - Exact reproducibility matching the foundational MGH CardiacFatQuant specification
 """
 
 from __future__ import annotations

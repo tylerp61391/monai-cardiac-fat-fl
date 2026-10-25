@@ -59,7 +59,7 @@
       End-to-End Pipeline: Raw CT &rarr; WholeBody SegResNet &rarr; Pericardium &rarr; EAT/PVAT &rarr; OHIF &amp; PACS
     </h1>
     <p class="text-xs md:text-sm text-slate-300 mt-2 max-w-6xl leading-relaxed">
-      A unified Python 3.11+ PyTorch, MONAI Model Zoo, and NVIDIA FLARE 2.5+ architecture replacing legacy multi-stage Bash/TF 1.14 scripts with an in-memory GPU pipeline executing 1.5mm whole-body CT segmentation, zero-drift ONNX pericardial delineation, anisotropic Voronoi fat partitioning (~10.1s/scan, ~15&times; speedup), embedded OHIF v3.13 web visualization, and institutional PACS archive transmission.
+      A unified Python 3.11+ PyTorch, MONAI Model Zoo, and NVIDIA FLARE 2.5+ architecture transitioning foundational multi-stage Bash/TF 1.14 workflows with an in-memory GPU pipeline executing 1.5mm whole-body CT segmentation, zero-drift ONNX pericardial delineation, anisotropic Voronoi fat partitioning (~10.1s/scan, ~15&times; speedup), embedded OHIF v3.13 web visualization, and institutional PACS archive transmission.
     </p>
   </div>
 
@@ -69,7 +69,7 @@
       <div class="flex items-center space-x-2">
         <span class="text-xs font-mono font-bold text-sky-400 tracking-wider uppercase">Stage-by-Stage Computational Flow</span>
         <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">In-Memory GPU MetaTensor Graph</span>
-        <span class="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800 font-mono">10.1s / scan on RTX 4090 (~15&times; vs Legacy)</span>
+        <span class="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800 font-mono">10.1s / scan on RTX 4090 (~15&times; vs Foundational Baseline)</span>
       </div>
       <span class="text-[11px] font-mono text-emerald-400">&Delta; = 0.00 cm&sup3; &bull; &Delta; = 0.00 HU Exact Parity</span>
     </div>
@@ -252,16 +252,16 @@
   <!-- Middle Tier: Dual-Engine Comparison & NVIDIA FLARE Federated System -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
     
-    <!-- Left Column: Legacy vs SOTA Architecture Compare (4 cols) -->
+    <!-- Left Column: Foundational vs SOTA Architecture Compare (4 cols) -->
     <div class="lg:col-span-4 bg-slate-900/80 border border-slate-800 rounded-xl p-5">
       <div class="flex items-center space-x-2 text-rose-400 font-bold text-xs mb-3 font-mono uppercase tracking-wider">
         <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
-        <span>Legacy MGH Pipeline vs Ours</span>
+        <span>Foundational MGH Pipeline vs Ours</span>
       </div>
       <div class="space-y-2.5 text-xs">
         <div class="p-3 bg-slate-950/60 rounded-lg border border-slate-800">
           <div class="flex justify-between text-slate-400 mb-1">
-            <span class="font-semibold text-rose-300">Legacy circ-ml / CardiacFatQuant</span>
+            <span class="font-semibold text-rose-300">Foundational circ-ml / CardiacFatQuant</span>
             <span class="text-[10px] text-rose-400 font-mono">4 Disjoint Scripts (~150s)</span>
           </div>
           <p class="text-[11px] text-slate-400 leading-relaxed">
