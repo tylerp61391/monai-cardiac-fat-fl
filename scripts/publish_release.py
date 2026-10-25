@@ -22,11 +22,20 @@ def main() -> None:
     ]
 
     # Generate or verify checksums.sha256 manifest
+    checksum_targets = list(files_to_upload)
+    wb_pt = model_dir / "wholeBody_ct_segmentation" / "models" / "model.pt"
+    wb_low = model_dir / "wholeBody_ct_segmentation" / "models" / "model_lowres.pt"
+    if wb_pt.is_file():
+        checksum_targets.append(wb_pt)
+    if wb_low.is_file():
+        checksum_targets.append(wb_low)
+
     checksum_lines = []
-    for f in files_to_upload:
+    for f in checksum_targets:
         if f.is_file():
             h = hashlib.sha256(f.read_bytes()).hexdigest()
-            checksum_lines.append(f"{h}  {f.name}")
+            rel_name = f.relative_to(model_dir).as_posix()
+            checksum_lines.append(f"{h}  {rel_name}")
     
     checksum_file = model_dir / "checksums.sha256"
     checksum_file.write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
