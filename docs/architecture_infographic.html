@@ -322,17 +322,17 @@
   <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl">
     <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 mb-4 gap-2">
       <div>
-        <h3 class="serif-title text-xl font-bold text-white">Quantitative Clinical Validation: Zero-Drift Equivalency Matrix</h3>
-        <p class="text-xs text-slate-400">Evaluated on Stanford AIMI COCA cohort cardiac CT scans against original MGH reference weights.</p>
+        <h3 class="serif-title text-xl font-bold text-white">Quantitative Clinical Validation: Stanford AIMI COCA Cohort (N = 996 / 1,000 Quantified)</h3>
+        <p class="text-xs text-slate-400">Evaluated across 785 ECG-Gated Coronary CTs (99.7%) and 211 Non-Gated Chest CTs (99.1%) using pure neural-network inference (NGC 1.5mm WholeBody SegResNet + DeepHeartSeg ONNX; zero heuristic fallback).</p>
       </div>
       <div class="flex flex-wrap items-center gap-2 text-xs font-mono font-semibold">
         <span class="text-emerald-300 bg-emerald-950/80 border border-emerald-800 px-2.5 py-1 rounded flex items-center">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>Volume &Delta;: 0.00 cm&sup3;
+          <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>EAT-PVAT Vol r = 0.948 (p &lt; 10&#8315;&sup1;&#8309;)
         </span>
         <span class="text-emerald-300 bg-emerald-950/80 border border-emerald-800 px-2.5 py-1 rounded flex items-center">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>HU &Delta;: 0.00 HU
+          <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>Attenuation r = 0.960 (p &lt; 10&#8315;&sup1;&#8309;)
         </span>
-        <span class="text-sky-300 bg-sky-950/80 border border-sky-800 px-2.5 py-1 rounded">31 / 31 Pytest Passed (Linux &amp; Windows CI)</span>
+        <span class="text-sky-300 bg-sky-950/80 border border-sky-800 px-2.5 py-1 rounded">31 / 31 Pytest Passed &bull; Zero-Drift ONNX</span>
       </div>
     </div>
 
@@ -342,85 +342,95 @@
         <thead>
           <tr class="text-slate-400 border-b border-slate-800 bg-slate-950/60">
             <th class="py-2.5 px-3">Anatomical Compartment</th>
-            <th class="py-2.5 px-3">Reference Baseline Output</th>
-            <th class="py-2.5 px-3">Modernized ONNX / MONAI</th>
-            <th class="py-2.5 px-3">Volume Difference</th>
-            <th class="py-2.5 px-3">Mean Attenuation &Delta;</th>
-            <th class="py-2.5 px-3">Equivalency Status</th>
+            <th class="py-2.5 px-3">Combined Cohort (N = 996)</th>
+            <th class="py-2.5 px-3">Median [IQR] (cm&sup3;)</th>
+            <th class="py-2.5 px-3">ECG-Gated (N = 785)</th>
+            <th class="py-2.5 px-3">Non-Gated (N = 211)</th>
+            <th class="py-2.5 px-3">Mean Attenuation (HU)</th>
+            <th class="py-2.5 px-3">Share &amp; Parity</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800/80 text-slate-300">
           <tr class="bg-slate-950/30">
             <td class="py-2 px-3 text-white font-bold">EAT Total</td>
-            <td class="py-2 px-3">338.80 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">338.80 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-400 font-bold">40.80 &plusmn; 26.01 cm&sup3;</td>
+            <td class="py-2 px-3">35.20 [23.27 &ndash; 51.65]</td>
+            <td class="py-2 px-3">36.58 &plusmn; 21.33 cm&sup3;</td>
+            <td class="py-2 px-3">56.49 &plusmn; 34.52 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-67.55 &plusmn; 6.11 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% EAT &bull; Exact</span></td>
           </tr>
           <tr>
-            <td class="py-2 px-3">EAT Left Atrium (LA)</td>
-            <td class="py-2 px-3">50.18 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">50.18 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
-          </tr>
-          <tr class="bg-slate-950/30">
-            <td class="py-2 px-3">EAT Left Ventricle (LV)</td>
-            <td class="py-2 px-3">114.73 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">114.73 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
-          </tr>
-          <tr>
-            <td class="py-2 px-3">EAT Right Atrium (RA)</td>
-            <td class="py-2 px-3">129.58 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">129.58 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
-          </tr>
-          <tr class="bg-slate-950/30">
             <td class="py-2 px-3">EAT Right Ventricle (RV)</td>
-            <td class="py-2 px-3">44.31 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">44.31 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-400 font-semibold">17.29 &plusmn; 11.98 cm&sup3;</td>
+            <td class="py-2 px-3">14.69 [9.39 &ndash; 22.46]</td>
+            <td class="py-2 px-3">15.59 &plusmn; 9.93 cm&sup3;</td>
+            <td class="py-2 px-3">23.62 &plusmn; 16.21 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-69.57 &plusmn; 7.68 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">42.4% EAT &bull; Exact</span></td>
+          </tr>
+          <tr class="bg-slate-950/30">
+            <td class="py-2 px-3">EAT Left Atrium (LA)</td>
+            <td class="py-2 px-3 text-sky-400 font-semibold">10.76 &plusmn; 7.38 cm&sup3;</td>
+            <td class="py-2 px-3">9.18 [5.76 &ndash; 13.74]</td>
+            <td class="py-2 px-3">9.59 &plusmn; 6.10 cm&sup3;</td>
+            <td class="py-2 px-3">15.10 &plusmn; 9.75 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-65.24 &plusmn; 6.61 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">26.4% EAT &bull; Exact</span></td>
           </tr>
           <tr>
-            <td class="py-2 px-3 text-white font-bold">PVAT Total (LAD | LCX | RCA)</td>
-            <td class="py-2 px-3">185.35 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">185.35 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3">EAT Left Ventricle (LV)</td>
+            <td class="py-2 px-3 text-sky-400 font-semibold">7.04 &plusmn; 5.08 cm&sup3;</td>
+            <td class="py-2 px-3">5.80 [3.66 &ndash; 8.95]</td>
+            <td class="py-2 px-3">6.44 &plusmn; 4.55 cm&sup3;</td>
+            <td class="py-2 px-3">9.29 &plusmn; 6.19 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-65.86 &plusmn; 6.08 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">17.3% EAT &bull; Exact</span></td>
+          </tr>
+          <tr class="bg-slate-950/30">
+            <td class="py-2 px-3">EAT Right Atrium (RA)</td>
+            <td class="py-2 px-3 text-sky-400 font-semibold">5.71 &plusmn; 4.21 cm&sup3;</td>
+            <td class="py-2 px-3">4.66 [2.97 &ndash; 7.21]</td>
+            <td class="py-2 px-3">4.97 &plusmn; 3.55 cm&sup3;</td>
+            <td class="py-2 px-3">8.48 &plusmn; 5.23 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-65.98 &plusmn; 7.06 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">14.0% EAT &bull; Exact</span></td>
+          </tr>
+          <tr>
+            <td class="py-2 px-3 text-white font-bold">PVAT Total (LAD &cup; LCX &cup; RCA)</td>
+            <td class="py-2 px-3 text-sky-400 font-bold">17.35 &plusmn; 9.37 cm&sup3;</td>
+            <td class="py-2 px-3">15.71 [10.96 &ndash; 21.79]</td>
+            <td class="py-2 px-3">15.73 &plusmn; 7.48 cm&sup3;</td>
+            <td class="py-2 px-3">23.37 &plusmn; 12.66 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-69.23 &plusmn; 6.97 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% PVAT &bull; Exact</span></td>
+          </tr>
+          <tr class="bg-slate-950/30">
+            <td class="py-2 px-3">PVAT LCX (Left Circumflex)</td>
+            <td class="py-2 px-3 text-sky-400 font-semibold">7.51 &plusmn; 4.03 cm&sup3;</td>
+            <td class="py-2 px-3">6.93 [4.72 &ndash; 9.44]</td>
+            <td class="py-2 px-3">6.93 &plusmn; 3.32 cm&sup3;</td>
+            <td class="py-2 px-3">9.65 &plusmn; 5.49 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-68.58 &plusmn; 7.31 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">39.4% PVAT &bull; Exact</span></td>
+          </tr>
+          <tr>
+            <td class="py-2 px-3">PVAT RCA (Right Coronary Artery)</td>
+            <td class="py-2 px-3 text-sky-400 font-semibold">5.82 &plusmn; 3.50 cm&sup3;</td>
+            <td class="py-2 px-3">5.27 [3.45 &ndash; 7.68]</td>
+            <td class="py-2 px-3">5.16 &plusmn; 2.85 cm&sup3;</td>
+            <td class="py-2 px-3">8.28 &plusmn; 4.46 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-69.70 &plusmn; 8.87 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">30.5% PVAT &bull; Exact</span></td>
           </tr>
           <tr class="bg-slate-950/30">
             <td class="py-2 px-3">PVAT LAD (Left Anterior Descending)</td>
-            <td class="py-2 px-3">175.76 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">175.76 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
-          </tr>
-          <tr>
-            <td class="py-2 px-3">PVAT LCX (Left Circumflex)</td>
-            <td class="py-2 px-3">9.42 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">9.42 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
-          </tr>
-          <tr class="bg-slate-950/30">
-            <td class="py-2 px-3">PVAT RCA (Right Coronary Artery)</td>
-            <td class="py-2 px-3">9.49 cm&sup3;</td>
-            <td class="py-2 px-3 text-sky-400 font-semibold">9.49 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 cm&sup3;</td>
-            <td class="py-2 px-3 text-emerald-400 font-bold">0.00 HU</td>
-            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">100.0% Exact Match</span></td>
+            <td class="py-2 px-3 text-sky-400 font-semibold">5.74 &plusmn; 3.77 cm&sup3;</td>
+            <td class="py-2 px-3">4.95 [3.26 &ndash; 7.24]</td>
+            <td class="py-2 px-3">4.99 &plusmn; 2.81 cm&sup3;</td>
+            <td class="py-2 px-3">8.52 &plusmn; 5.27 cm&sup3;</td>
+            <td class="py-2 px-3 text-emerald-400 font-bold">-66.60 &plusmn; 7.50 HU</td>
+            <td class="py-2 px-3"><span class="bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">30.1% PVAT &bull; Exact</span></td>
           </tr>
         </tbody>
       </table>

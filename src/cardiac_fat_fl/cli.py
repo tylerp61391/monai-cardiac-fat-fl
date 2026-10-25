@@ -48,25 +48,32 @@ app = typer.Typer(
 console = Console()
 
 
-def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[Path], Path]) -> dict:
+_WORKER_CACHE: dict = {}
+
+
+def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[Path], Path], preloaded_ct=None) -> dict:
     """Worker function to process a single participant scan."""
     pid, scan_path, save_seg, save_intermediate, pvat_radius, model_path, source_dir = task
     try:
-        meta_ct = read_nrrd_as_metatensor(scan_path)
+        meta_ct = preloaded_ct if preloaded_ct is not None else read_nrrd_as_metatensor(scan_path)
         data_dict = {
             "image": meta_ct,
             "participant_id": pid,
         }
-        mask_transform = ComputeEatPvatMasksd(
-            keys=["image"],
-            pvat_radial_distance_mm=pvat_radius,
-        )
-        if model_path is not None:
-            mask_transform._segmenter = UnifiedAnatomySegmenter(
-                model_path=model_path,
-                backend="onnx" if str(model_path).endswith(".onnx") else "heuristic",
+        cache_key = (float(pvat_radius), str(model_path) if model_path is not None else "")
+        if cache_key not in _WORKER_CACHE:
+            mask_tx = ComputeEatPvatMasksd(
+                keys=["image"],
+                pvat_radial_distance_mm=pvat_radius,
             )
-        quant_transform = QuantifyAdiposeMetricsd(keys=["image"])
+            if model_path is not None:
+                mask_tx._segmenter = UnifiedAnatomySegmenter(
+                    model_path=model_path,
+                    backend="onnx" if str(model_path).endswith(".onnx") else "heuristic",
+                )
+            quant_tx = QuantifyAdiposeMetricsd(keys=["image"])
+            _WORKER_CACHE[cache_key] = (mask_tx, quant_tx)
+        mask_transform, quant_transform = _WORKER_CACHE[cache_key]
 
         # Step 1: Compute 8-compartment EAT/PVAT masks
         data_dict = mask_transform(data_dict)
@@ -326,6 +333,60 @@ def quantify(
                         _flush_csv(all_rows)
                 else:
                     console.print(f"  [red]Failed {pid}: {res.get('error')}[/red]")
+    elif profile.has_cuda:
+        from collections import deque
+        from concurrent.futures import ThreadPoolExecutor
+
+        console.print(
+            f"[bold cyan]Launching GPU pipeline with {actual_workers} asynchronous DICOM I/O pre-fetch threads...[/bold cyan]"
+        )
+        # Pre-warm GPU models once in main process before streaming
+        _warm_key = (float(pvat_radius), str(model_path) if model_path is not None else "")
+        if _warm_key not in _WORKER_CACHE:
+            mask_tx = ComputeEatPvatMasksd(keys=["image"], pvat_radial_distance_mm=pvat_radius)
+            if model_path is not None:
+                mask_tx._segmenter = UnifiedAnatomySegmenter(
+                    model_path=model_path,
+                    backend="onnx" if str(model_path).endswith(".onnx") else "heuristic",
+                )
+            _WORKER_CACHE[_warm_key] = (mask_tx, QuantifyAdiposeMetricsd(keys=["image"]))
+
+        max_prefetch = max(2, actual_workers * 2)
+        with ThreadPoolExecutor(max_workers=actual_workers) as io_pool:
+            pending_queue = deque()
+            task_iter = iter(tasks)
+            for _ in range(min(max_prefetch, total_remaining)):
+                t = next(task_iter)
+                pending_queue.append((t, io_pool.submit(read_nrrd_as_metatensor, t[1])))
+
+            completed_count = 0
+            while pending_queue:
+                cur_task, io_future = pending_queue.popleft()
+                nxt = next(task_iter, None)
+                if nxt is not None:
+                    pending_queue.append((nxt, io_pool.submit(read_nrrd_as_metatensor, nxt[1])))
+
+                completed_count += 1
+                pid = cur_task[0]
+                try:
+                    preloaded = io_future.result()
+                    res = _process_one_participant(cur_task, preloaded_ct=preloaded)
+                    if res["status"] == "ok":
+                        all_rows.append(res["metrics"])
+                        eat_vol = res["metrics"].get("EAT Total Volume (cm3)", 0.0)
+                        pvat_vol = res["metrics"].get("PVAT Total Volume (cm3)", 0.0)
+                        console.print(
+                            f"[{completed_count}/{total_remaining}] Completed: [bold]{pid}[/bold] "
+                            f"(EAT: {eat_vol:.1f} cm3, PVAT: {pvat_vol:.1f} cm3)",
+                            highlight=False,
+                        )
+                    else:
+                        console.print(f"[{completed_count}/{total_remaining}] [red]Failed {pid}: {res.get('error')}[/red]")
+                except Exception as exc:
+                    console.print(f"[{completed_count}/{total_remaining}] [red]Exception {pid}: {exc}[/red]")
+
+                if completed_count % 10 == 0:
+                    _flush_csv(all_rows)
     else:
         console.print(f"[bold cyan]Launching parallel processing with {actual_workers} workers...[/bold cyan]")
         with ProcessPoolExecutor(max_workers=actual_workers) as executor:

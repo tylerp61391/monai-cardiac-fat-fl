@@ -1,0 +1,31 @@
+%YAML 1.2
+---
+application:
+  title: MONAI Cardiac Fat Quantification Application Package (EAT & PVAT)
+  version: 1.0.0
+  inputFormats: [file]
+  outputFormats: [file]
+
+resources:
+  cpu: 4
+  gpu: 1
+  memory: 16Gi
+  gpuMemory: 8Gi
+
+monai-deploy-app-sdk:
+  version: ">=0.6.0"
+  command: ["python3", "/opt/holoscan/app/app_skeleton.py"]
+
+dependencies:
+  python: "3.11"
+  packages:
+    - torch>=2.4.0
+    - monai>=1.4.0
+    - onnxruntime-gpu>=1.19.0
+    - pydicom>=2.4.0
+    - SimpleITK>=2.3.0
+    - pynrrd>=1.0.0
+    - scipy>=1.11.0
+    - numpy>=1.26.0
+    - pandas>=2.1.0
+

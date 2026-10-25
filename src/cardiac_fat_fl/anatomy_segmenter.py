@@ -168,6 +168,38 @@ class UnifiedAnatomySegmenter:
             if self.loc_model_path is not None and self.loc_model_path.is_file():
                 self.onnx_loc_session = ort.InferenceSession(str(self.loc_model_path), sess_options=sess_opts, providers=providers)
 
+            default_wb = repo_root / "models" / "wholeBody_ct_segmentation" / "models" / "model.pt"
+            if not default_wb.is_file():
+                alt_wb = Path("models/wholeBody_ct_segmentation/models/model.pt")
+                if alt_wb.is_file():
+                    default_wb = alt_wb.resolve()
+            if default_wb.is_file():
+                try:
+                    from monai.inferers import SlidingWindowInferer
+                    wb_net = SegResNet(
+                        spatial_dims=3,
+                        in_channels=1,
+                        out_channels=105,
+                        init_filters=32,
+                        blocks_down=[1, 2, 2, 4],
+                        blocks_up=[1, 1, 1],
+                        dropout_prob=0.2,
+                    ).to(self.device)
+                    ckpt = torch.load(default_wb, map_location=self.device, weights_only=True)
+                    state_dict = ckpt["state_dict"] if isinstance(ckpt, dict) and "state_dict" in ckpt else ckpt
+                    wb_net.load_state_dict(state_dict)
+                    wb_net.eval()
+                    self.wholebody_bundle = wb_net
+                    self.wholebody_inferer = SlidingWindowInferer(
+                        roi_size=(96, 96, 96),
+                        sw_batch_size=4,
+                        overlap=0.25,
+                        mode="gaussian",
+                        padding_mode="replicate",
+                    )
+                except Exception as exc:
+                    logger.warning("Could not load wholeBody_ct_segmentation model (%s).", exc)
+
         elif self.backend == "monai":
             # 8-channel anatomy model (0: pericardium, 1: LA, 2: LV, 3: RA, 4: RV, 5: LAD, 6: LCX, 7: RCA)
             self.torch_model = SegResNet(
@@ -206,18 +238,17 @@ class UnifiedAnatomySegmenter:
         else:
             arr = np.asarray(image_hu, dtype=np.float32)
 
+        is_clinical_scan = max(arr.shape) >= 128
         if self.backend == "onnx" and self.onnx_session is not None:
-            try:
-                return self._segment_onnx(arr, spacing)
-            except Exception as exc:
-                logger.warning("ONNX segmentation failed (%s); falling back to heuristic engine.", exc)
-                return self._segment_heuristic(arr, spacing)
+            return self._segment_onnx(arr, spacing)
         elif self.backend == "monai" and self.torch_model is not None and self.model_path is not None:
-            try:
-                return self._segment_monai(arr, spacing)
-            except Exception as exc:
-                logger.warning("MONAI segmentation failed (%s); falling back to heuristic engine.", exc)
-                return self._segment_heuristic(arr, spacing)
+            return self._segment_monai(arr, spacing)
+        elif is_clinical_scan and self.backend != "heuristic":
+            raise RuntimeError(
+                "Neural network segmentation models (monai_wholebody_ct_segmentation and DeepHeartSeg ONNX) "
+                "are required for clinical CT scans; heuristic fallback is disabled. "
+                "Run 'cardiac-fat-fl download-models' to install weights."
+            )
         else:
             return self._segment_heuristic(arr, spacing)
 
@@ -340,8 +371,10 @@ class UnifiedAnatomySegmenter:
             else:
                 pericardium = pericardium_zyx
 
-            # Derive chambers and coronaries using DeepHeartSeg pericardium envelope
-            return self._derive_chambers_and_vessels(pericardium, arr)
+            # Run MONAI wholeBody_ct_segmentation (1.5mm SegResNet) first to obtain multi-label cardiac anatomy
+            multilabel_map = self._run_wholebody_segmentation(arr, spacing)
+            # Combine MONAI WholeBody chambers/vessels with DeepHeartSeg pericardium envelope
+            return self._derive_chambers_and_vessels(pericardium, arr, multilabel_map=multilabel_map)
 
         # Standard 8-channel ONNX model
         norm = np.clip((arr - (-200.0)) / (800.0 - (-200.0)), 0.0, 1.0).astype(np.float32)
@@ -363,6 +396,64 @@ class UnifiedAnatomySegmenter:
             rca=(probs[7] > 0.5).astype(bool),
         )
 
+    def _run_wholebody_segmentation(
+        self,
+        arr: np.ndarray,
+        spacing: Tuple[float, float, float],
+    ) -> Optional[np.ndarray]:
+        """Run NGC monai_wholebody_ct_segmentation (1.5mm SegResNet) to extract 104-class labels."""
+        if self.wholebody_bundle is None or getattr(self, "wholebody_inferer", None) is None:
+            return None
+        if max(arr.shape) < 128:
+            return None
+
+        import torch.nn.functional as F
+
+        is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256
+        if is_xyz:
+            arr_ras = arr[::-1, ::-1, :].copy()
+        else:
+            arr_ras = arr.transpose(2, 1, 0)[::-1, ::-1, :].copy()
+
+        sp_ras = (float(spacing[0]), float(spacing[1]), float(spacing[2]))
+        target_shape = (
+            max(16, int(round(arr_ras.shape[0] * sp_ras[0] / 1.5))),
+            max(16, int(round(arr_ras.shape[1] * sp_ras[1] / 1.5))),
+            max(16, int(round(arr_ras.shape[2] * sp_ras[2] / 1.5))),
+        )
+
+        with torch.no_grad():
+            t_in = torch.from_numpy(arr_ras).unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
+            t_15 = F.interpolate(t_in, size=target_shape, mode="trilinear", align_corners=False)
+            nz = t_15 != 0
+            if torch.any(nz):
+                vals = t_15[nz]
+                m = vals.mean()
+                s = vals.std()
+                t_15[nz] = (vals - m) / (s + 1e-8)
+            vmin, vmax = t_15.min(), t_15.max()
+            if vmax > vmin:
+                t_15 = (t_15 - vmin) / (vmax - vmin) * 2.0 - 1.0
+
+            with torch.amp.autocast("cuda", enabled=("cuda" in str(self.device))):
+                logits = self.wholebody_inferer(t_15, self.wholebody_bundle)
+                pred_15 = torch.argmax(logits, dim=1, keepdim=True).float()
+
+            cardiac_mask = (pred_15 == 7) | ((pred_15 >= 44) & (pred_15 <= 49))
+            pred_15 = torch.where(cardiac_mask, pred_15, torch.zeros_like(pred_15))
+            pred_ras = (
+                F.interpolate(pred_15, size=arr_ras.shape, mode="nearest")
+                .squeeze(0)
+                .squeeze(0)
+                .to(torch.uint8)
+                .cpu()
+                .numpy()
+            )
+
+        if is_xyz:
+            return pred_ras[::-1, ::-1, :]
+        return pred_ras[::-1, ::-1, :].transpose(2, 1, 0)
+
     def _derive_chambers_and_vessels(
         self,
         pericardium: np.ndarray,
@@ -372,6 +463,7 @@ class UnifiedAnatomySegmenter:
         """Derive cardiac chamber and coronary vessel masks within a given pericardium.
 
         If `multilabel_map` from `monai_wholebody_ct_segmentation` is provided:
+          - Label 44: Left Ventricular Myocardium (`heart_myocardium`)
           - Label 45: Left Atrium (`heart_atrium_left`)
           - Label 46: Left Ventricle (`heart_ventricle_left`)
           - Label 47: Right Atrium (`heart_atrium_right`)
@@ -382,39 +474,76 @@ class UnifiedAnatomySegmenter:
         calibrated cardiac quadrant spatial rules.
         """
         shape = arr.shape
-        nz, ny, nx = shape  # Axis 0: Z (axial), Axis 1: Y (coronal), Axis 2: X (sagittal)
+        nz, ny, nx = shape
 
-        # 1. Check if monai_wholebody_ct_segmentation multi-label masks are present
+        # 1. Require monai_wholebody_ct_segmentation multi-label masks on clinical CT scans
         if multilabel_map is not None:
-            la_seg = (multilabel_map == 45) & pericardium
-            lv_seg = (multilabel_map == 46) & pericardium
-            ra_seg = (multilabel_map == 47) & pericardium
-            rv_seg = (multilabel_map == 48) & pericardium
-            aorta_seg = (multilabel_map == 7)
-            pa_seg = (multilabel_map == 49)
-            myo_seg = (multilabel_map == 44)
+            la_raw = multilabel_map == 45
+            lv_raw = multilabel_map == 46
+            ra_raw = multilabel_map == 47
+            rv_raw = multilabel_map == 48
+            aorta_seg = multilabel_map == 7
+            pa_seg = multilabel_map == 49
+            myo_raw = multilabel_map == 44
 
-            if np.any(la_seg) and np.any(lv_seg) and np.any(ra_seg) and np.any(rv_seg):
-                # Coronaries from coronary sulci around aorta / anterior groove
-                lad = ndi.binary_dilation(rv_seg & lv_seg, iterations=2) & (arr >= -30.0)
-                if not np.any(lad):
-                    lad = ndi.binary_dilation(lv_seg, iterations=1) & (arr >= -30.0)
-                lcx = ndi.binary_dilation(la_seg & lv_seg, iterations=2) & (arr >= -30.0)
-                rca = ndi.binary_dilation(ra_seg & rv_seg, iterations=2) & (arr >= -30.0)
-
-                return AnatomyMasks(
-                    pericardium=pericardium.astype(bool),
-                    la=la_seg.astype(bool),
-                    lv=lv_seg.astype(bool),
-                    ra=ra_seg.astype(bool),
-                    rv=rv_seg.astype(bool),
-                    lad=lad.astype(bool),
-                    lcx=lcx.astype(bool),
-                    rca=rca.astype(bool),
-                    aorta=aorta_seg.astype(bool) if np.any(aorta_seg) else None,
-                    pulmonary_artery=pa_seg.astype(bool) if np.any(pa_seg) else None,
-                    myocardium=myo_seg.astype(bool) if np.any(myo_seg) else None,
+            if not (np.any(la_raw) and np.any(lv_raw) and np.any(ra_raw) and np.any(rv_raw)):
+                raise RuntimeError(
+                    "monai_wholebody_ct_segmentation failed to segment all 4 cardiac chambers (LA=45, LV=46, RA=47, RV=48)."
                 )
+
+            import torch.nn.functional as F
+
+            la_seg = la_raw & pericardium if np.any(la_raw & pericardium) else la_raw
+            lv_seg = lv_raw & pericardium if np.any(lv_raw & pericardium) else lv_raw
+            ra_seg = ra_raw & pericardium if np.any(ra_raw & pericardium) else ra_raw
+            rv_seg = rv_raw & pericardium if np.any(rv_raw & pericardium) else rv_raw
+            myo_seg = myo_raw & pericardium if np.any(myo_raw & pericardium) else myo_raw
+
+            lv_outer = lv_seg | myo_seg
+            with torch.no_grad():
+                def _dilate3d(mask_np: np.ndarray, k: int = 9) -> np.ndarray:
+                    t = torch.from_numpy(mask_np).unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
+                    d = F.max_pool3d(t, kernel_size=k, stride=1, padding=k // 2) > 0.5
+                    return d.squeeze(0).squeeze(0).cpu().numpy()
+
+                dil_rv = _dilate3d(rv_seg, k=9)
+                dil_lv = _dilate3d(lv_outer, k=9)
+                dil_la = _dilate3d(la_seg, k=9)
+                dil_ra = _dilate3d(ra_seg, k=9)
+
+            all_chambers = la_seg | lv_outer | ra_seg | rv_seg
+            # Anterior interventricular sulcus (LAD): interface between RV and LV/Myocardium
+            lad = dil_rv & dil_lv & (~all_chambers) & pericardium
+            if not np.any(lad):
+                lad = dil_rv & dil_lv & pericardium
+            # Left atrioventricular / circumflex sulcus (LCX): interface between LA and LV/Myocardium
+            lcx = dil_la & dil_lv & (~all_chambers) & pericardium
+            if not np.any(lcx):
+                lcx = dil_la & dil_lv & pericardium
+            # Right atrioventricular sulcus (RCA): interface between RA and RV
+            rca = dil_ra & dil_rv & (~all_chambers) & pericardium
+            if not np.any(rca):
+                rca = dil_ra & dil_rv & pericardium
+
+            return AnatomyMasks(
+                pericardium=pericardium.astype(bool),
+                la=la_seg.astype(bool),
+                lv=lv_seg.astype(bool),
+                ra=ra_seg.astype(bool),
+                rv=rv_seg.astype(bool),
+                lad=lad.astype(bool),
+                lcx=lcx.astype(bool),
+                rca=rca.astype(bool),
+                aorta=aorta_seg.astype(bool) if np.any(aorta_seg) else None,
+                pulmonary_artery=pa_seg.astype(bool) if np.any(pa_seg) else None,
+                myocardium=myo_seg.astype(bool) if np.any(myo_seg) else None,
+            )
+
+        if max(arr.shape) >= 128 and self.backend != "heuristic":
+            raise RuntimeError(
+                "monai_wholebody_ct_segmentation model (models/wholeBody_ct_segmentation/models/model.pt) "
+                "is required for clinical chamber segmentation; heuristic fallback is disabled."
+            )
 
         indices = np.where(pericardium)
         is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256

@@ -72,9 +72,10 @@ def discover_participants(
     if ignore_patterns is None:
         ignore_patterns = [".seg.", "_seg.", ".mask.", "eat_pvat", "calcium_xml", "graphs", "ohif_export"]
 
-    # Check if root itself is a single participant study directory (contains DICOM series or direct volume)
+    # Check if root itself is a single participant study directory (contains DICOM series directly, or a single series subfolder)
+    subdirs = [d for d in root.iterdir() if d.is_dir() and not any(pat.lower() in d.name.lower() for pat in ignore_patterns)]
     dcm_root = _find_dicom_series_dir(root)
-    if dcm_root is not None and (dcm_root == root or dcm_root.parent == root):
+    if dcm_root is not None and (dcm_root == root or (dcm_root.parent == root and len(subdirs) == 1)):
         return [(root.name, dcm_root)]
 
     participants: List[Tuple[str, Path]] = []
@@ -125,6 +126,22 @@ def discover_participants(
             if ext in [".nrrd", ".mha"] or entry.name.lower().endswith(".nii.gz"):
                 pid = entry.name.split(".")[0]
                 participants.append((pid, entry))
+
+    # Check for nested Stanford COCA layout (Gated_release_final/patient and deidentified_nongated)
+    if not participants:
+        coca_roots = [root, root / "cocacoronarycalciumandchestcts-2"]
+        for c_root in coca_roots:
+            gated_dir = c_root / "Gated_release_final" / "patient"
+            nongated_dir = c_root / "deidentified_nongated"
+            if gated_dir.is_dir():
+                for g_pid, g_path in discover_participants(gated_dir, scan_filename, ignore_patterns):
+                    participants.append((g_pid, g_path))
+            if nongated_dir.is_dir():
+                for ng_pid, ng_path in discover_participants(nongated_dir, scan_filename, ignore_patterns):
+                    prefix_pid = f"nongated_{ng_pid}" if gated_dir.is_dir() else ng_pid
+                    participants.append((prefix_pid, ng_path))
+            if participants:
+                return participants
 
     # Fallback: check if root itself is a single participant study directory
     if not participants:

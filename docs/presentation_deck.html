@@ -1133,7 +1133,7 @@
     <div class="slide flex-col justify-center space-y-5" data-slide="9">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Clinical Cohort Validation</span>
-        <span class="text-xs text-slate-500">Stanford AIMI COCA (N = 787 Patients)</span>
+        <span class="text-xs text-slate-500">Stanford AIMI COCA (N = 996 / 1,000 Quantified: 785 Gated + 211 Non-Gated)</span>
       </div>
       <div class="flex items-center justify-between">
         <h2 class="text-2xl md:text-3xl font-bold text-white">Real-World Evidence: Multi-Vendor Diversity &amp; Plaque Biology</h2>
@@ -1379,122 +1379,142 @@
       </div>
     </div>
 
-            <!-- SLIDE 12: Live Benchmark Run on example_source_dir (0506, 0909, 0987) -->
-    <div class="slide flex-col justify-center space-y-4" data-slide="12">
+            <!-- SLIDE 12: Live Benchmark Run on example_source_dir (0506, 0909, 0987) & Stanford AIMI COCA (N=996/1,000) -->
+    <div class="slide flex-col justify-center space-y-3.5" data-slide="12">
       <div class="flex items-center justify-between">
-        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Live Repository Benchmark &bull; Included Reference Cohort</span>
-        <span class="text-xs text-slate-500 font-mono">example_source_dir/ (Participants 0506, 0909, 0987)</span>
+        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Live Repository &amp; Clinical Cohort Benchmarks &bull; Pure Neural-Network Pipeline</span>
+        <span class="text-xs text-slate-500 font-mono">example_source_dir (N=3) &bull; Stanford AIMI COCA (N=996 / 1,000)</span>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 class="text-2xl md:text-3xl font-bold text-white">End-to-End Execution: <code class="text-cyan-400">example_source_dir</code> Cohort Results</h2>
-          <p class="text-xs text-slate-400 mt-0.5">Executed with <code class="text-cyan-300 font-mono">cardiac-fat-fl quantify "example_source_dir" --save-seg --save-intermediate</code> on NVIDIA RTX 4090 (24 GB VRAM)</p>
+          <h2 class="text-2xl md:text-3xl font-bold text-white">End-to-End Execution: <code class="text-cyan-400">example_source_dir</code> &amp; Stanford AIMI COCA (<code class="text-emerald-400">N = 996 / 1,000</code>)</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Executed with <code class="text-cyan-300 font-mono">cardiac-fat-fl quantify &lt;dir&gt; --save-seg --save-intermediate</code> on NVIDIA RTX 4090 (Zero Heuristic Fallback)</p>
         </div>
         <div class="flex items-center space-x-2">
-          <span class="text-xs px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-mono font-semibold">3 / 3 Scans Completed</span>
-          <span class="text-xs px-2.5 py-1 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800 font-mono">19-Col Schema Verified</span>
+          <span class="text-xs px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-mono font-semibold">COCA: 996 / 1,000 (99.6%)</span>
+          <span class="text-xs px-2.5 py-1 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800 font-mono">785 Gated + 211 Non-Gated</span>
         </div>
       </div>
 
-      <!-- Top Summary KPI Cards from Federated Welford Stats (N=3) -->
+      <!-- Top Summary KPI Cards from Stanford AIMI COCA (N=996) & example_source_dir (N=3) -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="bg-slate-900/90 border border-cyan-800/60 rounded-xl p-3">
-          <div class="text-[10px] uppercase font-bold text-cyan-400">Cohort Mean EAT Total</div>
-          <div class="text-lg font-extrabold text-white font-mono">60.70 &plusmn; 14.25 cm&sup3;</div>
-          <div class="text-[11px] text-slate-400 font-mono">Mean HU: -72.58 &plusmn; 6.15 HU</div>
+        <div class="bg-slate-900/90 border border-cyan-800/60 rounded-xl p-2.5">
+          <div class="text-[10px] uppercase font-bold text-cyan-400">COCA Combined EAT (N=996)</div>
+          <div class="text-base font-extrabold text-white font-mono">40.80 &plusmn; 26.01 cm&sup3;</div>
+          <div class="text-[10px] text-slate-400 font-mono">Gated: 36.58 | Non-Gated: 56.49 cm&sup3;</div>
         </div>
-        <div class="bg-slate-900/90 border border-amber-800/60 rounded-xl p-3">
-          <div class="text-[10px] uppercase font-bold text-amber-400">Cohort Mean PVAT Total</div>
-          <div class="text-lg font-extrabold text-white font-mono">40.35 &plusmn; 9.46 cm&sup3;</div>
-          <div class="text-[11px] text-slate-400 font-mono">Mean HU: -73.95 &plusmn; 6.27 HU</div>
+        <div class="bg-slate-900/90 border border-amber-800/60 rounded-xl p-2.5">
+          <div class="text-[10px] uppercase font-bold text-amber-400">COCA Combined PVAT (N=996)</div>
+          <div class="text-base font-extrabold text-white font-mono">17.35 &plusmn; 9.37 cm&sup3;</div>
+          <div class="text-[10px] text-slate-400 font-mono">LAD: 30.1% | LCX: 39.4% | RCA: 30.5%</div>
         </div>
-        <div class="bg-slate-900/90 border border-emerald-800/60 rounded-xl p-3">
-          <div class="text-[10px] uppercase font-bold text-emerald-400">Dominant EAT Chamber</div>
-          <div class="text-lg font-extrabold text-white font-mono">RA: 28.07 &plusmn; 5.97 cm&sup3;</div>
-          <div class="text-[11px] text-slate-400 font-mono">Range: [22.49, 34.37] cm&sup3;</div>
+        <div class="bg-slate-900/90 border border-emerald-800/60 rounded-xl p-2.5">
+          <div class="text-[10px] uppercase font-bold text-emerald-400">example_source_dir (N=3)</div>
+          <div class="text-base font-extrabold text-white font-mono">EAT: 60.70 &plusmn; 14.25 cm&sup3;</div>
+          <div class="text-[10px] text-slate-400 font-mono">PVAT: 23.44 &plusmn; 6.04 cm&sup3; (-74.0 HU)</div>
         </div>
-        <div class="bg-slate-900/90 border border-purple-800/60 rounded-xl p-3">
+        <div class="bg-slate-900/90 border border-purple-800/60 rounded-xl p-2.5">
           <div class="text-[10px] uppercase font-bold text-purple-400">Per-Patient Artifacts</div>
-          <div class="text-lg font-extrabold text-white font-mono">4 NRRD Masks + CSV</div>
-          <div class="text-[11px] text-slate-400 font-mono">eat_pvat + heart + wholebody + sulci</div>
+          <div class="text-base font-extrabold text-white font-mono">4 NRRD Masks + CSV</div>
+          <div class="text-[10px] text-slate-400 font-mono">eat_pvat + heart + wholebody + sulci</div>
         </div>
       </div>
 
-      <!-- Full 9-Compartment Quantitative Table for 0506, 0909, 0987 -->
+      <!-- Full 9-Compartment Quantitative Table for 0506, 0909, 0987 & Stanford COCA N=996 -->
       <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow-xl">
         <table class="w-full text-left text-[11px] font-mono">
           <thead class="bg-slate-950 text-slate-300 border-b border-slate-800">
             <tr>
-              <th class="py-2 px-2.5">Compartment / Metric</th>
-              <th class="py-2 px-2.5 text-cyan-300">Participant 0506</th>
-              <th class="py-2 px-2.5 text-indigo-300">Participant 0909</th>
-              <th class="py-2 px-2.5 text-emerald-300">Participant 0987</th>
-              <th class="py-2 px-2.5 text-amber-300">Federated Welford (N=3)</th>
+              <th class="py-1.5 px-2.5">Compartment / Metric</th>
+              <th class="py-1.5 px-2.5 text-cyan-300">Case 0506</th>
+              <th class="py-1.5 px-2.5 text-indigo-300">Case 0909</th>
+              <th class="py-1.5 px-2.5 text-emerald-300">Case 0987</th>
+              <th class="py-1.5 px-2.5 text-amber-300">Ref Cohort (N=3)</th>
+              <th class="py-1.5 px-2.5 text-sky-300">COCA Gated (N=785)</th>
+              <th class="py-1.5 px-2.5 text-purple-300">COCA Combined (N=996)</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800/80 text-slate-300">
             <tr class="bg-slate-950/40">
-              <td class="py-1.5 px-2.5 font-bold text-white">EAT Total (Vol / Mean HU)</td>
-              <td class="py-1.5 px-2.5 text-cyan-300 font-bold">53.32 cm&sup3; <span class="text-slate-400">(-66.3 HU)</span></td>
-              <td class="py-1.5 px-2.5 text-indigo-300 font-bold">77.13 cm&sup3; <span class="text-slate-400">(-78.6 HU)</span></td>
-              <td class="py-1.5 px-2.5 text-emerald-300 font-bold">51.65 cm&sup3; <span class="text-slate-400">(-72.9 HU)</span></td>
-              <td class="py-1.5 px-2.5 text-amber-300 font-bold">60.70 &plusmn; 14.25 cm&sup3; <span class="text-slate-400">(-72.6 HU)</span></td>
+              <td class="py-1.5 px-2.5 font-bold text-white">EAT Total (Vol / HU)</td>
+              <td class="py-1.5 px-2.5 text-cyan-300 font-bold">53.32 cm&sup3; <span class="text-slate-400">(-66.3)</span></td>
+              <td class="py-1.5 px-2.5 text-indigo-300 font-bold">77.13 cm&sup3; <span class="text-slate-400">(-78.6)</span></td>
+              <td class="py-1.5 px-2.5 text-emerald-300 font-bold">51.65 cm&sup3; <span class="text-slate-400">(-72.9)</span></td>
+              <td class="py-1.5 px-2.5 text-amber-300 font-bold">60.70 &plusmn; 14.25 <span class="text-slate-400">(-72.6)</span></td>
+              <td class="py-1.5 px-2.5 text-sky-300 font-bold">36.58 &plusmn; 21.33 <span class="text-slate-400">(-68.4)</span></td>
+              <td class="py-1.5 px-2.5 text-purple-300 font-bold">40.80 &plusmn; 26.01 <span class="text-slate-400">(-67.6)</span></td>
             </tr>
             <tr>
               <td class="py-1.5 px-2.5">EAT Left Atrium (LA)</td>
-              <td class="py-1.5 px-2.5">11.54 cm&sup3; <span class="text-slate-400">(-70.4 HU)</span></td>
-              <td class="py-1.5 px-2.5">19.08 cm&sup3; <span class="text-slate-400">(-86.7 HU)</span></td>
-              <td class="py-1.5 px-2.5">8.16 cm&sup3; <span class="text-slate-400">(-72.2 HU)</span></td>
-              <td class="py-1.5 px-2.5">12.93 &plusmn; 5.59 cm&sup3; <span class="text-slate-400">(-76.4 HU)</span></td>
+              <td class="py-1.5 px-2.5">14.40 cm&sup3; <span class="text-slate-400">(-61.8)</span></td>
+              <td class="py-1.5 px-2.5">22.02 cm&sup3; <span class="text-slate-400">(-79.0)</span></td>
+              <td class="py-1.5 px-2.5">8.35 cm&sup3; <span class="text-slate-400">(-68.6)</span></td>
+              <td class="py-1.5 px-2.5">14.92 &plusmn; 6.85 <span class="text-slate-400">(-69.8)</span></td>
+              <td class="py-1.5 px-2.5">9.59 &plusmn; 6.10 <span class="text-slate-400">(-66.0)</span></td>
+              <td class="py-1.5 px-2.5">10.76 &plusmn; 7.38 <span class="text-slate-400">(-65.2)</span></td>
             </tr>
             <tr class="bg-slate-950/30">
               <td class="py-1.5 px-2.5">EAT Left Ventricle (LV)</td>
-              <td class="py-1.5 px-2.5">10.69 cm&sup3; <span class="text-slate-400">(-68.9 HU)</span></td>
-              <td class="py-1.5 px-2.5">17.08 cm&sup3; <span class="text-slate-400">(-75.1 HU)</span></td>
-              <td class="py-1.5 px-2.5">14.22 cm&sup3; <span class="text-slate-400">(-73.3 HU)</span></td>
-              <td class="py-1.5 px-2.5">14.00 &plusmn; 3.20 cm&sup3; <span class="text-slate-400">(-72.4 HU)</span></td>
+              <td class="py-1.5 px-2.5">13.58 cm&sup3; <span class="text-slate-400">(-70.9)</span></td>
+              <td class="py-1.5 px-2.5">21.56 cm&sup3; <span class="text-slate-400">(-84.6)</span></td>
+              <td class="py-1.5 px-2.5">10.54 cm&sup3; <span class="text-slate-400">(-71.5)</span></td>
+              <td class="py-1.5 px-2.5">15.23 &plusmn; 5.69 <span class="text-slate-400">(-75.7)</span></td>
+              <td class="py-1.5 px-2.5">6.44 &plusmn; 4.55 <span class="text-slate-400">(-66.4)</span></td>
+              <td class="py-1.5 px-2.5">7.04 &plusmn; 5.08 <span class="text-slate-400">(-65.9)</span></td>
             </tr>
             <tr>
               <td class="py-1.5 px-2.5">EAT Right Atrium (RA)</td>
-              <td class="py-1.5 px-2.5">27.36 cm&sup3; <span class="text-slate-400">(-64.0 HU)</span></td>
-              <td class="py-1.5 px-2.5">34.37 cm&sup3; <span class="text-slate-400">(-78.2 HU)</span></td>
-              <td class="py-1.5 px-2.5">22.49 cm&sup3; <span class="text-slate-400">(-71.5 HU)</span></td>
-              <td class="py-1.5 px-2.5">28.07 &plusmn; 5.97 cm&sup3; <span class="text-slate-400">(-71.2 HU)</span></td>
+              <td class="py-1.5 px-2.5">9.02 cm&sup3; <span class="text-slate-400">(-65.8)</span></td>
+              <td class="py-1.5 px-2.5">13.60 cm&sup3; <span class="text-slate-400">(-71.0)</span></td>
+              <td class="py-1.5 px-2.5">8.28 cm&sup3; <span class="text-slate-400">(-69.8)</span></td>
+              <td class="py-1.5 px-2.5">10.30 &plusmn; 2.88 <span class="text-slate-400">(-68.8)</span></td>
+              <td class="py-1.5 px-2.5">4.97 &plusmn; 3.55 <span class="text-slate-400">(-67.0)</span></td>
+              <td class="py-1.5 px-2.5">5.71 &plusmn; 4.21 <span class="text-slate-400">(-66.0)</span></td>
             </tr>
             <tr class="bg-slate-950/30">
               <td class="py-1.5 px-2.5">EAT Right Ventricle (RV)</td>
-              <td class="py-1.5 px-2.5">3.73 cm&sup3; <span class="text-slate-400">(-63.3 HU)</span></td>
-              <td class="py-1.5 px-2.5">6.59 cm&sup3; <span class="text-slate-400">(-66.2 HU)</span></td>
-              <td class="py-1.5 px-2.5">6.79 cm&sup3; <span class="text-slate-400">(-77.4 HU)</span></td>
-              <td class="py-1.5 px-2.5">5.70 &plusmn; 1.71 cm&sup3; <span class="text-slate-400">(-69.0 HU)</span></td>
+              <td class="py-1.5 px-2.5">16.31 cm&sup3; <span class="text-slate-400">(-66.7)</span></td>
+              <td class="py-1.5 px-2.5">19.94 cm&sup3; <span class="text-slate-400">(-76.8)</span></td>
+              <td class="py-1.5 px-2.5">24.47 cm&sup3; <span class="text-slate-400">(-76.0)</span></td>
+              <td class="py-1.5 px-2.5">20.24 &plusmn; 4.09 <span class="text-slate-400">(-73.2)</span></td>
+              <td class="py-1.5 px-2.5">15.59 &plusmn; 9.93 <span class="text-slate-400">(-70.8)</span></td>
+              <td class="py-1.5 px-2.5">17.29 &plusmn; 11.98 <span class="text-slate-400">(-69.6)</span></td>
             </tr>
             <tr class="bg-slate-950/50">
               <td class="py-1.5 px-2.5 font-bold text-white">PVAT Total (LAD &cup; LCX &cup; RCA)</td>
-              <td class="py-1.5 px-2.5 text-cyan-300 font-bold">32.82 cm&sup3; <span class="text-slate-400">(-67.1 HU)</span></td>
-              <td class="py-1.5 px-2.5 text-indigo-300 font-bold">50.96 cm&sup3; <span class="text-slate-400">(-79.5 HU)</span></td>
-              <td class="py-1.5 px-2.5 text-emerald-300 font-bold">37.27 cm&sup3; <span class="text-slate-400">(-75.2 HU)</span></td>
-              <td class="py-1.5 px-2.5 text-amber-300 font-bold">40.35 &plusmn; 9.46 cm&sup3; <span class="text-slate-400">(-74.0 HU)</span></td>
+              <td class="py-1.5 px-2.5 text-cyan-300 font-bold">19.60 cm&sup3; <span class="text-slate-400">(-67.5)</span></td>
+              <td class="py-1.5 px-2.5 text-indigo-300 font-bold">30.41 cm&sup3; <span class="text-slate-400">(-80.9)</span></td>
+              <td class="py-1.5 px-2.5 text-emerald-300 font-bold">20.32 cm&sup3; <span class="text-slate-400">(-73.6)</span></td>
+              <td class="py-1.5 px-2.5 text-amber-300 font-bold">23.44 &plusmn; 6.04 <span class="text-slate-400">(-74.0)</span></td>
+              <td class="py-1.5 px-2.5 text-sky-300 font-bold">15.73 &plusmn; 7.48 <span class="text-slate-400">(-70.5)</span></td>
+              <td class="py-1.5 px-2.5 text-purple-300 font-bold">17.35 &plusmn; 9.37 <span class="text-slate-400">(-69.2)</span></td>
             </tr>
             <tr>
               <td class="py-1.5 px-2.5">PVAT LAD (10 mm Radial Cuff)</td>
-              <td class="py-1.5 px-2.5">2.89 cm&sup3; <span class="text-slate-400">(-59.6 HU)</span></td>
-              <td class="py-1.5 px-2.5">6.55 cm&sup3; <span class="text-slate-400">(-76.3 HU)</span></td>
-              <td class="py-1.5 px-2.5">5.05 cm&sup3; <span class="text-slate-400">(-69.9 HU)</span></td>
-              <td class="py-1.5 px-2.5">4.83 &plusmn; 1.84 cm&sup3; <span class="text-slate-400">(-68.6 HU)</span></td>
+              <td class="py-1.5 px-2.5">5.36 cm&sup3; <span class="text-slate-400">(-67.0)</span></td>
+              <td class="py-1.5 px-2.5">9.42 cm&sup3; <span class="text-slate-400">(-82.2)</span></td>
+              <td class="py-1.5 px-2.5">5.56 cm&sup3; <span class="text-slate-400">(-70.6)</span></td>
+              <td class="py-1.5 px-2.5">6.78 &plusmn; 2.29 <span class="text-slate-400">(-73.3)</span></td>
+              <td class="py-1.5 px-2.5">4.99 &plusmn; 2.81 <span class="text-slate-400">(-67.7)</span></td>
+              <td class="py-1.5 px-2.5">5.74 &plusmn; 3.77 <span class="text-slate-400">(-66.6)</span></td>
             </tr>
             <tr class="bg-slate-950/30">
               <td class="py-1.5 px-2.5">PVAT LCX (10 mm Radial Cuff)</td>
-              <td class="py-1.5 px-2.5">16.55 cm&sup3; <span class="text-slate-400">(-70.1 HU)</span></td>
-              <td class="py-1.5 px-2.5">28.88 cm&sup3; <span class="text-slate-400">(-83.4 HU)</span></td>
-              <td class="py-1.5 px-2.5">13.25 cm&sup3; <span class="text-slate-400">(-72.9 HU)</span></td>
-              <td class="py-1.5 px-2.5">19.56 &plusmn; 8.24 cm&sup3; <span class="text-slate-400">(-75.5 HU)</span></td>
+              <td class="py-1.5 px-2.5">10.31 cm&sup3; <span class="text-slate-400">(-66.5)</span></td>
+              <td class="py-1.5 px-2.5">17.12 cm&sup3; <span class="text-slate-400">(-82.8)</span></td>
+              <td class="py-1.5 px-2.5">7.20 cm&sup3; <span class="text-slate-400">(-72.3)</span></td>
+              <td class="py-1.5 px-2.5">11.54 &plusmn; 5.07 <span class="text-slate-400">(-73.9)</span></td>
+              <td class="py-1.5 px-2.5">6.93 &plusmn; 3.32 <span class="text-slate-400">(-69.8)</span></td>
+              <td class="py-1.5 px-2.5">7.51 &plusmn; 4.03 <span class="text-slate-400">(-68.6)</span></td>
             </tr>
             <tr>
               <td class="py-1.5 px-2.5">PVAT RCA (10 mm Radial Cuff)</td>
-              <td class="py-1.5 px-2.5">15.61 cm&sup3; <span class="text-slate-400">(-64.3 HU)</span></td>
-              <td class="py-1.5 px-2.5">21.08 cm&sup3; <span class="text-slate-400">(-74.8 HU)</span></td>
-              <td class="py-1.5 px-2.5">21.83 cm&sup3; <span class="text-slate-400">(-76.6 HU)</span></td>
-              <td class="py-1.5 px-2.5">19.51 &plusmn; 3.39 cm&sup3; <span class="text-slate-400">(-71.9 HU)</span></td>
+              <td class="py-1.5 px-2.5">6.36 cm&sup3; <span class="text-slate-400">(-66.7)</span></td>
+              <td class="py-1.5 px-2.5">8.85 cm&sup3; <span class="text-slate-400">(-74.0)</span></td>
+              <td class="py-1.5 px-2.5">9.23 cm&sup3; <span class="text-slate-400">(-74.5)</span></td>
+              <td class="py-1.5 px-2.5">8.15 &plusmn; 1.56 <span class="text-slate-400">(-71.7)</span></td>
+              <td class="py-1.5 px-2.5">5.16 &plusmn; 2.85 <span class="text-slate-400">(-71.4)</span></td>
+              <td class="py-1.5 px-2.5">5.82 &plusmn; 3.50 <span class="text-slate-400">(-69.7)</span></td>
             </tr>
           </tbody>
         </table>
@@ -1502,7 +1522,7 @@
 
       <!-- Bottom Provenance Bar -->
       <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-wrap items-center justify-between text-[11px] text-slate-400 font-mono">
-        <span>Exported CSV: <strong class="text-emerald-400">example_source_dir/cardiac_fat_measurements.csv</strong></span>
+        <span>Exported CSVs: <strong class="text-emerald-400">example_source_dir/cardiac_fat_measurements.csv</strong> &bull; <strong class="text-purple-400">E:\CT\Stanford_COCA\cardiac_fat_measurements.csv</strong></span>
         <span>Per-Case Masks: <strong class="text-cyan-300">eat_pvat.seg.nrrd</strong> &bull; <strong class="text-amber-300">heart.seg.nrrd</strong> &bull; <strong class="text-indigo-300">monai_wholebody...masks.seg.nrrd</strong> &bull; <strong class="text-purple-300">coronary_sulci.seg.nrrd</strong></span>
       </div>
     </div>
@@ -1678,7 +1698,7 @@
                 <span class="font-bold text-white block mb-1">Standardized 19-Column Metric Preview</span>
                 <div class="text-slate-300 space-y-0.5 font-mono text-[11px]">
                   <div>&bull; Master CSV: <span class="text-emerald-300 font-bold">example_source_dir/cardiac_fat_measurements.csv</span></div>
-                  <div>&bull; Case 0506 EAT / PVAT: <span class="text-cyan-300 font-bold">53.32 cm&sup3;</span> (-66.3 HU) / <span class="text-amber-300 font-bold">32.82 cm&sup3;</span> (-67.1 HU)</div>
+                  <div>&bull; Case 0506 EAT / PVAT: <span class="text-cyan-300 font-bold">53.32 cm&sup3;</span> (-66.3 HU) / <span class="text-amber-300 font-bold">19.60 cm&sup3;</span> (-67.5 HU)</div>
                   <div>&bull; Case 0909 &amp; 0987 EAT: <span class="text-indigo-300 font-bold">77.13 cm&sup3;</span> (-78.6 HU) &amp; <span class="text-emerald-300 font-bold">51.65 cm&sup3;</span> (-72.9 HU)</div>
                 </div>
               </div>
