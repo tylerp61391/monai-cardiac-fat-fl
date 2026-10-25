@@ -146,3 +146,37 @@ def test_push_to_dimse_cstore_mock(tmp_path: Path):
         assert res["status_code"] == 0x0000
         assert mock_assoc.release.called
 
+
+
+def test_push_to_dicomweb_stow_custom_ca_bundle(tmp_path: Path):
+    dcm = _create_minimal_dicom(tmp_path / "eat_pvat_seg.dcm")
+    fake_ca = tmp_path / "hospital_root_ca.crt"
+    fake_ca.write_text("FAKE CERTIFICATE CONTENT", encoding="utf-8")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+
+    with patch("requests.post", return_value=mock_resp) as mock_post:
+        res = push_to_dicomweb_stow(
+            [dcm],
+            stow_url="https://secure-pacs.hospital.org/dicom-web/studies",
+            ca_cert=fake_ca,
+        )
+        assert res["success_count"] == 1
+        assert mock_post.call_args[1]["verify"] == str(fake_ca)
+
+
+def test_push_to_dicomweb_stow_insecure_flag(tmp_path: Path):
+    dcm = _create_minimal_dicom(tmp_path / "eat_pvat_seg.dcm")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+
+    with patch("requests.post", return_value=mock_resp) as mock_post:
+        res = push_to_dicomweb_stow(
+            [dcm],
+            stow_url="https://self-signed-pacs.internal/dicom-web/studies",
+            ca_cert=False,
+        )
+        assert res["success_count"] == 1
+        assert mock_post.call_args[1]["verify"] is False

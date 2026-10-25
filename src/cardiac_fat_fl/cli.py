@@ -611,6 +611,24 @@ def hardware_info() -> None:
     display_hardware_summary(profile, console=console)
 
 
+
+KNOWN_MODEL_SHA256: dict[str, str] = {
+    "deepheartseg_heart.onnx": "4015c53fa3fcdaa8b93e9d528f2410b8d34cdba07286e69b4f09a6e3c9644553",
+    "deepheartseg_loc.onnx": "94fbafee767d872f3fb0bae364d5922387963034bf59f75e8ea5971ba0306c93",
+}
+
+
+def _verify_model_file_sha256(path: Path, expected_sha256: str) -> bool:
+    """Compute and verify SHA-256 checksum of a model file."""
+    import hashlib
+
+    hasher = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(65536):
+            hasher.update(chunk)
+    return hasher.hexdigest().lower() == expected_sha256.lower()
+
+
 @app.command("download-models")
 def download_models_cmd(
     repo_tag: str = typer.Option(
@@ -637,6 +655,11 @@ def download_models_cmd(
         "-f",
         help="Re-download and overwrite existing ONNX files.",
     ),
+    skip_verify: bool = typer.Option(
+        False,
+        "--skip-verify",
+        help="Skip SHA-256 integrity verification against known release digests.",
+    ),
 ) -> None:
     """Download validated DeepHeartSeg ONNX models from GitHub Release assets."""
     import urllib.request
@@ -655,8 +678,15 @@ def download_models_cmd(
 
     for model_name in models:
         target = output_dir / model_name
+        expected_hash = KNOWN_MODEL_SHA256.get(model_name)
         if target.exists() and not force:
-            console.print(f"[green]Model already present:[/green] {target} (use --force to re-download)")
+            if not skip_verify and expected_hash:
+                if _verify_model_file_sha256(target, expected_hash):
+                    console.print(f"[green]Model already present and verified:[/green] {target} [dim](SHA-256 valid)[/dim]")
+                else:
+                    console.print(f"[bold red]Warning: Integrity mismatch for existing model:[/bold red] {target}. Use --force to re-download.")
+            else:
+                console.print(f"[green]Model already present:[/green] {target} (use --force to re-download)")
             continue
 
         url = f"{base_url}/{model_name}"
@@ -677,7 +707,18 @@ def download_models_cmd(
                         progress.update(task_id, total=total_size, completed=block_num * block_size)
 
                 urllib.request.urlretrieve(url, str(target), reporthook=reporthook)
+
+            if not skip_verify and expected_hash:
+                if _verify_model_file_sha256(target, expected_hash):
+                    console.print(f"[bold green]Integrity verified:[/bold green] {model_name} SHA-256 checksum matches release digest.")
+                else:
+                    console.print(f"[bold red]Security Error: Checksum mismatch for {model_name}![/bold red]")
+                    target.unlink(missing_ok=True)
+                    raise typer.Exit(code=1)
+
             console.print(f"[bold green]Successfully saved:[/bold green] {target}")
+        except typer.Exit:
+            raise
         except Exception as e:
             console.print(f"[yellow]Could not download {model_name} from {url}: {e}[/yellow]")
             console.print("[dim]Note: Ensure release assets are published or specify custom --repo / --tag.[/dim]")
@@ -745,6 +786,18 @@ def push_pacs(
         "--timeout",
         help="Network timeout in seconds.",
     ),
+    ca_bundle: Optional[Path] = typer.Option(
+        None,
+        "--ca-bundle",
+        help="Path to custom CA certificate bundle (.pem/.crt) for enterprise TLS verification.",
+        exists=True,
+    ),
+    insecure: bool = typer.Option(
+        False,
+        "--insecure",
+        "-k",
+        help="Disable TLS/SSL certificate verification (not recommended for production).",
+    ),
 ) -> None:
     """Store DICOM-SEG and cardiac CT volumes to a PACS archive via DICOMweb (STOW-RS) or DIMSE (C-STORE)."""
     from cardiac_fat_fl.pacs_client import (
@@ -774,8 +827,25 @@ def push_pacs(
     # 1. DICOMweb STOW-RS
     if url:
         console.print(f"[cyan]Connecting to DICOMweb STOW-RS endpoint:[/cyan] {url}")
+        ca_cert: Optional[Union[Path, bool]] = None
+        if insecure:
+            if ca_bundle:
+                console.print("[yellow]Warning: Both --ca-bundle and --insecure specified; ignoring CA bundle and disabling TLS verification.[/yellow]")
+            ca_cert = False
+            console.print("[bold yellow]Security Warning: TLS certificate verification is disabled (--insecure).[/bold yellow]")
+        elif ca_bundle:
+            ca_cert = ca_bundle
+            console.print(f"[cyan]Using custom Root CA bundle:[/cyan] {ca_bundle}")
+
         auth = (username, password) if username and password else None
-        res = push_to_dicomweb_stow(instances, stow_url=url, auth=auth, token=token, timeout=timeout)
+        res = push_to_dicomweb_stow(
+            instances,
+            stow_url=url,
+            auth=auth,
+            token=token,
+            timeout=timeout,
+            ca_cert=ca_cert,
+        )
         
         if res["failed_count"] == 0:
             console.print(f"[bold green]Success: Stored {res['success_count']} instance(s) to PACS via STOW-RS.[/bold green]")

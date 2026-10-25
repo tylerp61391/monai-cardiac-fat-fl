@@ -142,6 +142,7 @@ def push_to_dicomweb_stow(
     auth: Optional[Tuple[str, str]] = None,
     token: Optional[str] = None,
     timeout: int = 120,
+    ca_cert: Optional[Union[str, Path, bool]] = None,
 ) -> Dict[str, Any]:
     """Store DICOM instances to a DICOMweb STOW-RS server or Orthanc REST endpoint.
 
@@ -159,12 +160,20 @@ def push_to_dicomweb_stow(
         auth: Optional (username, password) tuple for HTTP Basic Auth.
         token: Optional Bearer token for Authorization header.
         timeout: Request timeout in seconds.
+        ca_cert: Path to custom CA certificate bundle file/directory, or False to disable SSL verification.
 
     Returns:
         Dict with status summary (`success_count`, `failed_count`, `status_code`, `details`).
     """
     if not files:
         return {"success_count": 0, "failed_count": 0, "status_code": 200, "details": "No files provided"}
+
+    verify_param: Union[bool, str] = True
+    if ca_cert is not None:
+        if isinstance(ca_cert, bool):
+            verify_param = ca_cert
+        else:
+            verify_param = str(ca_cert)
 
     headers: Dict[str, str] = {}
     if token:
@@ -187,6 +196,7 @@ def push_to_dicomweb_stow(
                     headers={**headers, "Content-Type": "application/dicom"},
                     auth=auth,
                     timeout=timeout,
+                    verify=verify_param,
                 )
                 if resp.status_code in [200, 201, 202]:
                     success += 1
@@ -230,6 +240,7 @@ def push_to_dicomweb_stow(
         headers=headers,
         auth=auth,
         timeout=timeout,
+        verify=verify_param,
     )
 
     if resp.status_code in [200, 201, 202]:

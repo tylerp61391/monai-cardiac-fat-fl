@@ -50,7 +50,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (31 tests; run before committing):
+- **Run Full Test Suite** (33 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v
@@ -88,7 +88,8 @@ When a user provides a CT scan or participant directory and asks to process and 
 2. **DICOMweb STOW-RS (Orthanc, dcm4chee-arc, Cloud PACS)**:
 
    ```bash
-   cardiac-fat-fl push "<study_dir>" --url "http://localhost:8042/dicom-web/studies"
+   # Add --ca-bundle <path> for custom hospital Root CAs, or --insecure for local testbeds
+   cardiac-fat-fl push "<study_dir>" --url "https://pacs.hospital.org/dicom-web/studies" --ca-bundle /path/to/root_ca.pem
    ```
 
 3. **Traditional DICOM DIMSE C-STORE (Hospital PACS)** (add `--include-ct` if the destination archive also requires the underlying CT series):
