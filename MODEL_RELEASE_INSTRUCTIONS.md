@@ -26,14 +26,14 @@ When publishing release `v1.0.0`, always generate and publish the official `chec
 
 ### Step 2.1: Generate the Checksum Manifest
 
-Generate the official SHA-256 manifest in the `models/` directory:
+Generate the official SHA-256 manifest for all four validated models in the `models/` directory:
 
 ```bash
 # Linux / macOS
-cd models && sha256sum *.onnx > checksums.sha256 && cd ..
+cd models && sha256sum *.onnx wholeBody_ct_segmentation/models/*.pt > checksums.sha256 && cd ..
 
 # Windows PowerShell
-Get-FileHash models/*.onnx -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $($_.Path | Split-Path -Leaf)" } | Set-Content models/checksums.sha256
+Get-FileHash models/*.onnx, models/wholeBody_ct_segmentation/models/*.pt -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $($_.Path.Replace((Get-Location).Path + [System.IO.Path]::DirectorySeparatorChar + 'models' + [System.IO.Path]::DirectorySeparatorChar, '').Replace('\', '/'))" } | Set-Content models/checksums.sha256
 ```
 
 ### Step 2.2: Publish Release Assets
@@ -51,9 +51,12 @@ gh release create v1.0.0 \
   models/checksums.sha256 \
   --title "v1.0.0 - Production MONAI & ONNX Pretrained Models" \
   --notes "Pretrained DeepHeartSeg ONNX models and cryptographic checksum manifest matching foundational MGH CardiacFatQuant with 0.00 delta.
-SHA-256 Checksums:
+
+Cryptographic SHA-256 Checksums:
 - deepheartseg_heart.onnx: 4015c53fa3fcdaa8b93e9d528f2410b8d34cdba07286e69b4f09a6e3c9644553
-- deepheartseg_loc.onnx:   94fbafee767d872f3fb0bae364d5922387963034bf59f75e8ea5971ba0306c93"
+- deepheartseg_loc.onnx:   94fbafee767d872f3fb0bae364d5922387963034bf59f75e8ea5971ba0306c93
+- wholeBody_ct_segmentation/models/model.pt:        80b429fb4b080df11c9ed0b0bdaa8a615ff083921bb213a512cf285afbc4e3fe
+- wholeBody_ct_segmentation/models/model_lowres.pt: c3ab55eb979785fdcb30690872c210bbeee73d79a170c32fdaa1eca117779f90"
 ```
 
 **Using the automated Python publishing script**:
@@ -102,14 +105,14 @@ cardiac-fat-fl quantify /path/to/cohort --workers 0
 
 ### Manual Integrity Verification
 
-To manually re-verify checksums independently of the CLI:
+To manually re-verify checksums independently of the CLI across all four models:
 
 ```bash
 # Linux / macOS
 cd models && sha256sum -c checksums.sha256
 
 # Windows PowerShell
-Get-FileHash models/deepheartseg_*.onnx -Algorithm SHA256
+Get-FileHash models/deepheartseg_*.onnx, models/wholeBody_ct_segmentation/models/*.pt -Algorithm SHA256
 ```
 
 ---
