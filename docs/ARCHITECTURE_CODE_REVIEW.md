@@ -2,7 +2,7 @@
 
 ## Step-by-Step Execution Flow in the MONAI Cardiac Fat FL Pipeline
 
-> **Reference Document**: [`docs/Cardiac_Segmentation_Architecture.pdf`](./Cardiac_Segmentation_Architecture.pdf)  
+> **Reference Documents**: [`docs/Cardiac_Segmentation_Architecture.pdf`](./Cardiac_Segmentation_Architecture.pdf) | [Visual Slide Gallery](./architecture_review/README.md)  
 > **Source Modules**: [`src/cardiac_fat_fl/anatomy_segmenter.py`](../src/cardiac_fat_fl/anatomy_segmenter.py), [`transforms.py`](../src/cardiac_fat_fl/transforms.py), [`dicom_sr.py`](../src/cardiac_fat_fl/dicom_sr.py), [`pacs_client.py`](../src/cardiac_fat_fl/pacs_client.py)  
 > **Target Equivalence**: Harvard / MGH `CardiacFatQuant` ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$)  
 > **Performance Milestone**: $\sim 10.1\text{s}$ / scan end-to-end ($\sim 15\times$ speedup vs. $>150\text{s}$ foundational MGH pipeline; $\sim 6.0\text{s}$ WholeBody SegResNet + $\sim 0.45\text{s}$ DeepHeartSeg ONNX on NVIDIA RTX 4090)

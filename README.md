@@ -431,6 +431,7 @@ monai-cardiac-fat-fl/
 ├── docs/                          # Architectural specifications, slide deck, and cohort validation reports
 │   ├── regulatory/
 │   │   └── FDA_SAMD_REGULATORY_DOSSIER.md # FDA 510(k) SaMD dossier, IEC 62304 matrix, ISO 14971 FMEA & PCCP
+│   ├── architecture_review/       # Visual architecture walkthrough & slide gallery (14 slides)
 │   ├── Cardiac_Segmentation_Architecture.pdf
 │   ├── ARCHITECTURE_CODE_REVIEW.md
 │   ├── architecture_infographic.html
