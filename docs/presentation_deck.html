@@ -1129,8 +1129,95 @@
       </div>
     </div>
 
-    <!-- SLIDE 9: Clinical Cohort Validation (Stanford AIMI COCA) -->
-    <div class="slide flex-col justify-center space-y-5" data-slide="9">
+    <!-- SLIDE 9: High-Throughput Batch Processing & Tri-Level Outputs -->
+    <div class="slide flex-col justify-center space-y-6" data-slide="9">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Cohort Scalability</span>
+        <span class="text-xs text-slate-500">Universal Ingestion &amp; Outputs</span>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white">Batch Processing &amp; Tri-Level Output Architecture</h2>
+
+      <div class="bg-slate-900 border border-cyan-900/50 rounded-xl p-3.5 flex items-center justify-between text-xs text-slate-300">
+        <div class="flex items-center space-x-2">
+          <span class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300 font-bold">Universal Ingestion</span>
+          <span>Point to any cohort folder: automatically handles mixed <strong class="text-white">DICOM slice series</strong>, <strong class="text-white">.nrrd</strong> volumes, and <strong class="text-white">.nii / .nii.gz</strong>.</span>
+        </div>
+        <div class="text-slate-400 font-mono text-[11px]">Auto-scaled concurrency (1 to 64 workers)</div>
+      </div>
+
+      <!-- 3 Columns for 3 Deliverables -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- Output 1 -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-emerald-400 uppercase mb-2 flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>Output 1: Population CSV</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-2">Master Analysis Spreadsheet</h4>
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-emerald-300 font-mono mb-2 truncate">
+              cardiac_fat_measurements.csv
+            </div>
+            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+              <li>Exact <strong class="text-white">19-column schema</strong> (Volumes in cm&sup3; &amp; Mean HU).</li>
+              <li>Ready for direct analysis in <strong class="text-white">Excel, SPSS, R, Python, SAS</strong>.</li>
+              <li>All patients aggregated into a single row-per-patient file.</li>
+            </ul>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-500">Saved in cohort root directory</div>
+        </div>
+
+        <!-- Output 2 -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-cyan-400 uppercase mb-2 flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              <span>Output 2: 3D Segmentations</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-2">Research NRRD &amp; PACS DICOM-SEG</h4>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] text-cyan-300 font-mono mb-2 space-y-0.5">
+              <div class="text-emerald-400 font-semibold">&bull; eat_pvat.seg.nrrd (8-Ch EAT/PVAT)</div>
+              <div>&bull; eat_pvat_seg.dcm (SOP .66.4) &amp; eat_pvat_sr.dcm (TID 1500)</div>
+              <div class="text-amber-300/90">&bull; heart.seg.nrrd (DeepHeartSeg Pericardium)</div>
+              <div class="text-amber-300/90 truncate">&bull; monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd</div>
+              <div class="text-amber-300/90 truncate">&bull; coronary_sulci.seg.nrrd (LAD/LCX/RCA)</div>
+            </div>
+            <ul class="text-[11px] text-slate-300 space-y-1 list-disc list-inside">
+              <li>Primary 8-channel quantification mask saved inside participant folder.</li>
+              <li>Pass <code class="mono-code text-[10px] text-amber-300 bg-slate-950 px-1 py-0.5 rounded">--save-intermediate</code> to write chamber/aorta, pericardial, and coronary sulci NRRD files.</li>
+              <li>Drag &amp; drop directly into <strong class="text-white">3D Slicer / ITK-SNAP / OHIF</strong>.</li>
+            </ul>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-500 flex justify-between">
+            <span>Per participant folder</span>
+            <span class="text-amber-400/90 font-mono text-[10px]">--save-intermediate</span>
+          </div>
+        </div>
+
+        <!-- Output 3 -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-purple-400 uppercase mb-2 flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+              <span>Output 3: Cohort Web Viewer</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-2">Zero-Footprint OHIF MPR</h4>
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-purple-300 font-mono mb-2">
+              http://127.0.0.1:8000/
+            </div>
+            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+              <li><strong class="text-white">Dynamic Participant Dropdown:</strong> Switch between hundreds of patients in seconds.</li>
+              <li>Linked 3D crosshairs + density slider.</li>
+              <li>No desktop software installation required.</li>
+            </ul>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-500">Live local web workstation</div>
+        </div>
+      </div>
+    </div>
+
+            <!-- SLIDE 10: Clinical Cohort Validation (Stanford AIMI COCA) -->
+    <div class="slide flex-col justify-center space-y-5" data-slide="10">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Clinical Cohort Validation</span>
         <span class="text-xs text-slate-500">Stanford AIMI COCA (N = 996 / 1,000 Quantified: 785 Gated + 211 Non-Gated)</span>
@@ -1228,8 +1315,8 @@
       </div>
     </div>
 
-    <!-- SLIDE 10: Quality & Resolution Stress-Testing (Slice Thickness) -->
-    <div class="slide flex-col justify-center space-y-5" data-slide="10">
+    <!-- SLIDE 11: Quality & Resolution Stress-Testing (Slice Thickness) -->
+    <div class="slide flex-col justify-center space-y-5" data-slide="11">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Quality &amp; Resolution Analysis</span>
         <span class="text-xs text-slate-500">Real-World Archive Robustness</span>
@@ -1292,94 +1379,7 @@
       </div>
     </div>
 
-    <!-- SLIDE 11: High-Throughput Batch Processing & Tri-Level Outputs -->
-    <div class="slide flex-col justify-center space-y-6" data-slide="11">
-      <div class="flex items-center justify-between">
-        <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Cohort Scalability</span>
-        <span class="text-xs text-slate-500">Universal Ingestion &amp; Outputs</span>
-      </div>
-      <h2 class="text-3xl md:text-4xl font-bold text-white">Batch Processing &amp; Tri-Level Output Architecture</h2>
-
-      <div class="bg-slate-900 border border-cyan-900/50 rounded-xl p-3.5 flex items-center justify-between text-xs text-slate-300">
-        <div class="flex items-center space-x-2">
-          <span class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300 font-bold">Universal Ingestion</span>
-          <span>Point to any cohort folder: automatically handles mixed <strong class="text-white">DICOM slice series</strong>, <strong class="text-white">.nrrd</strong> volumes, and <strong class="text-white">.nii / .nii.gz</strong>.</span>
-        </div>
-        <div class="text-slate-400 font-mono text-[11px]">Auto-scaled concurrency (1 to 64 workers)</div>
-      </div>
-
-      <!-- 3 Columns for 3 Deliverables -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <!-- Output 1 -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-          <div>
-            <div class="text-xs font-bold text-emerald-400 uppercase mb-2 flex items-center space-x-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Output 1: Population CSV</span>
-            </div>
-            <h4 class="font-bold text-white text-sm mb-2">Master Analysis Spreadsheet</h4>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-emerald-300 font-mono mb-2 truncate">
-              cardiac_fat_measurements.csv
-            </div>
-            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-              <li>Exact <strong class="text-white">19-column schema</strong> (Volumes in cm&sup3; &amp; Mean HU).</li>
-              <li>Ready for direct analysis in <strong class="text-white">Excel, SPSS, R, Python, SAS</strong>.</li>
-              <li>All patients aggregated into a single row-per-patient file.</li>
-            </ul>
-          </div>
-          <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-500">Saved in cohort root directory</div>
-        </div>
-
-        <!-- Output 2 -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-          <div>
-            <div class="text-xs font-bold text-cyan-400 uppercase mb-2 flex items-center space-x-2">
-              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-              <span>Output 2: 3D Segmentations</span>
-            </div>
-            <h4 class="font-bold text-white text-sm mb-2">Research NRRD &amp; PACS DICOM-SEG</h4>
-            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] text-cyan-300 font-mono mb-2 space-y-0.5">
-              <div class="text-emerald-400 font-semibold">&bull; eat_pvat.seg.nrrd (8-Ch EAT/PVAT)</div>
-              <div>&bull; eat_pvat_seg.dcm (SOP .66.4) &amp; eat_pvat_sr.dcm (TID 1500)</div>
-              <div class="text-amber-300/90">&bull; heart.seg.nrrd (DeepHeartSeg Pericardium)</div>
-              <div class="text-amber-300/90 truncate">&bull; monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd</div>
-              <div class="text-amber-300/90 truncate">&bull; coronary_sulci.seg.nrrd (LAD/LCX/RCA)</div>
-            </div>
-            <ul class="text-[11px] text-slate-300 space-y-1 list-disc list-inside">
-              <li>Primary 8-channel quantification mask saved inside participant folder.</li>
-              <li>Pass <code class="mono-code text-[10px] text-amber-300 bg-slate-950 px-1 py-0.5 rounded">--save-intermediate</code> to write chamber/aorta, pericardial, and coronary sulci NRRD files.</li>
-              <li>Drag &amp; drop directly into <strong class="text-white">3D Slicer / ITK-SNAP / OHIF</strong>.</li>
-            </ul>
-          </div>
-          <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-500 flex justify-between">
-            <span>Per participant folder</span>
-            <span class="text-amber-400/90 font-mono text-[10px]">--save-intermediate</span>
-          </div>
-        </div>
-
-        <!-- Output 3 -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-          <div>
-            <div class="text-xs font-bold text-purple-400 uppercase mb-2 flex items-center space-x-2">
-              <span class="w-2 h-2 rounded-full bg-purple-400"></span>
-              <span>Output 3: Cohort Web Viewer</span>
-            </div>
-            <h4 class="font-bold text-white text-sm mb-2">Zero-Footprint OHIF MPR</h4>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-xs text-purple-300 font-mono mb-2">
-              http://127.0.0.1:8000/
-            </div>
-            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-              <li><strong class="text-white">Dynamic Participant Dropdown:</strong> Switch between hundreds of patients in seconds.</li>
-              <li>Linked 3D crosshairs + density slider.</li>
-              <li>No desktop software installation required.</li>
-            </ul>
-          </div>
-          <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-500">Live local web workstation</div>
-        </div>
-      </div>
-    </div>
-
-            <!-- SLIDE 12: Live Benchmark Run on example_source_dir (0506, 0909, 0987) & Stanford AIMI COCA (N=996/1,000) -->
+    <!-- SLIDE 12: Live Benchmark Run on example_source_dir (0506, 0909, 0987) & Stanford AIMI COCA (N=996/1,000) -->
     <div class="slide flex-col justify-center space-y-3.5" data-slide="12">
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Live Repository &amp; Clinical Cohort Benchmarks &bull; Pure Neural-Network Pipeline</span>
@@ -1785,10 +1785,9 @@
       5: "Here is our formal architectural code review of anatomy_segmenter.py, directly drawn from our technical architecture specification. A core engineering challenge in federated medical AI is runtime heterogeneity across hospital nodes. To solve this, our orchestrator dynamically routes tensors through one of three paths: Path A is native MONAI 3D SegResNet and Path B is ONNX Runtime with CUDAExecutionProvider, benchmarked at 0.45 seconds per 3D volume on our NVIDIA GeForce RTX 4090 GPU (>120 scans/minute). Notice the thread control invariant: on multi-worker nodes, default ONNX runtime settings spawn 128 competing threads, causing severe L3 cache thrashing and host OS freezes. We explicitly constrain sessions to 2 intra-op and 1 inter-op threads, delivering safe, non-blocking multi-process throughput. Path C is our zero-download heuristic fallback for air-gapped nodes, capturing the mediastinum and using 3D connected components to guarantee the pipeline never crashes. From here, algorithmic boolean quadrant slicing derives the four cardiac chambers from centroids, and coronary sulci are bounded with HU >= -30 masks. All paths converge into a standardized dataclass AnatomyMasks container that marshals directly to GPU PyTorch tensors, achieving 100% mathematical equivalence to the foundational baseline with over 10 times higher throughput.",
       6: "Two core mathematical algorithms power our transforms: First, Voronoi chamber allocation uses 3D Euclidean distance transforms from chamber walls to assign continuous fat voxels to the nearest chamber without overlap. Second, 10 mm radial dilation computes a 3D Euclidean buffer from coronary centerlines, clipped to the adipose window and outside the myocardium.",
       7: "For federated deployment with NVIDIA FLARE, we have two operational modes: Mode 1 distills a unified 3D SegResNet using FedProx proximal loss and FedBN, which keeps normalization layers local to adapt to scanner variations. Mode 2 uses parallel Welford aggregation to compute multi-site statistical moments with 100% mathematical equivalence to pooled data and zero scan transfer.",
-      8: "Instead of requiring clinicians to install desktop software like 3D Slicer, we embed OHIF v3.13. It opens directly in the browser with standard 4-quadrant MPR (Axial, Sagittal, Coronal, and 3D rendering). Segmentations are standard DICOM-SEG SOP Class .66.4, ensuring complete PACS compatibility.",
-      9: "Here we validate the pipeline on the Stanford AIMI COCA cohort of 1,000 studies (996 successfully quantified: 785 ECG-gated and 211 non-gated chest CTs) across over 70,000 DICOM instances. A crucial question clinical PIs ask is: Can we definitively verify whether this dataset is non-contrast or contrast-enhanced? The answer is unambiguous: Stanford COCA is 100% non-contrast CT. We establish this through three independent empirical proofs and one major clinical research advantage. First, by clinical protocol mandate: these scans are coronary artery calcium (Agatston) scoring acquisitions, which strictly require non-contrast CT because iodinated contrast enhancements exceed 250 to 450 HU, which would completely obscure calcified plaques above the 130 HU threshold and invalidate Agatston scoring. Second, DICOM metadata: the series folders are explicitly designated 'Pro_Gated_CS' where 'CS' stands for Calcium Scoring, and the DICOM ContrastBolusAgent tag is completely absent. Third, physical radiodensity proof: we directly measured the aortic and left ventricular blood pool across the cohort, yielding a mean attenuation of exactly 34.1 HU in gated and 33.4 HU in non-gated scans. Unenhanced native blood is physically 30 to 50 HU, whereas contrast CCTA blood pool is 250 to 450+ HU—this provides conclusive, quantitative proof of zero contrast agent. Fourth, this confers a landmark clinical advantage: as demonstrated in the 2025 PROMISE trial in the European Heart Journal, non-contrast gated CT provides pure native adipose radiodensity measurements, completely eliminating contrast timing, bolus arrival variability, renal clearance differences, and interstitial contrast diffusion artifacts. On the multi-vendor side, notice the breakdown on the left: Siemens represents 87.6% and GE Healthcare represents 11.5%, perfectly justifying our FedBN architecture. And on the right, plaque prevalence shows LAD involvement in 95% of patients, with an exceptional correlation (r = 0.986, p < 10^-68) between PVAT and EAT attenuation across the cohort. In addition, total PVAT averages 25.30 cm3 and EAT averages 36.31 cm3, matching standard clinical literature.",
-      10: "This slide directly addresses scan quality and acquisition physics. Many clinical databases and epidemiological screening cohorts like COCA rely on standard non-contrast acquisition protocols with 3.0 mm gated slices and 5.0 mm non-gated screening CTs. In fact, 3.0 mm is the official SCCT consensus standard for non-contrast calcium scoring to minimize radiation dose while maintaining Agatston score calibration. While modern cutting-edge scanners achieve sub-millimeter isotropic resolution, this graph demonstrates an essential strength of our architecture: extreme resilience to partial volume averaging. Our deep learning pericardial isolation and bounded distance transforms successfully segment EAT and PVAT even on 5.0 mm thick slices with 100% completion, proving the pipeline can be deployed immediately on landmark trial archives and routine screening databases without needing specialized high-radiation or contrast-enhanced scans.",
-      11: "Next is cohort and batch scalability. The pipeline handles any mix of DICOM folders, NRRDs, and NIfTIs. When an agent runs batch quantification, it produces three distinct deliverables: First, a single master CSV with all 19 columns for Excel, R, and SPSS. Second, 3D segmentation masks—both NRRD for 3D Slicer and standard DICOM-SEG for PACS. Third, an interactive OHIF workstation with a dynamic patient switcher dropdown to toggle across hundreds of cases.",
+      8: "Instead of requiring clinicians to install desktop software like 3D Slicer, we embed OHIF v3.13. It opens directly in the browser with standard 4-quadrant MPR (Axial, Sagittal, Coronal, and 3D rendering). Segmentations are standard DICOM-SEG SOP Class .66.4, ensuring complete PACS compatibility.",      9: "Next is cohort and batch scalability. The pipeline handles any mix of DICOM folders, NRRDs, and NIfTIs. When an agent runs batch quantification, it produces three distinct deliverables: First, a single master CSV with all 19 columns for Excel, R, and SPSS. Second, 3D segmentation masks—both NRRD for 3D Slicer and standard DICOM-SEG for PACS. Third, an interactive OHIF workstation with a dynamic patient switcher dropdown to toggle across hundreds of cases.",
+      10: "Here we validate the pipeline on the Stanford AIMI COCA cohort of 1,000 studies (996 successfully quantified: 785 ECG-gated and 211 non-gated chest CTs) across over 70,000 DICOM instances. A crucial question clinical PIs ask is: Can we definitively verify whether this dataset is non-contrast or contrast-enhanced? The answer is unambiguous: Stanford COCA is 100% non-contrast CT. We establish this through three independent empirical proofs and one major clinical research advantage. First, by clinical protocol mandate: these scans are coronary artery calcium (Agatston) scoring acquisitions, which strictly require non-contrast CT because iodinated contrast enhancements exceed 250 to 450 HU, which would completely obscure calcified plaques above the 130 HU threshold and invalidate Agatston scoring. Second, DICOM metadata: the series folders are explicitly designated 'Pro_Gated_CS' where 'CS' stands for Calcium Scoring, and the DICOM ContrastBolusAgent tag is completely absent. Third, physical radiodensity proof: we directly measured the aortic and left ventricular blood pool across the cohort, yielding a mean attenuation of exactly 34.1 HU in gated and 33.4 HU in non-gated scans. Unenhanced native blood is physically 30 to 50 HU, whereas contrast CCTA blood pool is 250 to 450+ HU—this provides conclusive, quantitative proof of zero contrast agent. Fourth, this confers a landmark clinical advantage: as demonstrated in the 2025 PROMISE trial in the European Heart Journal, non-contrast gated CT provides pure native adipose radiodensity measurements, completely eliminating contrast timing, bolus arrival variability, renal clearance differences, and interstitial contrast diffusion artifacts. On the multi-vendor side, notice the breakdown on the left: Siemens represents 87.6% and GE Healthcare represents 11.5%, perfectly justifying our FedBN architecture. And on the right, plaque prevalence shows LAD involvement in 95% of patients, with an exceptional correlation (r = 0.986, p < 10^-68) between PVAT and EAT attenuation across the cohort. In addition, total PVAT averages 25.30 cm3 and EAT averages 36.31 cm3, matching standard clinical literature.",
+      11: "This slide directly addresses scan quality and acquisition physics. Many clinical databases and epidemiological screening cohorts like COCA rely on standard non-contrast acquisition protocols with 3.0 mm gated slices and 5.0 mm non-gated screening CTs. In fact, 3.0 mm is the official SCCT consensus standard for non-contrast calcium scoring to minimize radiation dose while maintaining Agatston score calibration. While modern cutting-edge scanners achieve sub-millimeter isotropic resolution, this graph demonstrates an essential strength of our architecture: extreme resilience to partial volume averaging. Our deep learning pericardial isolation and bounded distance transforms successfully segment EAT and PVAT even on 5.0 mm thick slices with 100% completion, proving the pipeline can be deployed immediately on landmark trial archives and routine screening databases without needing specialized high-radiation or contrast-enhanced scans.",
       12: "Here is the live execution output from running our pipeline on the repository's included reference cohort in example_source_dir across participants 0506, 0909, and 0987 on our NVIDIA RTX 4090 GPU. Using a single CLI command with --save-seg and --save-intermediate, the pipeline automatically profiles host hardware, launches parallel workers, and generates all four 3D NRRD masks per patient—eat_pvat.seg.nrrd, heart.seg.nrrd from DeepHeartSeg ONNX, monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd from NVIDIA NGC SegResNet, and coronary_sulci.seg.nrrd—plus the validated 19-column CSV. Across the three benchmark scans, EAT Total Volume is 53.32 cm3 (-66.3 HU) for 0506, 77.13 cm3 (-78.6 HU) for 0909, and 51.65 cm3 (-72.9 HU) for 0987, yielding a Federated Welford cohort mean of 60.70 ± 14.25 cm3 and PVAT Total mean of 40.35 ± 9.46 cm3.",
       13: "This slide pulls back the curtain on how this repository was engineered. Rather than months of manual rewriting and debugging, the entire codebase was generated autonomously using Antigravity's /goal directive. The input was a rigorous, 4-point autonomous specification: first, zero human interruption—execute end-to-end without stopping for confirmation. Second, a strict zero-placeholder mandate—no TODOs, no stubs, and no pass statements anywhere. Third, complete modernization of foundational Python 2.7 and TensorFlow 1.14 by building a unified PyTorch, MONAI, and ONNX runtime wrapper. And fourth, test-driven self-healing: the agent autonomously wrote a synthetic 3D cardiac CT phantom fixture in conftest.py, ran pytest through the terminal, debugged edge cases such as empty mask NaN handling and coordinate preservation, and iterated until all 31 unit and integration tests passed with 100% success. What would traditionally take a research engineering team 6 months was delivered as a production-grade, clinically verified codebase in a single automated session.",
       14: "Here is how this translates to a zero-code experience: a cardiologist can simply prompt an agent: 'Use this repo on these CTs in folder X to show me results and where I can get an output.' The agent executes the entire batch, outputs the master spreadsheet, and returns the interactive viewer URL. No terminal commands, no Python scripts, no DevOps friction.",
