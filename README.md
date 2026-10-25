@@ -419,6 +419,7 @@ monai-cardiac-fat-fl/
 ├── pyproject.toml                 # Package specs, dependencies (torch, monai, nvflare, pydicom, pynetdicom, pynrrd)
 ├── README.md                      # Technical specifications, architecture, and clinical usage guide
 ├── AGENTS.md                      # Autonomous agent codebase map, clinical invariants, and task recipes
+├── SECURITY.md                    # Healthcare compliance (HIPAA/GDPR), RUO disclaimer, vulnerability disclosure & SSDLC
 ├── configs/
 │   ├── monai_bundle/
 │   │   ├── metadata.json          # 1-ch CT input -> 8-ch EAT/PVAT output MONAI Bundle spec
@@ -431,7 +432,14 @@ monai-cardiac-fat-fl/
 │   ├── Cardiac_Segmentation_Architecture.pdf
 │   ├── ARCHITECTURE_CODE_REVIEW.md
 │   ├── architecture_infographic.html
-│   └── presentation_deck.html
+│   ├── presentation_deck.html
+│   └── coca_cohort_abstract.md    # Stanford AIMI COCA cohort validation report (N=996 scans)
+├── models/                        # Pretrained ONNX & NGC SegResNet weights directory (with README & download guide)
+│   ├── README.md
+│   ├── deepheartseg_heart.onnx
+│   ├── deepheartseg_loc.onnx
+│   └── wholeBody_ct_segmentation/ # 104-class 1.5mm SegResNet (NVIDIA NGC / MONAI Model Zoo)
+├── example_source_dir/            # Official MGH CardiacFatQuant 3-case benchmark CT cohort (0506, 0909, 0987)
 ├── monai_deploy_roadmap/          # MONAI Deploy Application Package (MAP) scoping & operator skeleton
 │   ├── MONAI_DEPLOY_SCOPING.md
 │   ├── app_skeleton.py
