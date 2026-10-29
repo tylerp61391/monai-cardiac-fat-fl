@@ -486,6 +486,14 @@ monai-cardiac-fat-fl/
 ├── README.md                      # Technical specifications, architecture, and clinical usage guide
 ├── AGENTS.md                      # Autonomous agent codebase map, clinical invariants, and task recipes
 ├── SECURITY.md                    # Healthcare compliance (HIPAA/GDPR), RUO disclaimer, vulnerability disclosure & SSDLC
+├── Dockerfile                     # Base OCI container definition for CLI & research workflows
+├── docker-compose.yml             # Local single-node development stack
+├── .github/
+│   └── workflows/                 # Automated CI/CD, packaging, and security analysis
+│       ├── ci.yml                 # Matrix test suite across Ubuntu + Windows on Python 3.11 & 3.12
+│       ├── docker-publish.yml     # Automated container build & push to GitHub Container Registry (GHCR)
+│       ├── publish-pypi.yml       # Automated wheel and sdist publishing
+│       └── security.yml           # CodeQL SAST & supply chain dependency security scans
 ├── configs/
 │   ├── monai_bundle/
 │   │   ├── metadata.json          # 1-ch CT input -> 8-ch EAT/PVAT output MONAI Bundle spec
@@ -504,8 +512,12 @@ monai-cardiac-fat-fl/
 │   ├── architecture_infographic.html
 │   ├── presentation_deck.html
 │   └── coca_cohort_abstract.md    # Stanford AIMI COCA cohort validation report (N=996 scans)
+├── k8s/                           # Institutional hospital Kubernetes cluster manifests
+│   ├── README.md                  # Kubernetes architecture overview & quickstart guide
+│   └── hospital-clinical-testbed.yaml # Orthanc PACS Deployment/Service & MAP batch inference Job
 ├── models/                        # Pretrained ONNX & NGC SegResNet weights directory (with README & download guide)
 │   ├── README.md
+│   ├── checksums.sha256           # Cryptographic SHA-256 verification hashes for all weight files
 │   ├── deepheartseg_heart.onnx
 │   ├── deepheartseg_loc.onnx
 │   └── wholeBody_ct_segmentation/ # 104-class 1.5mm SegResNet (NVIDIA NGC / MONAI Model Zoo)
@@ -514,7 +526,7 @@ monai-cardiac-fat-fl/
 │   ├── app.py                     # MAP application entrypoint executing 3-operator DAG
 │   ├── app.yaml                   # MONAI Deploy App SDK v0.6+ declarative manifest
 │   ├── Dockerfile                 # Production OCI container image for Kubernetes deployment
-│   ├── docker-compose.monai-deploy.yml # Clinical testbed (Orthanc PACS + MIG + MAP)
+│   ├── docker-compose.monai-deploy.yml # Clinical testbed (Orthanc PACS + optional MIG + MAP worker)
 │   └── MONAI_DEPLOY_SCOPING.md    # Engineering scoping & hospital deployment roadmap
 ├── src/
 │   └── cardiac_fat_fl/
@@ -532,7 +544,7 @@ monai-cardiac-fat-fl/
 │       ├── ohif_exporter.py       # DICOM series generator, DICOM-SEG (.66.4), DICOM-SR, and OHIF v3.13 workstation builder
 │       ├── ohif_viewer.py         # Local CORS-enabled multi-threaded HTTP server and browser launcher
 │       ├── hardware.py            # Dynamic hardware auto-detection (CPU/RAM/GPU) & safe concurrency sizing
-│       └── cli.py                 # Typer CLI (quantify, view, export-ohif, push, federated-train, federated-stats, hardware)
+│       └── cli.py                 # Typer CLI (quantify, map-run, view, export-ohif, push, federated-train, federated-stats, hardware)
 └── tests/
     ├── conftest.py                # Synthetic 3D cardiac CT phantom fixtures with known HU values
     ├── test_monai_deploy.py       # Automated unit & CLI tests for MONAI Deploy operators and pipeline

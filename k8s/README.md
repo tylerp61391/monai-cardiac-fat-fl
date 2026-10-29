@@ -66,3 +66,4 @@ To cleanly delete the namespace and all associated pods, services, and jobs:
 ```bash
 kubectl delete -f k8s/hospital-clinical-testbed.yaml
 ```
+
