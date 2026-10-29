@@ -1163,6 +1163,148 @@ def daemon_cmd(
         console.print("\n[yellow]Daemon interrupted by user (SIGINT). Exiting safely.[/yellow]")
 
 
+@app.command(name="report")
+def report_cmd(
+    input_path: Path = typer.Argument(
+        ...,
+        help="Path to study directory, participant folder, or output folder containing metrics.",
+    ),
+    output_dir: Optional[Path] = typer.Option(
+        None,
+        "--output-dir",
+        "-o",
+        help="Directory to save the clinical report bundle (defaults to input_path or input_path/report).",
+    ),
+    open_browser: bool = typer.Option(
+        True,
+        "--browser/--no-browser",
+        help="Automatically open the interactive HTML report in your default web browser.",
+    ),
+) -> None:
+    """Generate a SOTA clinical-grade cardiovascular imaging report (Cleerly / HeartFlow style).
+
+    Computes overall cardiovascular risk, CRISP-CT coronary inflammation status (> -70.1 HU),
+    vessel-by-vessel PVAT meters (LAD, LCX, RCA), chamber EAT breakdown, and a 3-view orthogonal
+    MPR cross-sectional montage (Axial, Coronal, Sagittal) with 8-compartment overlays.
+
+    Outputs:
+      1. Interactive Standalone HTML Report (cardiac_fat_report.html)
+      2. Vector PDF Document (cardiac_fat_report.pdf)
+      3. DICOM Encapsulated PDF (eat_pvat_report.dcm, SOP 1.2.840.10008.5.1.4.1.1.104.1)
+      4. MPR Snapshot Montage (mpr_montage.png)
+    """
+    import json
+    import webbrowser
+    import pandas as pd
+    from cardiac_fat_fl.clinical_report import export_clinical_imaging_report
+    from cardiac_fat_fl.io_metatensor import read_medical_image_as_metatensor, read_nrrd_as_metatensor
+
+    resolved_input = Path(input_path).resolve()
+    if not resolved_input.exists():
+        console.print(f"[bold red]Input path does not exist:[/bold red] {resolved_input}")
+        raise typer.Exit(code=1)
+
+    # 1. Discover metrics (CSV or JSON)
+    metrics: Dict[str, float] = {}
+    csv_candidates = [
+        resolved_input / "cardiac_fat_measurements.csv",
+        resolved_input / "outbox" / "cardiac_fat_measurements.csv",
+    ]
+    json_candidates = [
+        resolved_input / "cardiac_fat_measurements.json",
+        resolved_input / "outbox" / "cardiac_fat_measurements.json",
+    ]
+
+    for jc in json_candidates:
+        if jc.exists():
+            try:
+                metrics = json.loads(jc.read_text(encoding="utf-8"))
+                break
+            except Exception:
+                pass
+
+    if not metrics:
+        for cc in csv_candidates:
+            if cc.exists():
+                try:
+                    df = pd.read_csv(cc)
+                    if not df.empty:
+                        row = df.iloc[0].to_dict()
+                        metrics = {k: float(v) for k, v in row.items() if k != "participant_id" and pd.notna(v)}
+                        break
+                except Exception:
+                    pass
+
+    # If metrics still missing, run quantification on the fly
+    ct_image_np: Optional[np.ndarray] = None
+    mask_np: Optional[np.ndarray] = None
+    pid = resolved_input.name
+
+    # Check for CT scan and segmentation mask
+    seg_candidates = [
+        resolved_input / "eat_pvat.seg.nrrd",
+        resolved_input / f"{resolved_input.name}_eat_pvat.seg.nrrd",
+    ]
+    found_seg = next((s for s in seg_candidates if s.exists()), None)
+    if found_seg:
+        try:
+            mask_meta = read_nrrd_as_metatensor(found_seg)
+            mask_np = mask_meta.cpu().numpy() if hasattr(mask_meta, "cpu") else np.asarray(mask_meta)
+        except Exception as exc:
+            console.print(f"[yellow]Warning: Could not load segmentation mask: {exc}[/yellow]")
+
+    # Find CT scan
+    ct_candidates = [
+        resolved_input / "scan.nrrd",
+        resolved_input / "ct.nrrd",
+        resolved_input / f"{resolved_input.name}.nrrd",
+    ]
+    found_ct = next((c for c in ct_candidates if c.exists()), None)
+    if not found_ct:
+        # Check if resolved_input is itself a scan file
+        if resolved_input.is_file() and resolved_input.suffix.lower() in [".nrrd", ".nii", ".gz", ".dcm"]:
+            found_ct = resolved_input
+        else:
+            # Check for DICOM folder
+            dcm_files = list(resolved_input.glob("*.dcm"))
+            if dcm_files:
+                found_ct = resolved_input
+
+    if found_ct:
+        try:
+            ct_meta = read_medical_image_as_metatensor(found_ct)
+            ct_image_np = ct_meta.cpu().numpy() if hasattr(ct_meta, "cpu") else np.asarray(ct_meta)
+        except Exception as exc:
+            console.print(f"[yellow]Warning: Could not load CT volume: {exc}[/yellow]")
+
+    target_out = output_dir if output_dir is not None else (resolved_input if resolved_input.is_dir() else resolved_input.parent / "report")
+    target_out.mkdir(parents=True, exist_ok=True)
+
+    console.print("[bold cyan]================================================================[/bold cyan]")
+    console.print("[bold cyan]       Clinical-Grade Cardiovascular AI Diagnostic Report       [/bold cyan]")
+    console.print("[bold cyan]================================================================[/bold cyan]")
+    console.print(f"  [bold]Patient / Study ID:[/bold] {pid}")
+    console.print(f"  [bold]Output Directory:[/bold]   {target_out}")
+    console.print(f"  [bold]3-View MPR Snapshot:[/bold] {'[green]Active (CT + 8-ch Overlay)[/green]' if ct_image_np is not None else '[yellow]Skipped (no CT loaded)[/yellow]'}")
+
+    artifacts = export_clinical_imaging_report(
+        output_dir=target_out,
+        metrics=metrics,
+        image=ct_image_np,
+        mask=mask_np,
+        participant_id=pid,
+        ohif_viewer_url=f"http://127.0.0.1:8000/patient/{pid}/",
+    )
+
+    console.print("\n[bold green]Report bundle successfully generated:[/bold green]")
+    for k, v in artifacts.items():
+        console.print(f"  [cyan]{k}:[/cyan] {v}")
+
+    if open_browser and artifacts.get("report_html") and artifacts["report_html"].exists():
+        console.print(f"\n[dim]Opening report in browser: {artifacts['report_html']}[/dim]")
+        webbrowser.open(artifacts["report_html"].as_uri())
+
+
 if __name__ == "__main__":
     app()
 

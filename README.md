@@ -412,6 +412,7 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `federated-stats` | `cardiac-fat-fl federated-stats -c <csv_path>` | Extracts multi-site privacy-preserving cohort statistical moments. |
 | `map-run` | `cardiac-fat-fl map-run -i <study_dir> -o <dest>` | Executes the MONAI Deploy Application Package (MAP) DAG emitting DICOM-SEG, DICOM-SR, and metrics. |
 | `daemon` | `cardiac-fat-fl daemon <inbox_dir> [--outbox ...] [--pacs-url ...] [--dry-run]` | Autonomous background watchdog: monitors incoming CT scans, executes MAP DAG, and auto-routes DICOM-SEG/SR to PACS. |
+| `report` | `cardiac-fat-fl report <study_dir> [-o dest]` | Generates SOTA clinical diagnostic report with 3-view orthogonal MPR montage (HTML, vector PDF, and DICOM Encapsulated PDF `.104.1`). |
 
 ### End-to-End Workflow: From Raw CT to Interactive OHIF Visualization
 
@@ -551,13 +552,14 @@ monai-cardiac-fat-fl/
 │       ├── dicom_sr.py            # DICOM-SR TID 1500 (SOP .88.34) structured report builder (SNOMED-CT / LOINC / UCUM)
 │       ├── pacs_client.py         # Institutional PACS archive push via DICOMweb (STOW-RS) and DIMSE (C-STORE)
 │       ├── pacs_daemon.py         # Autonomous PACS watchdog daemon (auto-routing CT -> MAP DAG -> DICOM-SEG/SR -> PACS)
+│       ├── clinical_report.py     # SOTA Cleerly/HeartFlow-style clinical imaging report & 3-view MPR montage
 │       ├── model.py               # 3D SegResNet / SwinUNETR factory and FedBN layer filtering
 │       ├── fl_client_algo.py      # monai.fl.client.ClientAlgo subclass for distillation and local analytics
 │       ├── fl_stats_executor.py   # NVFLARE Executor for privacy-preserving federated Welford summary statistics
 │       ├── ohif_exporter.py       # DICOM series generator, DICOM-SEG (.66.4), DICOM-SR, and OHIF v3.13 workstation builder
 │       ├── ohif_viewer.py         # Local CORS-enabled multi-threaded HTTP server and browser launcher
 │       ├── hardware.py            # Dynamic hardware auto-detection (CPU/RAM/GPU) & safe concurrency sizing
-│       └── cli.py                 # Typer CLI (quantify, map-run, daemon, view, export-ohif, push, federated-train, federated-stats, hardware)
+│       └── cli.py                 # Typer CLI (quantify, map-run, daemon, report, view, export-ohif, push, federated-train, federated-stats, hardware)
 └── tests/
     ├── conftest.py                # Synthetic 3D cardiac CT phantom fixtures with known HU values
     ├── test_monai_deploy.py       # Automated unit & CLI tests for MONAI Deploy operators and pipeline
@@ -569,6 +571,8 @@ monai-cardiac-fat-fl/
     ├── test_ohif.py               # DICOM & DICOM-SEG SOP class (.66.4) validation tests
     ├── test_pacs_client.py        # DICOMweb STOW-RS multipart/related & DIMSE C-STORE association tests
     ├── test_pacs_daemon.py        # Automated unit and integration tests for PACS watchdog daemon
+    ├── test_clinical_report.py     # SOTA Cleerly/HeartFlow-style clinical imaging report & 3-view MPR montage
+    ├── test_clinical_report.py    # Automated unit & CLI tests for clinical diagnostic report & MPR montage
     └── test_transforms.py         # Transforms, HU thresholding, cm3 volume & 19-column schema validation
 ```
 

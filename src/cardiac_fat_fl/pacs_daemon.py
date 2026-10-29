@@ -213,6 +213,8 @@ def process_study(
                 files_to_push.append(artifacts["dicom_seg"])
             if artifacts.get("dicom_sr") and artifacts["dicom_sr"].exists():
                 files_to_push.append(artifacts["dicom_sr"])
+            if artifacts.get("report_dcm") and artifacts["report_dcm"].exists():
+                files_to_push.append(artifacts["report_dcm"])
 
             # If user wants CT included and original study is DICOM
             if config.include_ct:

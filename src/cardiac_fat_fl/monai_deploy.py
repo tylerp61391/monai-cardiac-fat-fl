@@ -318,6 +318,22 @@ class DicomSegAndSrWriterOp(MonaiDeployOperator):
             "metrics_csv": metrics_csv_path,
         }
 
+        # 7. Export Clinical Diagnostic Report (HTML, PDF, DICOM Encapsulated PDF, and MPR Montage)
+        try:
+            from cardiac_fat_fl.clinical_report import export_clinical_imaging_report
+            ct_vol_np = ct_meta.cpu().numpy() if hasattr(ct_meta, "cpu") else np.asarray(ct_meta)
+            report_artifacts = export_clinical_imaging_report(
+                output_dir=out_path,
+                metrics=metrics,
+                image=ct_vol_np,
+                mask=seg_mask_8ch,
+                participant_id=pid,
+                source_ct_dcm=first_ct_dcm,
+            )
+            artifacts.update(report_artifacts)
+        except Exception as report_err:
+            logger.warning("Clinical report generation skipped or failed: %s", report_err)
+
         if op_output is not None and hasattr(op_output, "emit"):
             op_output.emit(artifacts)
 

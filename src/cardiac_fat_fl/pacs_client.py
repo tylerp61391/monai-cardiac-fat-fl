@@ -101,13 +101,31 @@ def find_dicom_instances_to_push(
         if matches:
             found_sr = matches[0]
 
-    # Always ensure segmentation and structured report are included if available
+    # Search for Encapsulated PDF Clinical Report (eat_pvat_report.dcm)
+    report_candidates = [
+        path / "eat_pvat_report.dcm",
+        path / "ohif_export" / "eat_pvat_report.dcm",
+    ]
+    found_report: Optional[Path] = None
+    for cand in report_candidates:
+        if cand.exists():
+            found_report = cand
+            break
+
+    if found_report is None:
+        matches = list(path.glob("*eat_pvat_report*.dcm")) + list(path.glob("**/*eat_pvat_report*.dcm"))
+        if matches:
+            found_report = matches[0]
+
+    # Always ensure segmentation, structured report, and clinical report are included if available
     if found_seg is not None and found_seg not in instances:
         instances.append(found_seg)
     if found_sr is not None and found_sr not in instances:
         instances.append(found_sr)
+    if found_report is not None and found_report not in instances:
+        instances.append(found_report)
 
-    if not instances and found_seg is None and found_sr is None:
+    if not instances and found_seg is None and found_sr is None and found_report is None:
         # If no specific seg found, gather all .dcm files in path
         all_dcms = [f for f in path.glob("*.dcm") if _is_dicom_file(f)]
         if all_dcms:

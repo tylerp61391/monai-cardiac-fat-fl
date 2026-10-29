@@ -28,12 +28,13 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 | `anatomy_segmenter.py` | 577 | `AnatomyMasks`, `UnifiedAnatomySegmenter` | 3D anatomy engine: NGC `monai_wholebody_ct_segmentation` (1.5mm SegResNet), DeepHeartSeg ONNX pericardium, and geometric coronary sulci derivation. |
 | `transforms.py` | 439 | `ComputeEatPvatMasksd`, `QuantifyAdiposeMetricsd` | MONAI dictionary transforms for 8-compartment fat masking, 10mm anisotropic EDT radial dilation, and volume/HU calculation. |
 | `io_metatensor.py` | 551 | `discover_participants`, `read_nrrd_as_metatensor`, `write_eat_pvat_seg_nrrd` | Header-preserving 3D I/O for NRRD, NIfTI, and DICOM series. |
+| `clinical_report.py` | 695 | `evaluate_clinical_risk`, `generate_mpr_snapshot`, `generate_clinical_report_html`, `generate_clinical_report_pdf`, `encapsulate_pdf_to_dicom`, `export_clinical_imaging_report` | SOTA Cleerly/HeartFlow-style clinical imaging report (risk stratification, 3-view orthogonal MPR snapshots with 8-compartment overlays, vector PDF, and DICOM Encapsulated PDF SOP `.104.1`). |
 | `dicom_sr.py` | 345 | `create_cardiac_fat_sr`, `export_cardiac_fat_sr` | DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`) structured report builder using SNOMED-CT / LOINC / UCUM codes. |
 | `pacs_client.py` | 320 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
 | `pacs_daemon.py` | 338 | `DaemonConfig`, `PACSWatchdogDaemon`, `is_study_settled`, `find_pending_studies`, `process_study` | Automated clinical PACS watchdog and auto-router daemon (zero-click processing, file settling check, dry-run mode, and fault-tolerant error quarantine). |
 | `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
 | `ohif_viewer.py` | 244 | `launch_ohif_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
-| `cli.py` | 1051 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cli.py` | 1176 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `fl_client_algo.py` | 409 | `CardiacFatClientAlgo` | NVFLARE client training/evaluation executor (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
@@ -52,7 +53,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests: `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_cli.py` (101L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L).
+- Unit/Integration tests: `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_cli.py` (101L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L).
 
 ---
 
@@ -62,7 +63,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (48 tests; run before committing):
+- **Run Full Test Suite** (56 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v
@@ -171,6 +172,20 @@ To run the autonomous daemon monitoring an incoming folder for CT scans:
    ```bash
    cardiac-fat-fl daemon "staging/incoming" --single-pass --dry-run
    ```
+
+### Recipe 7: Generate SOTA Clinical Imaging Report with MPR Snapshots
+
+To generate a Cleerly/HeartFlow-style clinical diagnostic report with 3-view orthogonal MPR snapshots (Axial, Coronal, Sagittal) and 8-compartment color overlays:
+
+1. **CLI Execution**:
+   ```bash
+   cardiac-fat-fl report "path/to/study_dir" --output-dir "path/to/study_dir/report"
+   ```
+2. **Generated Deliverables**:
+   - `cardiac_fat_report.html` (interactive, responsive, printable HTML with embedded base64 MPR montage)
+   - `cardiac_fat_report.pdf` (vector-rendered Letter-sized PDF for EHR chart upload)
+   - `eat_pvat_report.dcm` (DICOM Encapsulated PDF SOP `1.2.840.10008.5.1.4.1.1.104.1` for PACS indexing)
+   - `mpr_montage.png` (high-res 3-view orthogonal montage with soft-tissue CT windowing & alpha overlays)
 
 ---
 

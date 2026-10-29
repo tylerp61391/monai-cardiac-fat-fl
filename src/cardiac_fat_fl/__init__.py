@@ -39,6 +39,14 @@ from cardiac_fat_fl.pacs_daemon import (
     is_study_settled,
     process_study,
 )
+from cardiac_fat_fl.clinical_report import (
+    evaluate_clinical_risk,
+    export_clinical_imaging_report,
+    generate_clinical_report_html,
+    generate_clinical_report_pdf,
+    generate_mpr_snapshot,
+    encapsulate_pdf_to_dicom,
+)
 from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
 
 __version__ = "0.1.0"
@@ -76,5 +84,11 @@ __all__ = [
     "is_study_settled",
     "find_pending_studies",
     "process_study",
+    "evaluate_clinical_risk",
+    "export_clinical_imaging_report",
+    "generate_clinical_report_html",
+    "generate_clinical_report_pdf",
+    "generate_mpr_snapshot",
+    "encapsulate_pdf_to_dicom",
 ]
 
