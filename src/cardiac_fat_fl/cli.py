@@ -931,6 +931,60 @@ def push_pacs(
             raise typer.Exit(code=1)
 
 
+@app.command(name="map-run")
+def map_run(
+    input_path: Path = typer.Option(
+        Path("/var/monai/input"),
+        "--input",
+        "-i",
+        help="Input DICOM study directory, NRRD, or NIfTI scan.",
+    ),
+    output_path: Path = typer.Option(
+        Path("/var/monai/output"),
+        "--output",
+        "-o",
+        help="Output directory for DICOM-SEG, DICOM-SR TID 1500, and metrics.",
+    ),
+    models_dir: Optional[Path] = typer.Option(
+        None,
+        "--models",
+        "-m",
+        help="Directory containing deep learning model weights (defaults to models/).",
+    ),
+    pvat_radius: float = typer.Option(
+        10.0,
+        "--pvat-radius",
+        help="Pericoronary Adipose Tissue radial dilation distance in mm (default: 10.0 mm).",
+    ),
+) -> None:
+    """Execute the MONAI Deploy Application Package (MAP) pipeline.
+
+    Loads a clinical CT study, executes dual-network anatomy segmentation + 3D Voronoi EDT,
+    and exports multi-frame DICOM-SEG, DICOM-SR TID 1500, and 19-column CSV/JSON metrics.
+    """
+    from cardiac_fat_fl.monai_deploy import run_monai_deploy_pipeline
+
+    console.print("[bold cyan]MONAI Deploy Application Package (MAP) Pipeline[/bold cyan]")
+    console.print(f"  Input:       {input_path}")
+    console.print(f"  Output:      {output_path}")
+    console.print(f"  PVAT Radius: {pvat_radius} mm")
+
+    resolved_models = models_dir if models_dir is not None else Path("models")
+    try:
+        artifacts = run_monai_deploy_pipeline(
+            input_path=input_path,
+            output_path=output_path,
+            models_dir=resolved_models,
+            pvat_radius_mm=pvat_radius,
+        )
+        console.print("[bold green]MONAI Deploy pipeline completed successfully![/bold green]")
+        for k, v in artifacts.items():
+            console.print(f"  [cyan]{k}:[/cyan] {v}")
+    except Exception as exc:
+        console.print(f"[bold red]MONAI Deploy execution failed:[/bold red] {exc}")
+        raise typer.Exit(code=1)
+
+
 if __name__ == "__main__":
     app()
 

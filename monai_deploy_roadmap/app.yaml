@@ -1,10 +1,22 @@
 %YAML 1.2
 ---
+# MONAI Application Package (MAP) Configuration Manifest
+# Conforms to MONAI Deploy App SDK v0.6+ and NVIDIA Holoscan SDK specifications
+
 application:
+  name: monai-cardiac-fat-map
   title: MONAI Cardiac Fat Quantification Application Package (EAT & PVAT)
   version: 1.0.0
-  inputFormats: [file]
-  outputFormats: [file]
+  description: >-
+    Automated 3D segmentation and volumetric/attenuation quantification of Epicardial
+    Adipose Tissue (EAT) and Pericoronary Adipose Tissue (PVAT) from cardiac CT scans.
+    Emits multi-frame DICOM-SEG (1.2.840.10008.5.1.4.1.1.66.4), DICOM-SR TID 1500
+    (1.2.840.10008.5.1.4.1.1.88.34), and 19-column quantitative CSV/JSON metrics.
+  authors:
+    - name: Tyler Patay
+      email: tcpatay123@gmail.com
+  license: Apache-2.0
+  repository: https://github.com/tylerp61391/monai-cardiac-fat-fl
 
 resources:
   cpu: 4
@@ -12,13 +24,46 @@ resources:
   memory: 16Gi
   gpuMemory: 8Gi
 
+input:
+  path: /var/monai/input
+  formats:
+    - dicom
+    - nrrd
+    - nifti
+  description: Clinical axial cardiac or chest CT series (DICOM, NRRD, or NIfTI)
+
+output:
+  path: /var/monai/output
+  formats:
+    - dicom-seg
+    - dicom-sr
+    - nrrd
+    - json
+    - csv
+  description: >-
+    Multi-frame DICOM-SEG (eat_pvat_seg.dcm), Comprehensive 3D DICOM-SR TID 1500
+    (eat_pvat_sr.dcm), 8-channel NRRD (eat_pvat.seg.nrrd), and summary metrics CSV/JSON.
+
+models:
+  path: /opt/holoscan/models
+  artifacts:
+    - name: deepheartseg_heart.onnx
+      description: Zero-drift ONNX model for high-resolution pericardial sac segmentation
+      sha256: 4015c53fa3fcdaa8b93e9d528f2410b8d34cdba07286e69b4f09a6e3c9644553
+    - name: deepheartseg_loc.onnx
+      description: Zero-drift ONNX model for coarse 3D cardiac bounding box localization
+      sha256: 94fbafee767d872f3fb0bae364d5922387963034bf59f75e8ea5971ba0306c93
+    - name: wholeBody_ct_segmentation/models/model.pt
+      description: NVIDIA NGC / MONAI Model Zoo 1.5mm 105-class SegResNet for chamber & great vessel extraction
+      sha256: 80b429fb4b080df11c9ed0b0bdaa8a615ff083921bb213a512cf285afbc4e3fe
+
 monai-deploy-app-sdk:
   version: ">=0.6.0"
-  command: ["python3", "/opt/holoscan/app/app_skeleton.py"]
+  command: ["python3", "/opt/holoscan/app/app.py"]
 
 dependencies:
   python: "3.11"
-  packages:
+  pip_packages:
     - torch>=2.4.0
     - monai>=1.4.0
     - onnxruntime-gpu>=1.19.0
@@ -28,4 +73,3 @@ dependencies:
     - scipy>=1.11.0
     - numpy>=1.26.0
     - pandas>=2.1.0
-

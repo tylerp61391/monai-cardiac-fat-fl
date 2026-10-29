@@ -25,6 +25,13 @@ from cardiac_fat_fl.measurement_schema import (
     validate_measurement_dataframe,
 )
 from cardiac_fat_fl.model import create_cardiac_fat_model, filter_weights_for_fedbn
+from cardiac_fat_fl.monai_deploy import (
+    CardiacCTStudyLoaderOp,
+    CardiacFatQuantApplication,
+    CardiacFatQuantifierOp,
+    DicomSegAndSrWriterOp,
+    run_monai_deploy_pipeline,
+)
 from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
 
 __version__ = "0.1.0"
@@ -52,5 +59,10 @@ __all__ = [
     "CardiacFatClientAlgo",
     "CardiacFatStatsExecutor",
     "aggregate_federated_statistics",
+    "CardiacCTStudyLoaderOp",
+    "CardiacFatQuantifierOp",
+    "DicomSegAndSrWriterOp",
+    "CardiacFatQuantApplication",
+    "run_monai_deploy_pipeline",
 ]
 

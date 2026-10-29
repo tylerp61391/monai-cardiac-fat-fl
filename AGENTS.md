@@ -36,11 +36,12 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
 | `hardware.py` | 219 | `detect_hardware`, `validate_worker_concurrency` | Host CPU/RAM/GPU profiler and OOM-safe worker concurrency throttling. |
+| `monai_deploy.py` | 390 | `CardiacCTStudyLoaderOp`, `CardiacFatQuantifierOp`, `DicomSegAndSrWriterOp`, `CardiacFatQuantApplication` | MONAI Deploy Application Package (MAP) DAG for clinical Holoscan / Informatics Gateway deployment. |
 
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests: `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_dicom_sr.py` (119L), `test_cli.py` (101L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L).
+- Unit/Integration tests: `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_dicom_sr.py` (119L), `test_cli.py` (101L), `test_monai_deploy.py` (130L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L).
 
 ---
 
@@ -50,7 +51,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (34 tests; run before committing):
+- **Run Full Test Suite** (39 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v

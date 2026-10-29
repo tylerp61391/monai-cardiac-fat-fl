@@ -1,0 +1,77 @@
+version: '3.8'
+
+# MONAI Deploy Clinical Integration Testbed:
+# Orthanc PACS + MONAI Deploy Informatics Gateway (MIG) + Workflow Manager (MWM) + Cardiac Fat MAP
+#
+# Workflow:
+# 1. CT scanner or cardiac-fat-fl pushes study to MIG DICOM listener (port 11112) or Orthanc (port 4242).
+# 2. MIG triggers Workflow Manager to launch monai-cardiac-fat-map container.
+# 3. Container processes study and emits multi-frame DICOM-SEG (.66.4) & DICOM-SR TID 1500 (.88.34).
+# 4. MIG forwards resulting clinical objects into Orthanc PACS archive and embedded OHIF viewer.
+
+services:
+  # 1. Institutional Orthanc PACS Archive & OHIF Workstation
+  orthanc-pacs:
+    image: orthancteam/orthanc:24.12.0
+    container_name: cardiac-fat-orthanc
+    restart: unless-stopped
+    ports:
+      - "8042:8042"   # DICOMweb REST API & Orthanc Explorer UI
+      - "4242:4242"   # Traditional DICOM DIMSE C-STORE Port (AET: ORTHANC)
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      ORTHANC__DICOM_MODALITIES_IN_DATABASE: "true"
+      ORTHANC__DICOM_CHECK_CALLED_AET: "false"
+      ORTHANC__DICOM_AET: "ORTHANC"
+    volumes:
+      - orthanc_storage:/var/lib/orthanc/db
+
+  # 2. MONAI Deploy Informatics Gateway (MIG)
+  # Receives DICOM studies from hospital network and routes processed DICOM-SEG/SR back to PACS
+  monai-informatics-gateway:
+    image: projectmonai/informatics-gateway:0.6.0
+    container_name: cardiac-fat-mig
+    restart: unless-stopped
+    ports:
+      - "11112:11112" # MIG SCP DICOM C-STORE Port (AET: MONAIMIG)
+      - "5000:5000"   # MIG Management API
+    environment:
+      MIG__DICOM__SCP__AET: "MONAIMIG"
+      MIG__DICOM__SCP__PORT: "11112"
+      MIG__STORAGE__SERVICE_TYPE: "FileSystem"
+      MIG__DESTINATIONS__ORTHANC__HOST: "orthanc-pacs"
+      MIG__DESTINATIONS__ORTHANC__PORT: "4242"
+      MIG__DESTINATIONS__ORTHANC__AET: "ORTHANC"
+    depends_on:
+      - orthanc-pacs
+    volumes:
+      - mig_incoming:/var/monai/incoming
+      - mig_payloads:/var/monai/payloads
+
+  # 3. Standalone MONAI Application Package (monai-cardiac-fat-map)
+  # Example service definition for running the containerized MAP on incoming studies
+  cardiac-fat-map:
+    build:
+      context: ..
+      dockerfile: monai_deploy_roadmap/Dockerfile
+    image: ghcr.io/tylerp61391/monai-cardiac-fat-map:1.0.0
+    container_name: cardiac-fat-map-worker
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - mig_payloads:/var/monai/input:ro
+      - map_output:/var/monai/output:rw
+    depends_on:
+      - monai-informatics-gateway
+
+volumes:
+  orthanc_storage:
+  mig_incoming:
+  mig_payloads:
+  map_output:
+
