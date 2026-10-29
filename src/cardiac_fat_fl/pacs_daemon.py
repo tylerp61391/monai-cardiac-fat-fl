@@ -402,3 +402,4 @@ class PACSWatchdogDaemon:
             "failed_count": self.failed_count,
             "termination_reason": termination_reason,
         }
+

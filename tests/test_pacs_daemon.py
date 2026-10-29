@@ -204,3 +204,4 @@ def test_cli_daemon_dry_run(synthetic_nrrd_scan: Path, tmp_path: Path) -> None:
     assert "Automated Clinical PACS Watchdog & Auto-Router Daemon" in res.output
     assert "DRY-RUN" in res.output
     assert "Daemon finished cleanly" in res.output
+
