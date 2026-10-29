@@ -31,7 +31,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 | `pacs_client.py` | 320 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
 | `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
 | `ohif_viewer.py` | 244 | `launch_ohif_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
-| `cli.py` | 749 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cli.py` | 749 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L937**: `map-run` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `fl_client_algo.py` | 409 | `CardiacFatClientAlgo` | NVFLARE client training/evaluation executor (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
@@ -98,6 +98,29 @@ When a user provides a CT scan or participant directory and asks to process and 
    ```bash
    cardiac-fat-fl push "<study_dir>" --host 192.168.1.50 --port 104 --called-aet CENTRAL_PACS
    ```
+
+### Recipe 4: Execute MONAI Deploy Application Package (MAP) Pipeline
+
+1. **Standalone CLI Execution**:
+
+   ```bash
+   python -m cardiac_fat_fl.cli map-run -i "<study_dir_or_scan>" -o "<output_dir>"
+   ```
+
+2. **Containerized Execution via MONAI Deploy / Docker**:
+
+   ```bash
+   docker run --gpus all --rm \
+     -v "/path/to/study:/var/monai/input:ro" \
+     -v "/path/to/output:/var/monai/output:rw" \
+     ghcr.io/tylerp61391/monai-cardiac-fat-map:1.0.0
+   ```
+
+3. **Outputs Written to Output Directory**:
+   - `eat_pvat_seg.dcm` (multi-frame DICOM-SEG `1.2.840.10008.5.1.4.1.1.66.4`, 8 segments)
+   - `eat_pvat_sr.dcm` (Comprehensive 3D DICOM-SR TID 1500 `1.2.840.10008.5.1.4.1.1.88.34`)
+   - `cardiac_fat_measurements.csv` (19-column clinical metrics)
+   - `eat_pvat.seg.nrrd` (8-channel NRRD)
 
 ---
 

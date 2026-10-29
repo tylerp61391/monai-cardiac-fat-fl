@@ -47,6 +47,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 ### 1. Per-Participant Output Files (Clean Clinical & Model Provenance)
 
 In the reference MGH pipeline, running the foundational multi-step workflow produced intermediate segmentations inside each participant folder:
+
 ```text
 # MGH Foundational Pipeline Output:
 participant_001/
@@ -59,10 +60,13 @@ participant_001/
 In `monai-cardiac-fat-fl`, the default execution is streamlined to output the primary clinical endpoint (`eat_pvat.seg.nrrd`).
 
 When the `--save-intermediate` flag is passed, the pipeline exports intermediate files with **strict clinical provenance**, separating pure neural network inferences from downstream derived geometric sulci:
+
 ```bash
 cardiac-fat-fl quantify /path/to/cohort --save-seg --save-intermediate
 ```
+
 This writes the full suite of intermediate anatomical, sulcus, and fat segmentation volumes into each participant folder:
+
 ```text
 # With --save-intermediate:
 participant_001/
@@ -76,11 +80,15 @@ participant_001/
 ```
 
 ### 2. Cohort-Level Aggregation Output
+
 Running batch quantification across a cohort directory:
+
 ```bash
 cardiac-fat-fl quantify /path/to/cohort --output-dir /path/to/cohort --save-seg
 ```
+
 Outputs:
+
 1. **Per-Participant Masks**: Written to each participant subfolder (`/path/to/cohort/<participant_id>/eat_pvat.seg.nrrd`).
 2. **Cohort Summary Table**: Written to the `--output-dir` (defaults to cohort root) as `cardiac_fat_measurements.csv` conforming to the exact 19-column clinical schema.
 
@@ -89,6 +97,7 @@ Outputs:
 The pipeline features a native PACS transmission client (`cardiac-fat-fl push`) capable of sending generated multi-frame DICOM-SEG objects (SOP Class `1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 quantitative measurement reports (SOP Class `1.2.840.10008.5.1.4.1.1.88.34`), and original or exported CT series to clinical and research archives:
 
 - **DICOMweb STOW-RS**:
+
   ```bash
   # Push DICOM-SEG to Orthanc, dcm4chee, or Cloud PACS:
   cardiac-fat-fl push /path/to/participant_dir --url "http://localhost:8042/dicom-web/studies"
@@ -96,25 +105,29 @@ The pipeline features a native PACS transmission client (`cardiac-fat-fl push`) 
   # With authentication:
   cardiac-fat-fl push /path/to/participant_dir --url "https://pacs.hospital.org/studies" --username rad_tech --password secret
   ```
+
 - **DICOM DIMSE C-STORE**:
+
   ```bash
   # Push directly to hospital PACS via standard DICOM C-STORE:
   cardiac-fat-fl push /path/to/participant_dir --host 192.168.1.50 --port 104 --called-aet CENTRAL_PACS
   ```
+
 - **Include CT Volume**: Add `--include-ct` to upload the underlying 3D CT slice series alongside the DICOM-SEG mask.
-
-
 
 ---
 
 ## Clinical & Anatomical Specifications
 
 ### 1. Adipose Attenuation Window
-Adipose tissue is quantified strictly within the clinical Hounsfield Unit (HU) window:   
+
+Adipose tissue is quantified strictly within the clinical Hounsfield Unit (HU) window:
 $$\text{Adipose HU} \in [-190.0, -30.0]$$
 
 ### 2. The 8 Output Segmentation Compartments (`eat_pvat.seg.nrrd`)
+
 Saved as an 8-channel 3D binary volume matching the CT coordinate system:
+
 1. `EAT_Total` (Channel 0): All adipose tissue within the pericardial sac in $[-190.0, -30.0]\text{ HU}$.
 2. `EAT_LA` (Channel 1): Left Atrium epicardial fat via Euclidean Voronoi chamber proximity.
 3. `EAT_LV` (Channel 2): Left Ventricle epicardial fat.
@@ -127,7 +140,9 @@ Saved as an 8-channel 3D binary volume matching the CT coordinate system:
 *(Note: `PVAT_Total` is computed for reporting as the spatial boolean union: `PVAT_LAD` ∪ `PVAT_LCX` ∪ `PVAT_RCA`).*
 
 ### 3. Canonical 19-Column CSV Schema (`cardiac_fat_measurements.csv`)
+
 Matches reference MGH `CardiacFatQuant` exactly:
+
 - `participant_id`
 - `<Region> Volume (cm3)` and `<Region> Mean Attenuation (HU)` for all 9 reported regions:
   `EAT Total`, `EAT LA`, `EAT LV`, `EAT RA`, `EAT RV`, `PVAT Total`, `PVAT LAD`, `PVAT LCX`, `PVAT RCA`.
@@ -161,6 +176,7 @@ The repository provides full integration with the [Open Health Imaging Foundatio
 ```
 
 ### Launching the Medical Workstation
+
 ```bash
 # Launch the local interactive OHIF v3.13 workstation (serves on http://127.0.0.1:8000)
 cardiac-fat-fl view /path/to/participant_dir --port 8000
@@ -170,6 +186,7 @@ cardiac-fat-fl export-ohif /path/to/participant_dir --output-dir /path/to/export
 ```
 
 ### Viewing in the Official OHIF Cloud / Docker Viewer
+
 1. Navigate to **[viewer.ohif.org/local](https://viewer.ohif.org/local)** (or local Docker container `docker run -d -p 3000:80 ohif/app:latest`).
 2. Drag and drop the generated `ohif_export/` folder into the browser window.
 3. OHIF automatically loads the CT study, parses `eat_pvat_seg.dcm`, and displays 3D Multiplanar Reconstruction (MPR) with colored segmentation overlays and the right-hand segmentation panel.
@@ -179,6 +196,7 @@ cardiac-fat-fl export-ohif /path/to/participant_dir --output-dir /path/to/export
 ## Installation & Setup
 
 ### Prerequisites
+
 - Python `>=3.11` (Python 3.11, 3.12, 3.13 supported)
 - CUDA-compatible GPU (recommended for acceleration; CPU execution supported)
 
@@ -202,6 +220,7 @@ The pipeline modernizes foundational Python 2.7 / TensorFlow 1.14 subprocess scr
    - Natively segments 104 whole-body structures on GPU, including Aorta (label 7), Pulmonary Artery (49), Myocardium (44), Left Atrium (45), Left Ventricle (46), Right Atrium (47), and Right Ventricle (48).
    - Downstream coronary sulci (LAD 1, LCX 2, RCA 3) are derived geometrically from chamber boundary grooves and exported separately as `coronary_sulci.seg.nrrd` to maintain 100% neural network model provenance.
    - Loadable directly via `monai.bundle`:
+
      ```python
      import monai.bundle
      # Downloads or loads the official monai_wholebody_ct_segmentation bundle
@@ -210,11 +229,14 @@ The pipeline modernizes foundational Python 2.7 / TensorFlow 1.14 subprocess scr
 
 2. **Pretrained Pericardium DeepHeartSeg ONNX Models (GitHub Releases)**:
    - For 100.0% zero-drift match ($\Delta = 0.00\,\text{cm}^3$) to the MGH DeepHeartSeg weights:
+
    ```bash
    # Automatically downloads deepheartseg_heart.onnx & deepheartseg_loc.onnx into models/
    cardiac-fat-fl download-models
    ```
+
    Or via `curl`:
+
    ```bash
    curl -L -o models/deepheartseg_heart.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_heart.onnx
    curl -L -o models/deepheartseg_loc.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_loc.onnx
@@ -235,6 +257,7 @@ example_source_dir/
 ```
 
 **Run quantification immediately on the included test data:**
+
 ```bash
 # Process all 3 benchmark cases and generate measurements.csv + 8-compartment masks:
 cardiac-fat-fl quantify example_source_dir --save-seg
@@ -243,16 +266,18 @@ cardiac-fat-fl quantify example_source_dir --save-seg
 cardiac-fat-fl view example_source_dir/0506 --port 8000
 ```
 
-#### Measured End-to-End Benchmark (Participant `0506`, $512 \times 512 \times 122$ voxels):
+#### Measured End-to-End Benchmark (Participant `0506`, $512 \times 512 \times 122$ voxels)
+
 - **Total Latency**: **10.14 seconds** (vs. $>150\,\text{s}$ in foundational MGH CPU pipeline, a **$15\times$ speedup**).
 - **Stage Timing Breakdown**:
   - **Stage 1 (CT Ingestion)**: $0.23\,\text{s}$ (zero-copy GPU `MetaTensor` with affine coordinates)
   - **Stage 2 (Anatomy & Mask Generation)**: $6.01\,\text{s}$ (`monai_wholebody_ct_segmentation` + 2-stage ONNX `DeepHeartSeg`)
   - **Stage 3 (Adipose Quantification)**: $0.28\,\text{s}$ ($[-190, -30]\,\text{HU}$ window + 19-column metrics)
   - **Stage 4 (Disk Serialization)**: $3.62\,\text{s}$ (writing 3D Slicer-tagged `.seg.nrrd` files + CSV report)
-3. **Repository Maintainer Deployment**:
+
+1. **Repository Maintainer Deployment**:
    When pushing to a new repository, create release `v1.0.0` and attach `models/deepheartseg_heart.onnx` and `models/deepheartseg_loc.onnx` as binary assets.
-4. **Strict Clinical Neural-Network Guardrail**:
+2. **Strict Clinical Neural-Network Guardrail**:
    Clinical CT volumes ($\max(D, H, W) \ge 128$) strictly require neural-network weights (`monai_wholebody_ct_segmentation` 1.5 mm SegResNet + `DeepHeartSeg` ONNX) and never silently substitute geometric heuristic approximations. Deterministic morphological fallback is restricted exclusively to tiny synthetic unit-test phantoms ($< 128^3$ in `pytest`).
 
 ### Docker & Containerized Deployment
@@ -288,6 +313,7 @@ apptainer run --nv --bind /path/to/data:/data docker://ghcr.io/tylerp61391/monai
 ```
 
 #### Example SLURM Batch Script (`submit_cardiofat.sh`)
+
 ```bash
 #!/bin/bash
 #SBATCH --job-name=cardiofat
@@ -345,20 +371,24 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | **Departmental Workstation GPU** | **Single NVIDIA RTX 5070 / 4070 (12–16 GB VRAM)** / RTX 4080 (16 GB), 8–16C CPU, 32 GB RAM | **1 – 2 workers** (CUDA) | 2 threads | 6.0 – 8.0 GB RAM, ~4 GB VRAM | **9.0 – 14.0 s / scan** | **3 – 6 scans / min** (180–360 / hr) |
 | **Multicore CPU Server** | Dual AMD EPYC / Intel Xeon Scalable (32C–64C), 128–256 GB RAM (CPU-only) | **8 – 16 workers** (CPU) | 2 – 4 threads | 20.0 – 40.0 GB RAM | **45 – 75 s / scan** | **8 – 14 scans / min** (480–840 / hr) |
 | **Standard Laptop / Edge PC** | Modern 8-core CPU, 16–32 GB RAM (CPU-only / Mobile GPU) | **1 – 2 workers** (CPU) | 2 – 4 threads | ~5.0 GB RAM | **60 – 110 s / scan** | **0.5 – 1.0 scans / min** (30–60 / hr) |
-| **Constrained VM / Thin Client**| 4-core CPU, 8 GB RAM (CPU-only, ~3–4 GB available) | **1 worker** (Serial) | 2 threads | ~2.5 GB RAM | **90 – 150 s / scan** | **0.3 – 0.5 scans / min** (18–30 / hr) |
+| **Constrained VM / Thin Client** | 4-core CPU, 8 GB RAM (CPU-only, ~3–4 GB available) | **1 worker** (Serial) | 2 threads | ~2.5 GB RAM | **90 – 150 s / scan** | **0.3 – 0.5 scans / min** (18–30 / hr) |
 
 ### Guidance for Autonomous MCP Agents & Safe Execution
 
 1. **Auto-Detect Safe Concurrency (Recommended)**:
+
    ```bash
    # Leaving --workers 0 (or omitting the flag) automatically inspects host resources
    cardiac-fat-fl quantify /path/to/cohort
    ```
+
 2. **Pre-Flight Hardware Inspection**:
+
    ```bash
    # Run instant non-invasive hardware check before launching batch jobs
    cardiac-fat-fl hardware
    ```
+
 3. **Execution on Institutional Enterprise Compute (NVIDIA Blackwell DGX & Multi-GPU Clusters)**:
    - For high-throughput institutional cohorts (e.g. UK Biobank, Stanford COCA with $>10^4 - 10^5$ scans), launch with `--workers 16-32` on Blackwell enterprise nodes or multi-GPU clusters. The runtime executes parallel sliding-window SegResNet sessions with `CUDAExecutionProvider` and DeepHeartSeg ONNX, achieving sustained aggregate throughput of **7,200–10,800 full 3D CT scans per hour**.
 4. **Execution on Prosumer Desktop GPUs (RTX 5090 / 4090)**:
@@ -371,32 +401,38 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | Command | Usage | Description |
 | :--- | :--- | :--- |
 | `hardware` | `cardiac-fat-fl hardware` | Inspects host CPUs, RAM, and CUDA GPUs to display safe concurrency limits. |
-| `download-models`| `cardiac-fat-fl download-models [--tag v1.0.0]` | Downloads validated DeepHeartSeg ONNX models from GitHub Release assets. |
+| `download-models` | `cardiac-fat-fl download-models [--tag v1.0.0]` | Downloads validated DeepHeartSeg ONNX models from GitHub Release assets. |
 | `quantify` | `cardiac-fat-fl quantify <cohort_dir> [--workers 0] [--limit N]` | End-to-end batch quantification over DICOM/NRRD/NIfTI cohort (auto-sized). |
 | `view` | `cardiac-fat-fl view <sample_dir> [--port 8000]` | Prepares study and launches authentic OHIF v3.13 2x2 medical workstation. |
 | `export-ohif` | `cardiac-fat-fl export-ohif <sample_dir> [-o dest]` | Generates standard CT DICOM series and multi-frame `eat_pvat_seg.dcm`. |
 | `push` | `cardiac-fat-fl push <sample_dir> [--url ... / --host ...] [--ca-bundle ...]` | Stores DICOM-SEG and CT slices to PACS via DICOMweb (STOW-RS with enterprise TLS) or DIMSE (C-STORE). |
-| `compare-models`| `cardiac-fat-fl compare-models <scan_path>` | Side-by-side equivalency test: MONAI vs frozen DeepHeartSeg ONNX. |
-| `federated-train`| `cardiac-fat-fl federated-train --data-dir <dir>` | Runs local NVFLARE client distillation round with FedProx and FedBN. |
-| `federated-stats`| `cardiac-fat-fl federated-stats -c <csv_path>` | Extracts multi-site privacy-preserving cohort statistical moments. |
+| `compare-models` | `cardiac-fat-fl compare-models <scan_path>` | Side-by-side equivalency test: MONAI vs frozen DeepHeartSeg ONNX. |
+| `federated-train` | `cardiac-fat-fl federated-train --data-dir <dir>` | Runs local NVFLARE client distillation round with FedProx and FedBN. |
+| `federated-stats` | `cardiac-fat-fl federated-stats -c <csv_path>` | Extracts multi-site privacy-preserving cohort statistical moments. |
+| `map-run` | `cardiac-fat-fl map-run -i <study_dir> -o <dest>` | Executes the MONAI Deploy Application Package (MAP) DAG emitting DICOM-SEG, DICOM-SR, and metrics. |
 
 ### End-to-End Workflow: From Raw CT to Interactive OHIF Visualization
 
 To process a new cardiac CT scan and inspect the 8-compartment segmentations in the OHIF workstation:
 
 1. **Step 1: Quantify Adipose Tissue (Batch or Single Study)**:
+
    ```bash
    # Computes 8-channel eat_pvat.seg.nrrd and cardiac_fat_measurements.csv
    cardiac-fat-fl quantify /path/to/cohort --save-seg
    ```
+
 2. **Step 2: Launch Interactive OHIF MPR Workstation**:
+
    ```bash
    # Generates standard DICOM-SEG (eat_pvat_seg.dcm) and serves local viewer on port 8000
    cardiac-fat-fl view /path/to/cohort/participant_id --port 8000
    ```
+
    Navigate to `http://127.0.0.1:8000/patient/<participant_id>/` to evaluate the 3D Slicer 4-quadrant layout with interactive crosshairs, density sliders, and real-time volumetric metrics.
 
 3. **Step 3: Push Results to Clinical or Research PACS (Optional)**:
+
    ```bash
    # DICOMweb STOW-RS (Orthanc, dcm4chee, Cloud PACS):
    cardiac-fat-fl push /path/to/cohort/participant_id --url "http://localhost:8042/dicom-web/studies"
@@ -405,6 +441,36 @@ To process a new cardiac CT scan and inspect the 8-compartment segmentations in 
    cardiac-fat-fl push /path/to/cohort/participant_id --host 192.168.1.50 --port 104 --called-aet CENTRAL_PACS
    ```
 
+### MONAI Deploy Application Package (MAP) & Hospital PACS Routing
+
+For clinical hospital networks and Kubernetes infrastructure, `monai-cardiac-fat-fl` implements a native **MONAI Deploy Application Package (MAP)** adhering to the [Project MONAI Deploy standard](https://project-monai.github.io/deploy.html) (`monai-deploy-app-sdk` / NVIDIA Holoscan SDK):
+
+```mermaid
+flowchart LR
+    CT["CT Scanner / PACS<br/>(DICOM C-STORE / STOW-RS)"] -->|"1. Push CT Series"| MIG["MONAI Informatics Gateway<br/>(Port 11112 / 104)"]
+    MIG -->|"2. Trigger K8s Pod"| MAP["monai-cardiac-fat-map<br/>(/var/monai/input)"]
+    MAP -->|"3. Output /var/monai/output<br/>(SEG .66.4 + SR .88.34)"| MIG
+    MIG -->|"4. Auto-route to PACS"| PACS["Hospital PACS Archive<br/>(Centricity / Syngo / Sectra)"]
+    PACS -->|"5. Review"| Viewer["Radiologist Review<br/>(OHIF v3.13 / Slicer)"]
+```
+
+1. **3-Operator Application DAG** ([`monai_deploy.py`](src/cardiac_fat_fl/monai_deploy.py)):
+   - **`CardiacCTStudyLoaderOp`**: Ingests clinical DICOM CT series or 3D volume (`/var/monai/input`) into MONAI `MetaTensor`.
+   - **`CardiacFatQuantifierOp`**: Runs WholeBody 1.5mm SegResNet + DeepHeartSeg ONNX + 3D Voronoi EDT.
+   - **`DicomSegAndSrWriterOp`**: Exports multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), and 19-column CSV/JSON to `/var/monai/output`.
+
+2. **Standalone CLI Execution**:
+
+   ```bash
+   cardiac-fat-fl map-run -i "example_source_dir/0506" -o "scratch/map_output"
+   ```
+
+3. **Kubernetes & Turnkey Clinical Integration Testbed**:
+   Launch the complete clinical testbed (Orthanc PACS + MONAI Deploy Informatics Gateway + MAP worker) in one command:
+
+   ```bash
+   docker compose -f monai_deploy_roadmap/docker-compose.monai-deploy.yml up
+   ```
 
 ---
 
@@ -443,7 +509,12 @@ monai-cardiac-fat-fl/
 │   ├── deepheartseg_loc.onnx
 │   └── wholeBody_ct_segmentation/ # 104-class 1.5mm SegResNet (NVIDIA NGC / MONAI Model Zoo)
 ├── example_source_dir/            # Official MGH CardiacFatQuant 3-case benchmark CT cohort (0506, 0909, 0987)
-├── monai_deploy_roadmap/          # MONAI Deploy Application Package (MAP) scoping & operator skeleton
+├── monai_deploy_roadmap/          # MONAI Deploy Application Package (MAP) container & PACS testbed
+│   ├── app.py                     # MAP application entrypoint executing 3-operator DAG
+│   ├── app.yaml                   # MONAI Deploy App SDK v0.6+ declarative manifest
+│   ├── Dockerfile                 # Production OCI container image for Kubernetes deployment
+│   ├── docker-compose.monai-deploy.yml # Clinical testbed (Orthanc PACS + MIG + MAP)
+│   └── MONAI_DEPLOY_SCOPING.md    # Engineering scoping & hospital deployment roadmap
 │   ├── MONAI_DEPLOY_SCOPING.md
 │   ├── app_skeleton.py
 │   └── app.yaml
@@ -454,6 +525,7 @@ monai-cardiac-fat-fl/
 │       ├── io_metatensor.py       # Universal loader (DICOM/NRRD/NIfTI -> MetaTensor), nested cohort discovery & NRRD writer
 │       ├── anatomy_segmenter.py   # UnifiedAnatomySegmenter (NGC 1.5mm WholeBody SegResNet + DeepHeartSeg ONNX + GPU sulci)
 │       ├── transforms.py          # ComputeEatPvatMasksd (Voronoi & 10mm radial dilation) & QuantifyAdiposeMetricsd
+│       ├── monai_deploy.py        # MONAI Deploy Operator DAG (Loader, Quantifier, Writer) & Application
 │       ├── dicom_sr.py            # DICOM-SR TID 1500 (SOP .88.34) structured report builder (SNOMED-CT / LOINC / UCUM)
 │       ├── pacs_client.py         # Institutional PACS archive push via DICOMweb (STOW-RS) and DIMSE (C-STORE)
 │       ├── model.py               # 3D SegResNet / SwinUNETR factory and FedBN layer filtering
@@ -465,6 +537,7 @@ monai-cardiac-fat-fl/
 │       └── cli.py                 # Typer CLI (quantify, view, export-ohif, push, federated-train, federated-stats, hardware)
 └── tests/
     ├── conftest.py                # Synthetic 3D cardiac CT phantom fixtures with known HU values
+    ├── test_monai_deploy.py       # Automated unit & CLI tests for MONAI Deploy operators and pipeline
     ├── test_cli.py                # End-to-end CLI tests (quantify, federated-stats, compare-models)
     ├── test_dicom_sr.py           # DICOM-SR TID 1500 SOP Class, SNOMED-CT/LOINC/UCUM, and NaN empty-mask tests
     ├── test_equivalency.py        # Numerical equivalency test between ONNX and modernized pipeline
@@ -478,6 +551,7 @@ monai-cardiac-fat-fl/
 ### 2. Programmatic Python API
 
 #### Loading Scans & Multi-Modal I/O
+
 ```python
 from cardiac_fat_fl.io_metatensor import read_medical_image_as_metatensor, discover_participants
 
@@ -490,6 +564,7 @@ for participant_id, scan_path in participants:
 ```
 
 #### Running Anatomical Segmentation & MapTransforms
+
 ```python
 from cardiac_fat_fl.anatomy_segmenter import UnifiedAnatomySegmenter
 from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
@@ -514,6 +589,7 @@ measurements = result["metrics"]  # Exact 19-column dictionary
 ```
 
 #### Exporting to OHIF & Launching the Viewer
+
 ```python
 from cardiac_fat_fl.ohif_exporter import export_sample_to_ohif
 from cardiac_fat_fl.ohif_viewer import launch_viewer
@@ -526,6 +602,7 @@ launch_viewer("/path/to/participant_dir", port=8000)
 ```
 
 #### Transmitting Results to Institutional PACS (STOW-RS & C-STORE)
+
 ```python
 from cardiac_fat_fl.pacs_client import (
     find_dicom_instances_to_push,
@@ -573,6 +650,7 @@ $$
 $$
 
 Where:
+
 - $\mathcal{L}_{\text{DiceFocal}}$ mitigates extreme foreground-background class imbalance across the 8 cardiac adipose compartments.
 - $\mu \in [0.01, 0.1]$ is the proximal regularization coefficient penalizing local client divergence.
 - **FedBN (Domain Adaptation)**: Normalization layers (`BatchNorm3d`, `InstanceNorm3d`) are decoupled from global aggregation to neutralize inter-hospital scanner variations (e.g., Siemens vs. GE energy spectra):
@@ -601,11 +679,13 @@ This guarantees **100.0% mathematical equivalence** to pooling all patient CSVs 
 ## Verification & Test Suite
 
 Run all automated unit tests via `pytest`:
+
 ```bash
 pytest -v
 ```
 
 The test suite validates:
+
 - **Transform Correctness**: Strict $[-190.0, -30.0]\text{ HU}$ thresholding, Voronoi chamber partitioning, and radial vessel dilation.
 - **Header Coordinate Integrity**: Orientation preservation across NRRD and DICOM formats.
 - **Mathematical Equivalency**: $0.00\text{ cm}^3$ and $0.00\text{ HU}$ agreement against reference baseline models.
@@ -635,6 +715,7 @@ The software is provided "as is", without warranty of any kind, express or impli
 This project builds directly upon the pioneering research and engineering of the foundational **[`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant)** and **[`DeepHeartSeg`](https://github.com/AIM-Harvard/DeepHeartSeg)** pipelines developed at the **Cardiovascular Imaging Research Center (CIRC)** at Massachusetts General Hospital / Harvard Medical School, and the **Artificial Intelligence in Medicine (AIM)** Program at Mass General Brigham.
 
 Special acknowledgement is extended to:
+
 - **Ibrahim Hadzic ([@ibro45](https://github.com/ibro45))** for the foundational design, architecture, and code contributions that established the original automated cardiac fat segmentation and quantification methodology.
 - The CIRC and AIM research groups for open-sourcing foundational weights, validation cohorts, and domain specifications that made modernizing this pipeline into MONAI and NVIDIA FLARE possible.
 
@@ -643,4 +724,5 @@ If you utilize this pipeline or the foundational methodology in your research, p
 ---
 
 ## Citation & Lineage
+
 Modernized from the original Harvard / MGH `CardiacFatQuant` research pipeline by Tyler Patay, XuCong Ruan, Shawn Newlander, George Wesbey, and Borek Foldyna.

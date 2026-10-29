@@ -151,9 +151,14 @@ monai-deploy run ghcr.io/tylerp61391/monai-cardiac-fat-map:1.0.0 \
 
 ---
 
-## 6. Files Included in This Scoping Folder
+## 6. Implemented Production Deliverables
 
-- [MONAI_DEPLOY_SCOPING.md](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2/cardiofat/monai_deploy_roadmap/MONAI_DEPLOY_SCOPING.md) — This architectural and engineering roadmap.
-- [app_skeleton.py](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2/cardiofat/monai_deploy_roadmap/app_skeleton.py) — Reference 3-operator `monai-deploy-app-sdk` DAG wrapping `cardiac_fat_fl`.
-- [app.yaml](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2/cardiofat/monai_deploy_roadmap/app.yaml) — Declarative MONAI Application Package (MAP) configuration manifest.
+All 4 phases are fully implemented, verified, and integrated into the continuous integration suite (39 tests passing):
 
+- [`src/cardiac_fat_fl/monai_deploy.py`](../src/cardiac_fat_fl/monai_deploy.py) — 3-node MONAI Deploy Operator DAG (`CardiacCTStudyLoaderOp`, `CardiacFatQuantifierOp`, `DicomSegAndSrWriterOp`) and `CardiacFatQuantApplication` with dual-mode SDK/standalone support.
+- [`src/cardiac_fat_fl/cli.py`](../src/cardiac_fat_fl/cli.py) — `cardiac-fat-fl map-run` CLI command.
+- [`monai_deploy_roadmap/app.py`](app.py) — Official MAP application entrypoint.
+- [`monai_deploy_roadmap/app.yaml`](app.yaml) — Declarative MAP manifest conforming to MONAI Deploy App SDK v0.6+ & NVIDIA Holoscan SDK specifications.
+- [`monai_deploy_roadmap/Dockerfile`](Dockerfile) — Production OCI Docker container image for Kubernetes / Argo Workflows deployment.
+- [`monai_deploy_roadmap/docker-compose.monai-deploy.yml`](docker-compose.monai-deploy.yml) — Turnkey clinical testbed launching Orthanc PACS, MONAI Informatics Gateway (MIG), and the MAP container.
+- [`tests/test_monai_deploy.py`](../tests/test_monai_deploy.py) — Comprehensive automated unit & integration test suite.
