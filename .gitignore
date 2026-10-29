@@ -65,6 +65,9 @@ docs/architecture_review/*.png
 # Local scratch scripts & temporary test outputs
 scratch/
 ohif_export/
+cardiac_fat_report.*
+eat_pvat_report.dcm
+mpr_montage.png
 
 
 

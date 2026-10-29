@@ -1255,6 +1255,7 @@ def report_cmd(
 
     # Find CT scan
     ct_candidates = [
+        resolved_input / "img.nrrd",
         resolved_input / "scan.nrrd",
         resolved_input / "ct.nrrd",
         resolved_input / f"{resolved_input.name}.nrrd",

@@ -192,29 +192,47 @@ def generate_mpr_snapshot(
     Returns:
         PIL Image containing the 3-view panoramic montage.
     """
-    if image.ndim == 4:
+    while image.ndim > 3 and image.shape[0] == 1:
         image = image[0]
 
-    d, h, w = image.shape
+    if mask is not None:
+        while mask.ndim > 4 and mask.shape[0] == 1:
+            mask = mask[0]
+        if mask.ndim == 3:
+            mask = mask[np.newaxis, ...]
 
     # Find optimal centroid based on mask (or fallback to middle)
     if mask is not None and np.any(mask):
-        coords = np.argwhere(mask[0] > 0 if mask.ndim == 4 else mask > 0)
+        search_mask = mask[0] if (mask.ndim == 4 and mask.shape[0] > 0) else mask
+        coords = np.argwhere(search_mask > 0)
         if len(coords) > 0:
-            cz, cy, cx = coords.mean(axis=0).astype(int)
+            c0, c1, c2 = coords.mean(axis=0).astype(int)
         else:
-            cz, cy, cx = d // 2, h // 2, w // 2
+            c0, c1, c2 = image.shape[0] // 2, image.shape[1] // 2, image.shape[2] // 2
     else:
-        cz, cy, cx = d // 2, h // 2, w // 2
+        c0, c1, c2 = image.shape[0] // 2, image.shape[1] // 2, image.shape[2] // 2
 
-    cz = int(np.clip(cz, 0, d - 1))
-    cy = int(np.clip(cy, 0, h - 1))
-    cx = int(np.clip(cx, 0, w - 1))
+    c0 = int(np.clip(c0, 0, image.shape[0] - 1))
+    c1 = int(np.clip(c1, 0, image.shape[1] - 1))
+    c2 = int(np.clip(c2, 0, image.shape[2] - 1))
 
-    # Extract 2D slices
-    axial_slice = image[cz, :, :]
-    coronal_slice = image[:, cy, :]
-    sagittal_slice = image[:, :, cx]
+    # Check whether image orientation is (X, Y, Z) or (Z, Y, X)
+    if image.shape[2] < min(image.shape[0], image.shape[1]):
+        cx, cy, cz = c0, c1, c2
+        axial_slice = image[:, :, cz].T
+        coronal_slice = image[:, cy, :].T[::-1, :]
+        sagittal_slice = image[cx, :, :].T[::-1, :]
+        axial_m = np.transpose(mask[:, :, :, cz], (0, 2, 1)) if mask is not None else None
+        coronal_m = np.transpose(mask[:, :, cy, :], (0, 2, 1))[:, ::-1, :] if mask is not None else None
+        sagittal_m = np.transpose(mask[:, cx, :, :], (0, 2, 1))[:, ::-1, :] if mask is not None else None
+    else:
+        cz, cy, cx = c0, c1, c2
+        axial_slice = image[cz, :, :]
+        coronal_slice = image[:, cy, :]
+        sagittal_slice = image[:, :, cx]
+        axial_m = mask[:, cz, :, :] if mask is not None else None
+        coronal_m = mask[:, :, cy, :] if mask is not None else None
+        sagittal_m = mask[:, :, :, cx] if mask is not None else None
 
     def _render_pane(
         ct_2d: np.ndarray,
@@ -272,10 +290,7 @@ def generate_mpr_snapshot(
 
         return base
 
-    # Prepare masks for each view
-    axial_m = mask[:, cz, :, :] if mask is not None else None
-    coronal_m = mask[:, :, cy, :] if mask is not None else None
-    sagittal_m = mask[:, :, :, cx] if mask is not None else None
+
 
     pane_axial = _render_pane(axial_slice, axial_m, f"AXIAL (Z={cz})", ("A", "P", "R", "L"))
     pane_coronal = _render_pane(coronal_slice, coronal_m, f"CORONAL (Y={cy})", ("S", "I", "R", "L"))
@@ -723,8 +738,8 @@ def encapsulate_pdf_to_dicom(
     ds.Modality = "DOC"
     ds.ConversionType = "WSD"
     ds.MIMETypeOfEncapsulatedDocument = "application/pdf"
-    ds.DocumentTitle = document_title
-    ds.SeriesDescription = f"AI Imaging Report: {document_title}"
+    ds.DocumentTitle = document_title[:64]
+    ds.SeriesDescription = f"AI Report: {document_title}"[:64]
     ds.EncapsulatedDocument = pdf_bytes
 
     if len(pdf_bytes) % 2 != 0:
