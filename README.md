@@ -497,7 +497,8 @@ monai-cardiac-fat-fl/
 ├── docs/                          # Architectural specifications, slide deck, and cohort validation reports
 │   ├── regulatory/
 │   │   └── FDA_SAMD_REGULATORY_DOSSIER.md # FDA 510(k) SaMD dossier, IEC 62304 matrix, ISO 14971 FMEA & PCCP
-│   ├── architecture_review/       # Visual architecture walkthrough & slide gallery (14 slides)
+│   ├── architecture_review/       # Visual architecture walkthrough & slide gallery (15 slides)
+│   ├── MONAI_DEPLOY_AND_FLARE_INTEGRATION.md # Closed-loop federated clinical architecture & AI flywheel
 │   ├── Cardiac_Segmentation_Architecture.pdf
 │   ├── ARCHITECTURE_CODE_REVIEW.md
 │   ├── architecture_infographic.html
@@ -515,9 +516,6 @@ monai-cardiac-fat-fl/
 │   ├── Dockerfile                 # Production OCI container image for Kubernetes deployment
 │   ├── docker-compose.monai-deploy.yml # Clinical testbed (Orthanc PACS + MIG + MAP)
 │   └── MONAI_DEPLOY_SCOPING.md    # Engineering scoping & hospital deployment roadmap
-│   ├── MONAI_DEPLOY_SCOPING.md
-│   ├── app_skeleton.py
-│   └── app.yaml
 ├── src/
 │   └── cardiac_fat_fl/
 │       ├── __init__.py            # Package root exports
