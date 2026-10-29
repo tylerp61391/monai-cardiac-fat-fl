@@ -37,8 +37,9 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 | **Segmentation Engine** | Multi-step external tools: subprocess `TotalSegmentator` (nnUNet 1.5 mm isotropic) + 2-stage `DeepHeartSeg` (TF 1.14 `.pb`) | **Native MONAI & GPU Stack**: NVIDIA NGC / MONAI Model Zoo [`monai_wholebody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation) (1.5 mm isotropic SegResNet, 104 labels: LA, LV, RA, RV, Aorta) + 2-stage `DeepHeartSeg` ONNX (`loc` + `heart`) + distilled 8-ch SegResNet |
 | **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$, $r = 1.000$) |
 | **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
+| **Clinical Edge & Deployment** | Manual CLI execution on host Python; no containerization or automated hospital staging | **Turnkey MONAI Deploy (MAP)** 3-operator DAG (`monai_deploy.py`), autonomous **PACS Watchdog & Auto-Router Daemon** (`cardiac-fat-fl daemon`), and containerized Kubernetes batch Jobs (`k8s/hospital-clinical-testbed.yaml`) |
 | **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
-| **Visualization & PACS** | Manual 3D Slicer import | Native **OHIF v3.13 Workstation** + **Direct PACS Push** (DICOMweb STOW-RS & DIMSE C-STORE) + **DICOM-SEG** (SOP .66.4) |
+| **Visualization & Reporting** | Manual 3D Slicer import; no standard DICOM export | Native **OHIF v3.13 Workstation** + **Direct PACS Push** (DICOMweb STOW-RS & DIMSE C-STORE) + **DICOM-SEG** (SOP .66.4) + **DICOM-SR TID 1500** (SOP .88.34) |
 
 ---
 
