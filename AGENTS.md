@@ -12,6 +12,7 @@ This document is automatically loaded into agent context. It provides the codeba
 - **Privacy & FL**: Coordinates multi-hospital federated model distillation (FedProx + FedBN) and cohort moment aggregation (Welford) with zero patient DICOM/image transfer.
 - **Visualization & PACS**: Converts studies into web-ready DICOM + DICOM-SEG volumes served via a local DCM4CHEE-compatible static JSON-DICOM server for interactive OHIF 2D MPR and 3D Slicer rendering.
 - **PACS Archive Push**: Natively exports and transmits standard multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), and CT volumes to institutional PACS via DICOMweb (STOW-RS) and DIMSE (C-STORE).
+- **MONAI Deploy & Kubernetes**: Turnkey MONAI Deploy Application Package (MAP) with 3-operator DAG (`monai_deploy.py`), Docker Compose PACS testbed (`monai_deploy_roadmap/`), and Kubernetes hospital cluster manifests (`k8s/`).
 
 ---
 
@@ -37,6 +38,15 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
 | `hardware.py` | 219 | `detect_hardware`, `validate_worker_concurrency` | Host CPU/RAM/GPU profiler and OOM-safe worker concurrency throttling. |
 | `monai_deploy.py` | 390 | `CardiacCTStudyLoaderOp`, `CardiacFatQuantifierOp`, `DicomSegAndSrWriterOp`, `CardiacFatQuantApplication` | MONAI Deploy Application Package (MAP) DAG for clinical Holoscan / Informatics Gateway deployment. |
+
+### Deployment & Infrastructure Layout
+
+| Directory / File | Description | Responsibility |
+| :--- | :--- | :--- |
+| `k8s/hospital-clinical-testbed.yaml` | Kubernetes manifests | Provisions `clinical-ai` namespace, Orthanc PACS Deployment/Service (8042/4242), and MAP batch Job. |
+| `k8s/README.md` | Kubernetes deployment guide | Quickstart instructions for deploying, port-forwarding, pushing studies, and tearing down on clusters. |
+| `monai_deploy_roadmap/docker-compose.monai-deploy.yml` | Turnkey Docker testbed | Spins up local Orthanc PACS on `:8042` and `:4242` for DICOMweb/DIMSE testing. |
+| `monai_deploy_roadmap/app.yaml` | MAP container manifest | OCI image specification obeying MONAI Deploy / NVIDIA Holoscan SDK resource contracts. |
 
 ### Test Suite (`tests/`)
 
@@ -121,6 +131,26 @@ When a user provides a CT scan or participant directory and asks to process and 
    - `eat_pvat_sr.dcm` (Comprehensive 3D DICOM-SR TID 1500 `1.2.840.10008.5.1.4.1.1.88.34`)
    - `cardiac_fat_measurements.csv` (19-column clinical metrics)
    - `eat_pvat.seg.nrrd` (8-channel NRRD)
+
+### Recipe 5: Deploy & Test on Local / Hospital Kubernetes (`k8s/`)
+
+1. **Deploy Clinical Testbed**:
+   ```bash
+   kubectl apply -f k8s/hospital-clinical-testbed.yaml
+   ```
+2. **Access Web UI via Port-Forward**:
+   ```bash
+   kubectl port-forward svc/orthanc-pacs -n clinical-ai 8043:8042
+   ```
+   Navigate to `http://localhost:8043` in browser.
+3. **Push Patient Study to Kubernetes PACS**:
+   ```bash
+   cardiac-fat-fl push "example_source_dir/0506" --url "http://localhost:8043/dicom-web/studies" --include-ct
+   ```
+4. **Tear Down**:
+   ```bash
+   kubectl delete -f k8s/hospital-clinical-testbed.yaml
+   ```
 
 ---
 
