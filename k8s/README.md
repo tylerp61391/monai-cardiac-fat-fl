@@ -61,9 +61,9 @@ Refresh [http://localhost:8043](http://localhost:8043) to inspect the 3 series i
 
 ### 4. Tear Down & Clean Up
 
-To cleanly delete the namespace and all associated pods, services, and jobs:
+To cleanly delete the namespace and all associated pods, services, and jobs (with `--ignore-not-found=true` ensuring safe, idempotent teardown without errors if resources are already removed):
 
 ```bash
-kubectl delete -f k8s/hospital-clinical-testbed.yaml
+kubectl delete -f k8s/hospital-clinical-testbed.yaml --ignore-not-found=true
 ```
 

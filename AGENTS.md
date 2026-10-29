@@ -51,7 +51,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests: `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_dicom_sr.py` (119L), `test_cli.py` (101L), `test_monai_deploy.py` (130L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L).
+- Unit/Integration tests: `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_dicom_sr.py` (119L), `test_cli.py` (101L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L).
 
 ---
 
@@ -61,7 +61,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (39 tests; run before committing):
+- **Run Full Test Suite** (42 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v
@@ -149,7 +149,7 @@ When a user provides a CT scan or participant directory and asks to process and 
    ```
 4. **Tear Down**:
    ```bash
-   kubectl delete -f k8s/hospital-clinical-testbed.yaml
+   kubectl delete -f k8s/hospital-clinical-testbed.yaml --ignore-not-found=true
    ```
 
 ---
