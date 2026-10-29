@@ -59,7 +59,7 @@ def find_dicom_instances_to_push(
 
     if include_ct:
         # Search for CT slices in ohif_export or directory
-        ct_dirs = [path / "ohif_export", path]
+        ct_dirs = [path / "ohif_export" / "ct", path / "ohif_export", path, path / "ct"]
         ct_files: List[Path] = []
         for d in ct_dirs:
             if d.exists() and d.is_dir():

@@ -1,35 +1,39 @@
-version: '3.8'
-
 # MONAI Deploy Clinical Integration Testbed:
-# Orthanc PACS + MONAI Deploy Informatics Gateway (MIG) + Workflow Manager (MWM) + Cardiac Fat MAP
+# Orthanc PACS + Optional MONAI Deploy Informatics Gateway (MIG) & Cardiac Fat MAP Worker
 #
-# Workflow:
-# 1. CT scanner or cardiac-fat-fl pushes study to MIG DICOM listener (port 11112) or Orthanc (port 4242).
-# 2. MIG triggers Workflow Manager to launch monai-cardiac-fat-map container.
-# 3. Container processes study and emits multi-frame DICOM-SEG (.66.4) & DICOM-SR TID 1500 (.88.34).
-# 4. MIG forwards resulting clinical objects into Orthanc PACS archive and embedded OHIF viewer.
+# Default Workflow (PACS Archive & DICOMweb / DIMSE Push Testing):
+# 1. Start Orthanc PACS: docker compose -f monai_deploy_roadmap/docker-compose.monai-deploy.yml up -d
+# 2. Open Web UI: http://localhost:8042
+# 3. Push study via DICOMweb STOW-RS:
+#    python -m cardiac_fat_fl.cli push "example_source_dir/0506" --url "http://localhost:8042/dicom-web/studies"
+# 4. Push study via DIMSE C-STORE:
+#    python -m cardiac_fat_fl.cli push "example_source_dir/0506" --host localhost --port 4242 --called-aet ORTHANC
 
 services:
-  # 1. Institutional Orthanc PACS Archive & OHIF Workstation
+  # 1. Institutional Orthanc PACS Archive & DICOMweb Testbed (Default Service)
   orthanc-pacs:
     image: orthancteam/orthanc:24.12.0
     container_name: cardiac-fat-orthanc
     restart: unless-stopped
     ports:
-      - "8042:8042"   # DICOMweb REST API & Orthanc Explorer UI
+      - "8042:8042"   # DICOMweb STOW-RS / WADO-RS & Orthanc Explorer UI
       - "4242:4242"   # Traditional DICOM DIMSE C-STORE Port (AET: ORTHANC)
     environment:
       ORTHANC__AUTHENTICATION_ENABLED: "false"
       ORTHANC__DICOM_MODALITIES_IN_DATABASE: "true"
       ORTHANC__DICOM_CHECK_CALLED_AET: "false"
       ORTHANC__DICOM_AET: "ORTHANC"
+      ORTHANC__DICOM_WEB__ENABLE: "true"
     volumes:
       - orthanc_storage:/var/lib/orthanc/db
 
-  # 2. MONAI Deploy Informatics Gateway (MIG)
+  # 2. MONAI Deploy Informatics Gateway (MIG) (Optional - run with: --profile mig)
   # Receives DICOM studies from hospital network and routes processed DICOM-SEG/SR back to PACS
   monai-informatics-gateway:
-    image: projectmonai/informatics-gateway:0.6.0
+    profiles:
+      - mig
+      - full
+    image: projectmonai/monai-informatics-gateway:0.6.0
     container_name: cardiac-fat-mig
     restart: unless-stopped
     ports:
@@ -48,13 +52,16 @@ services:
       - mig_incoming:/var/monai/incoming
       - mig_payloads:/var/monai/payloads
 
-  # 3. Standalone MONAI Application Package (monai-cardiac-fat-map)
-  # Example service definition for running the containerized MAP on incoming studies
+  # 3. Standalone MONAI Application Package Worker (Optional - run with: --profile worker)
+  # Containerized MAP execution on incoming studies
   cardiac-fat-map:
+    profiles:
+      - worker
+      - full
     build:
       context: ..
       dockerfile: monai_deploy_roadmap/Dockerfile
-    image: ghcr.io/tylerp61391/monai-cardiac-fat-map:1.0.0
+    image: monai-cardiac-fat-map:local
     container_name: cardiac-fat-map-worker
     deploy:
       resources:
@@ -67,11 +74,10 @@ services:
       - mig_payloads:/var/monai/input:ro
       - map_output:/var/monai/output:rw
     depends_on:
-      - monai-informatics-gateway
+      - orthanc-pacs
 
 volumes:
   orthanc_storage:
   mig_incoming:
   mig_payloads:
   map_output:
-
