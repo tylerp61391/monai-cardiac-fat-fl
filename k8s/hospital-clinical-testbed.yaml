@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: clinical-ai
+  labels:
+    app.kubernetes.io/part-of: monai-cardiac-fat-fl
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orthanc-pacs
+  namespace: clinical-ai
+  labels:
+    app: orthanc-pacs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orthanc-pacs
+  template:
+    metadata:
+      labels:
+        app: orthanc-pacs
+    spec:
+      containers:
+      - name: orthanc
+        image: orthancteam/orthanc:24.12.0
+        ports:
+        - containerPort: 8042
+          name: http-web
+        - containerPort: 4242
+          name: dicom-dimse
+        env:
+        - name: ORTHANC__AUTHENTICATION_ENABLED
+          value: "false"
+        - name: ORTHANC__DICOM_MODALITIES_IN_DATABASE
+          value: "true"
+        - name: ORTHANC__DICOM_CHECK_CALLED_AET
+          value: "false"
+        - name: ORTHANC__DICOM_AET
+          value: "ORTHANC"
+        - name: ORTHANC__DICOM_WEB__ENABLE
+          value: "true"
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orthanc-pacs
+  namespace: clinical-ai
+spec:
+  type: ClusterIP
+  selector:
+    app: orthanc-pacs
+  ports:
+  - name: http-web
+    port: 8042
+    targetPort: 8042
+  - name: dicom-dimse
+    port: 4242
+    targetPort: 4242
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cardiac-fat-quant-job
+  namespace: clinical-ai
+  labels:
+    app: cardiac-fat-map
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: cardiac-fat-map
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: cardiac-fat-map
+        image: orthancteam/orthanc:24.12.0 # placeholder or monai-cardiac-fat-map
+        command: ["echo", "Clinical MAP job ready"]
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "2Gi"
+
