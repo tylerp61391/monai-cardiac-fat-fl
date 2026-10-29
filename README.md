@@ -410,6 +410,7 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `federated-train` | `cardiac-fat-fl federated-train --data-dir <dir>` | Runs local NVFLARE client distillation round with FedProx and FedBN. |
 | `federated-stats` | `cardiac-fat-fl federated-stats -c <csv_path>` | Extracts multi-site privacy-preserving cohort statistical moments. |
 | `map-run` | `cardiac-fat-fl map-run -i <study_dir> -o <dest>` | Executes the MONAI Deploy Application Package (MAP) DAG emitting DICOM-SEG, DICOM-SR, and metrics. |
+| `daemon` | `cardiac-fat-fl daemon <inbox_dir> [--outbox ...] [--pacs-url ...] [--dry-run]` | Autonomous background watchdog: monitors incoming CT scans, executes MAP DAG, and auto-routes DICOM-SEG/SR to PACS. |
 
 ### End-to-End Workflow: From Raw CT to Interactive OHIF Visualization
 
@@ -439,6 +440,16 @@ To process a new cardiac CT scan and inspect the 8-compartment segmentations in 
 
    # Or traditional DICOM DIMSE C-STORE:
    cardiac-fat-fl push /path/to/cohort/participant_id --host 192.168.1.50 --port 104 --called-aet CENTRAL_PACS
+   ```
+
+4. **Step 4: Autonomous Background Processing (Zero-Click PACS Watchdog)**:
+
+   ```bash
+   # Safe Dry-Run validation (processes incoming CTs, creates DICOM-SEG/SR & CSV, skips network push):
+   cardiac-fat-fl daemon /path/to/inbox --outbox /path/to/outbox --dry-run
+
+   # Live Hospital Auto-Routing:
+   cardiac-fat-fl daemon /path/to/inbox --outbox /path/to/outbox --archive /path/to/archive --pacs-url "http://pacs:8042/dicom-web/studies"
    ```
 
 ### MONAI Deploy Application Package (MAP) & Hospital PACS Routing
@@ -538,13 +549,14 @@ monai-cardiac-fat-fl/
 │       ├── monai_deploy.py        # MONAI Deploy Operator DAG (Loader, Quantifier, Writer) & Application
 │       ├── dicom_sr.py            # DICOM-SR TID 1500 (SOP .88.34) structured report builder (SNOMED-CT / LOINC / UCUM)
 │       ├── pacs_client.py         # Institutional PACS archive push via DICOMweb (STOW-RS) and DIMSE (C-STORE)
+│       ├── pacs_daemon.py         # Autonomous PACS watchdog daemon (auto-routing CT -> MAP DAG -> DICOM-SEG/SR -> PACS)
 │       ├── model.py               # 3D SegResNet / SwinUNETR factory and FedBN layer filtering
 │       ├── fl_client_algo.py      # monai.fl.client.ClientAlgo subclass for distillation and local analytics
 │       ├── fl_stats_executor.py   # NVFLARE Executor for privacy-preserving federated Welford summary statistics
 │       ├── ohif_exporter.py       # DICOM series generator, DICOM-SEG (.66.4), DICOM-SR, and OHIF v3.13 workstation builder
 │       ├── ohif_viewer.py         # Local CORS-enabled multi-threaded HTTP server and browser launcher
 │       ├── hardware.py            # Dynamic hardware auto-detection (CPU/RAM/GPU) & safe concurrency sizing
-│       └── cli.py                 # Typer CLI (quantify, map-run, view, export-ohif, push, federated-train, federated-stats, hardware)
+│       └── cli.py                 # Typer CLI (quantify, map-run, daemon, view, export-ohif, push, federated-train, federated-stats, hardware)
 └── tests/
     ├── conftest.py                # Synthetic 3D cardiac CT phantom fixtures with known HU values
     ├── test_monai_deploy.py       # Automated unit & CLI tests for MONAI Deploy operators and pipeline

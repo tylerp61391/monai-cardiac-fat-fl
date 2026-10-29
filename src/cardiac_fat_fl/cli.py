@@ -985,6 +985,184 @@ def map_run(
         raise typer.Exit(code=1)
 
 
+@app.command(name="daemon")
+def daemon_cmd(
+    inbox: Path = typer.Argument(
+        ...,
+        help="Path to incoming study inbox directory to monitor for new cardiac CT scans.",
+    ),
+    outbox: Optional[Path] = typer.Option(
+        None,
+        "--outbox",
+        "-o",
+        help="Output directory where DICOM-SEG, DICOM-SR, and measurement CSVs are saved.",
+    ),
+    archive: Optional[Path] = typer.Option(
+        None,
+        "--archive",
+        "-a",
+        help="Optional archive folder to move input scans to once successfully processed.",
+    ),
+    failed: Optional[Path] = typer.Option(
+        None,
+        "--failed",
+        "-f",
+        help="Optional destination folder for scans that fail or are corrupted.",
+    ),
+    pacs_url: Optional[str] = typer.Option(
+        None,
+        "--pacs-url",
+        help="Target DICOMweb STOW-RS URL (e.g. http://localhost:8042/dicom-web/studies).",
+    ),
+    pacs_host: Optional[str] = typer.Option(
+        None,
+        "--pacs-host",
+        help="Target PACS hostname or IP address for DIMSE C-STORE.",
+    ),
+    pacs_port: Optional[int] = typer.Option(
+        None,
+        "--pacs-port",
+        help="Target PACS DIMSE port (e.g. 104, 4242).",
+    ),
+    called_aet: str = typer.Option(
+        "ANY-SCP",
+        "--called-aet",
+        help="Target Application Entity Title (AET) for DIMSE C-STORE.",
+    ),
+    calling_aet: str = typer.Option(
+        "CARDIAC_FAT_FL",
+        "--calling-aet",
+        help="Local Application Entity Title (AET).",
+    ),
+    include_ct: bool = typer.Option(
+        False,
+        "--include-ct/--no-include-ct",
+        help="Push original CT series slices to PACS alongside DICOM-SEG and DICOM-SR.",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run/--live",
+        help="Process scans and save locally in outbox, but skip network transmission to PACS.",
+    ),
+    single_pass: bool = typer.Option(
+        False,
+        "--single-pass/--continuous",
+        help="Process all settled studies currently in inbox once and exit (batch/cron mode).",
+    ),
+    poll_interval: float = typer.Option(
+        5.0,
+        "--poll-interval",
+        help="Seconds between inbox polling cycles in continuous mode (default: 5.0).",
+    ),
+    settle_seconds: float = typer.Option(
+        5.0,
+        "--settle-seconds",
+        help="Quiet duration in seconds required for incoming files before processing starts.",
+    ),
+    models_dir: Optional[Path] = typer.Option(
+        None,
+        "--models",
+        "-m",
+        help="Directory containing deep learning model weights (default: models/).",
+    ),
+    pvat_radius: float = typer.Option(
+        10.0,
+        "--pvat-radius",
+        help="Pericoronary Adipose Tissue radial dilation distance in mm (default: 10.0 mm).",
+    ),
+    max_studies: Optional[int] = typer.Option(
+        None,
+        "--max-studies",
+        help="Maximum number of studies to process before terminating (default: unlimited).",
+    ),
+    ca_bundle: Optional[Path] = typer.Option(
+        None,
+        "--ca-bundle",
+        help="Custom CA certificate bundle path for DICOMweb TLS verification.",
+    ),
+    insecure: bool = typer.Option(
+        False,
+        "--insecure",
+        help="Disable SSL/TLS certificate verification for local development testbeds.",
+    ),
+) -> None:
+    """Run the Automated PACS Watchdog & Auto-Router Daemon.
+
+    Monitors an incoming directory for newly arrived cardiac CT scans, executes the MONAI Deploy
+    MAP pipeline, computes 8-compartment EAT/PVAT metrics, and auto-routes DICOM-SEG (.66.4) and
+    DICOM-SR TID 1500 (.88.34) directly to PACS.
+
+    Strictly opt-in / dormant by default. Use --dry-run for non-destructive local validation.
+    """
+    from cardiac_fat_fl.pacs_daemon import DaemonConfig, PACSWatchdogDaemon
+
+    ca_cert: Optional[Union[str, Path, bool]] = None
+    if insecure:
+        ca_cert = False
+    elif ca_bundle is not None:
+        ca_cert = ca_bundle
+
+    config = DaemonConfig(
+        inbox_dir=inbox,
+        outbox_dir=outbox,
+        archive_dir=archive,
+        failed_dir=failed,
+        settle_seconds=settle_seconds,
+        poll_interval=poll_interval,
+        models_dir=models_dir,
+        pvat_radius_mm=pvat_radius,
+        pacs_url=pacs_url,
+        pacs_host=pacs_host,
+        pacs_port=pacs_port,
+        called_aet=called_aet,
+        calling_aet=calling_aet,
+        include_ct=include_ct,
+        dry_run=dry_run,
+        ca_cert=ca_cert,
+        single_pass=single_pass,
+        max_studies=max_studies,
+    )
+
+    console.print("[bold cyan]================================================================[/bold cyan]")
+    console.print("[bold cyan]       Automated Clinical PACS Watchdog & Auto-Router Daemon    [/bold cyan]")
+    console.print("[bold cyan]================================================================[/bold cyan]")
+    console.print(f"  [bold]Inbox Dir:[/bold]       {config.inbox_dir}")
+    console.print(f"  [bold]Outbox Dir:[/bold]      {config.outbox_dir}")
+    console.print(f"  [bold]Archive Dir:[/bold]     {config.archive_dir or '(leave in inbox)'}")
+    console.print(f"  [bold]Failed Dir:[/bold]      {config.failed_dir or '(leave in inbox)'}")
+    console.print(f"  [bold]Mode:[/bold]            {'[yellow]DRY-RUN (no network push)[/yellow]' if dry_run else '[green]LIVE PACS AUTO-ROUTING[/green]'}")
+    console.print(f"  [bold]Execution:[/bold]       {'Single pass (batch)' if single_pass else f'Continuous polling ({poll_interval}s)'}")
+    if pacs_url:
+        console.print(f"  [bold]PACS Route:[/bold]      STOW-RS -> {pacs_url}")
+    elif pacs_host and pacs_port:
+        console.print(f"  [bold]PACS Route:[/bold]      DIMSE C-STORE -> {called_aet}@{pacs_host}:{pacs_port}")
+    else:
+        console.print("  [bold]PACS Route:[/bold]      [dim]None (local storage in outbox only)[/dim]")
+
+    daemon = PACSWatchdogDaemon(config)
+
+    def on_study_completed(summary: Dict[str, Any]) -> None:
+        sid = summary.get("study_id", "unknown")
+        status = summary.get("status")
+        if status == "success":
+            console.print(f"[bold green]Study [{sid}] processed successfully[/bold green]")
+            pacs_info = summary.get("pacs_result", {})
+            if pacs_info.get("status") == "dry_run_success":
+                console.print(f"  [yellow]{pacs_info.get('details')}[/yellow]")
+            elif "details" in pacs_info:
+                console.print(f"  [cyan]{pacs_info.get('details')}[/cyan]")
+        else:
+            console.print(f"[bold red]Study [{sid}] failed:[/bold red] {summary.get('error')}")
+
+    try:
+        summary = daemon.run(progress_callback=on_study_completed)
+        console.print("\n[bold green]Daemon finished cleanly.[/bold green]")
+        console.print(f"  Processed: {summary['processed_count']} | Failed: {summary['failed_count']} | Reason: {summary['termination_reason']}")
+    except KeyboardInterrupt:
+        daemon.stop()
+        console.print("\n[yellow]Daemon interrupted by user (SIGINT). Exiting safely.[/yellow]")
+
+
 if __name__ == "__main__":
     app()
 
