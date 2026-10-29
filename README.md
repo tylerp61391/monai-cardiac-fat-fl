@@ -567,6 +567,7 @@ monai-cardiac-fat-fl/
     ├── test_hardware.py           # Auto-detection, safe concurrency throttling & CLI hardware checks
     ├── test_ohif.py               # DICOM & DICOM-SEG SOP class (.66.4) validation tests
     ├── test_pacs_client.py        # DICOMweb STOW-RS multipart/related & DIMSE C-STORE association tests
+    ├── test_pacs_daemon.py        # Automated unit and integration tests for PACS watchdog daemon
     └── test_transforms.py         # Transforms, HU thresholding, cm3 volume & 19-column schema validation
 ```
 
