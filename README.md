@@ -8,6 +8,8 @@
 [![CI Test Suite](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml/badge.svg)](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
 [![DICOM-SR](https://img.shields.io/badge/DICOM--SR-TID%201500-blueviolet.svg)](https://dicom.nema.org/)
+[![DICOM Encapsulated PDF](https://img.shields.io/badge/DICOM-Encapsulated%20PDF%20.104.1-008080.svg)](https://dicom.nema.org/)
+[![HL7 FHIR](https://img.shields.io/badge/HL7%20FHIR-R4%20%2F%20R5%20Bridge-e05d44.svg?logo=fire&logoColor=white)](https://hl7.org/fhir/)
 [![OHIF Viewer](https://img.shields.io/badge/OHIF%20Viewer-v3.13%20Next-0284c7.svg)](https://ohif.org/release-notes/3p13)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED.svg?logo=docker&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-fl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -39,7 +41,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 | **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
 | **Clinical Edge & Deployment** | Manual CLI execution on host Python; no containerization or automated hospital staging | **Turnkey MONAI Deploy (MAP)** 3-operator DAG (`monai_deploy.py`), autonomous **PACS Watchdog & Auto-Router Daemon** (`cardiac-fat-fl daemon`), and containerized Kubernetes batch Jobs (`k8s/hospital-clinical-testbed.yaml`) |
 | **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + Federated Stats) |
-| **Visualization & Reporting** | Manual 3D Slicer import; no standard DICOM export | Native **OHIF v3.13 Workstation** + **Direct PACS Push** (DICOMweb STOW-RS & DIMSE C-STORE) + **DICOM-SEG** (SOP .66.4) + **DICOM-SR TID 1500** (SOP .88.34) |
+| **Visualization & Reporting** | Manual 3D Slicer import; no standard DICOM export | Native **OHIF v3.13 Workstation** + **Direct PACS Push** (STOW-RS & C-STORE) + **DICOM-SEG** (.66.4) + **DICOM-SR TID 1500** (.88.34) + **DICOM Encapsulated PDF** (.104.1) & **HL7 FHIR R4/R5 Interoperability** |
 
 ---
 
@@ -115,6 +117,53 @@ The pipeline features a native PACS transmission client (`cardiac-fat-fl push`) 
   ```
 
 - **Include CT Volume**: Add `--include-ct` to upload the underlying 3D CT slice series alongside the DICOM-SEG mask.
+
+### 4. Clinical AI Imaging Diagnostic Report & HL7 FHIR Interoperability
+
+In addition to quantitative CSV matrices and DICOM-SEG binary masks, `monai-cardiac-fat-fl` generates comprehensive, diagnostic-grade clinical imaging reports modeled after commercial Cleerly, HeartFlow, and Caristo cardiovascular analysis platforms.
+
+The report pipeline synthesizes 8-compartment volumetric and attenuation quantification, evaluates active pericoronary vascular inflammation against the clinically validated **CRISP-CT threshold** ($> -70.1\text{ HU}$), generates a 3-view orthogonal MPR snapshot montage (Axial, Coronal, Sagittal) under standard soft-tissue windowing ($WL=40\text{ HU}, WW=400\text{ HU}$), and exports native deliverables formatted for institutional PACS and electronic health record (EHR) ingestion:
+
+```bash
+# Generate clinical diagnostic report bundle with 3-view MPR montage
+cardiac-fat-fl report /path/to/participant_dir
+```
+
+#### Standard Clinical Deliverables Produced
+- `cardiac_fat_report.html`: Interactive, responsive, printable diagnostic report with embedded base64 MPR montage.
+- `cardiac_fat_report.pdf`: Vector-rendered Letter-sized diagnostic document formatted for EHR chart attachment.
+- `eat_pvat_report.dcm`: Standard **DICOM Encapsulated PDF (SOP Class `1.2.840.10008.5.1.4.1.1.104.1`)** preserving patient demographics, accession numbers, and study instance UIDs for direct PACS archiving.
+- `mpr_montage.png`: High-resolution 3-view orthogonal MPR visualization with 8-compartment semi-transparent alpha overlays.
+
+#### End-to-End Hospital Interoperability: PACS to EHR via HL7 FHIR
+
+Because the imaging report is archived natively as a standard DICOM Encapsulated PDF (`1.2.840.10008.5.1.4.1.1.104.1`) alongside the DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), institutional integration bridges automatically into hospital EHRs (e.g., Epic Systems, Cerner / Oracle Health) via modern **HL7 FHIR R4/R5** standards:
+
+```mermaid
+flowchart LR
+    CT["Cardiac CT Scan\n(Hospital PACS)"] --> MAP["monai-cardiac-fat-fl\n(AI Inference Engine)"]
+    MAP --> SEG["DICOM-SEG\n(SOP .66.4)"]
+    MAP --> SR["DICOM-SR TID 1500\n(SOP .88.34)"]
+    MAP --> ENCAP["DICOM Encapsulated PDF\n(SOP .104.1)"]
+    
+    SEG & SR & ENCAP -->|STOW-RS / C-STORE| PACS["Institutional PACS / VNA\n(Orthanc / DCM4CHEE)"]
+    
+    PACS -->|DICOM-to-FHIR Bridge| FHIR["HL7 FHIR R4/R5 Server\n(Interoperability Gateway)"]
+    
+    FHIR -->|DiagnosticReport| EHR1["EHR Cardiology Tab\n(DiagnosticReport.conclusion)"]
+    FHIR -->|DocumentReference| EHR2["EHR Chart Media / PDF Viewer\n(DocumentReference.content)"]
+    FHIR -->|Observation| EHR3["EHR Flowsheets / CDS Hooks\n(LOINC 84245-0 EAT Volume)"]
+```
+
+1. **FHIR `DiagnosticReport` (Radiology / Cardiology Profile)**:
+   - Captures the overall patient finding and cardiovascular risk tier (`ELEVATED RISK` vs. `LOW RISK`), the CRISP-CT inflammation narrative, and links directly to the underlying `ImagingStudy` resource.
+2. **FHIR `DocumentReference`**:
+   - The DICOM Encapsulated PDF (`eat_pvat_report.dcm`) is extracted by the hospital's DICOM-to-FHIR bridge (e.g., Epic Radiant interface, Google Cloud Healthcare API, or dcm4chee FHIR proxy) as a `DocumentReference` (`contentType: application/pdf`). This embeds the PDF directly into the clinician's EHR chart under "Imaging Results" with zero manual physician upload.
+3. **FHIR `Observation` (Discrete Quantitative Biomarkers)**:
+   - Extracted from the DICOM-SR TID 1500 object (`eat_pvat_sr.dcm`):
+     - **EAT Volume**: Coded under LOINC `84245-0` (*Epicardial adipose tissue volume*) in $\text{cm}^3$.
+     - **PVAT Attenuation**: Vessel-specific mean HU (LAD, LCX, RCA) coded under LOINC / RadLex codes in $\text{HU}$.
+   - Stored as discrete numerical observations in the patient's EHR flowsheets for longitudinal trending and automated Clinical Decision Support (CDS Hooks).
 
 ---
 
