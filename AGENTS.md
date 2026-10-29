@@ -11,7 +11,7 @@ This document is automatically loaded into agent context. It provides the codeba
 - **Core Task**: Automated 3D segmentation and volumetric/attenuation quantification of Epicardial Adipose Tissue (EAT) and Pericoronary Adipose Tissue (PVAT) from cardiac CT scans.
 - **Privacy & FL**: Coordinates multi-hospital federated model distillation (FedProx + FedBN) and cohort moment aggregation (Welford) with zero patient DICOM/image transfer.
 - **Visualization & PACS**: Converts studies into web-ready DICOM + DICOM-SEG volumes served via a local DCM4CHEE-compatible static JSON-DICOM server for interactive OHIF 2D MPR and 3D Slicer rendering.
-- **PACS Archive Push**: Natively exports and transmits standard multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), and CT volumes to institutional PACS via DICOMweb (STOW-RS) and DIMSE (C-STORE).
+- **PACS Archive Push & HL7 FHIR Bridge**: Natively exports and transmits standard multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), DICOM Encapsulated PDF (`1.2.840.10008.5.1.4.1.1.104.1`), and CT volumes to institutional PACS via DICOMweb (STOW-RS) and DIMSE (C-STORE), integrating directly with hospital HL7 FHIR R4/R5 interoperability buses (DiagnosticReport, DocumentReference, Observation).
 - **MONAI Deploy & Kubernetes**: Turnkey MONAI Deploy Application Package (MAP) with 3-operator DAG (`monai_deploy.py`), Docker Compose PACS testbed (`monai_deploy_roadmap/`), and Kubernetes hospital cluster manifests (`k8s/`).
 
 ---
@@ -28,13 +28,13 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 | `anatomy_segmenter.py` | 577 | `AnatomyMasks`, `UnifiedAnatomySegmenter` | 3D anatomy engine: NGC `monai_wholebody_ct_segmentation` (1.5mm SegResNet), DeepHeartSeg ONNX pericardium, and geometric coronary sulci derivation. |
 | `transforms.py` | 439 | `ComputeEatPvatMasksd`, `QuantifyAdiposeMetricsd` | MONAI dictionary transforms for 8-compartment fat masking, 10mm anisotropic EDT radial dilation, and volume/HU calculation. |
 | `io_metatensor.py` | 551 | `discover_participants`, `read_nrrd_as_metatensor`, `write_eat_pvat_seg_nrrd` | Header-preserving 3D I/O for NRRD, NIfTI, and DICOM series. |
-| `clinical_report.py` | 695 | `evaluate_clinical_risk`, `generate_mpr_snapshot`, `generate_clinical_report_html`, `generate_clinical_report_pdf`, `encapsulate_pdf_to_dicom`, `export_clinical_imaging_report` | SOTA Cleerly/HeartFlow-style clinical imaging report (risk stratification, 3-view orthogonal MPR snapshots with 8-compartment overlays, vector PDF, and DICOM Encapsulated PDF SOP `.104.1`). |
+| `clinical_report.py` | 819 | `evaluate_clinical_risk`, `generate_mpr_snapshot`, `generate_clinical_report_html`, `generate_clinical_report_pdf`, `encapsulate_pdf_to_dicom`, `export_clinical_imaging_report` | SOTA Cleerly/HeartFlow-style clinical imaging report (risk stratification, 3-view orthogonal MPR snapshots with 8-compartment overlays, vector PDF, and DICOM Encapsulated PDF SOP `.104.1`). |
 | `dicom_sr.py` | 345 | `create_cardiac_fat_sr`, `export_cardiac_fat_sr` | DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`) structured report builder using SNOMED-CT / LOINC / UCUM codes. |
 | `pacs_client.py` | 320 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
 | `pacs_daemon.py` | 338 | `DaemonConfig`, `PACSWatchdogDaemon`, `is_study_settled`, `find_pending_studies`, `process_study` | Automated clinical PACS watchdog and auto-router daemon (zero-click processing, file settling check, dry-run mode, and fault-tolerant error quarantine). |
 | `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
 | `ohif_viewer.py` | 244 | `launch_ohif_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
-| `cli.py` | 1176 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cli.py` | 1311 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `fl_client_algo.py` | 409 | `CardiacFatClientAlgo` | NVFLARE client training/evaluation executor (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
@@ -186,6 +186,9 @@ To generate a Cleerly/HeartFlow-style clinical diagnostic report with 3-view ort
    - `cardiac_fat_report.pdf` (vector-rendered Letter-sized PDF for EHR chart upload)
    - `eat_pvat_report.dcm` (DICOM Encapsulated PDF SOP `1.2.840.10008.5.1.4.1.1.104.1` for PACS indexing)
    - `mpr_montage.png` (high-res 3-view orthogonal montage with soft-tissue CT windowing & alpha overlays)
+3. **HL7 FHIR Interoperability (EHR Integration)**:
+   - `eat_pvat_report.dcm` maps automatically to FHIR `DocumentReference` (`application/pdf`) and `DiagnosticReport` (CRISP-CT inflammation summary and risk tier).
+   - `eat_pvat_sr.dcm` maps to discrete numeric FHIR `Observation` resources (LOINC `84245-0` for EAT volume in cm3, RadLex/LOINC for vessel PVAT HU attenuation).
 
 ---
 
@@ -202,10 +205,13 @@ Whenever modifying preprocessing, segmentation, transforms, or reporting:
    - `participant_id` + 9 regions (`EAT_Total`, `EAT_LA`, `EAT_LV`, `EAT_RA`, `EAT_RV`, `PVAT_LAD`, `PVAT_LCX`, `PVAT_RCA`, `PVAT_Total`) × 2 metrics (`Volume (cm3)`, `Mean Attenuation (HU)`).
    - `PVAT_Total` is the boolean union of LAD, LCX, and RCA masks.
    - Empty masks MUST return `0.0` for volume and `NaN` (blank in CSV; omitted in DICOM-SR NUM sequence) for mean HU.
-4. **Coordinate & DICOM SOP Compliance**:
+4. **Coordinate, DICOM & FHIR Standards Compliance**:
    - Origin, spacing, and direction cosines must be preserved identically across input and output volumes.
    - DICOM-SEG SOP Class UID: `1.2.840.10008.5.1.4.1.1.66.4`.
    - DICOM-SR Comprehensive 3D SR SOP Class UID: `1.2.840.10008.5.1.4.1.1.88.34` (TID 1500).
+   - DICOM Encapsulated PDF SOP Class UID: `1.2.840.10008.5.1.4.1.1.104.1`.
+   - CRISP-CT Active Vascular Inflammation Cutoff: PVAT Mean Attenuation $> -70.1\text{ HU}$.
+   - HL7 FHIR Interoperability Resources: `DiagnosticReport` (cardiology conclusion), `DocumentReference` (PDF chart attachment), and `Observation` (LOINC `84245-0` discrete EAT volume).
 
 ---
 
