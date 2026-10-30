@@ -319,6 +319,10 @@ class CohortDataset:
         return len(self.participants)
 
     @property
+    def quantified_count(self) -> int:
+        return sum(1 for p in self.participants.values() if bool(p.metrics))
+
+    @property
     def segmented_count(self) -> int:
         return sum(1 for p in self.participants.values() if p.seg_path is not None)
 
@@ -333,7 +337,12 @@ class CohortDataset:
         if total_n == 0:
             return {
                 "total_count": 0,
+                "quantified_count": 0,
+                "quantified_pct": 0.0,
                 "segmented_count": 0,
+                "segmented_pct": 0.0,
+                "mask_saved_count": 0,
+                "mask_saved_pct": 0.0,
                 "cac_scored_count": 0,
                 "eat_volume_stats": {},
                 "pvat_attenuation_stats": {},
@@ -435,8 +444,12 @@ class CohortDataset:
 
         return {
             "total_count": total_n,
+            "quantified_count": self.quantified_count,
+            "quantified_pct": round((self.quantified_count / total_n) * 100.0, 1) if total_n else 0.0,
             "segmented_count": self.segmented_count,
             "segmented_pct": round((self.segmented_count / total_n) * 100.0, 1) if total_n else 0.0,
+            "mask_saved_count": self.segmented_count,
+            "mask_saved_pct": round((self.segmented_count / total_n) * 100.0, 1) if total_n else 0.0,
             "cac_scored_count": self.cac_scored_count,
             "cac_scored_pct": round((self.cac_scored_count / total_n) * 100.0, 1) if total_n else 0.0,
             "active_inflammation_count": inflam_count,

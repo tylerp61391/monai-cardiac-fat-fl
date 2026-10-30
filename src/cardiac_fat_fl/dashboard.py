@@ -342,9 +342,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           <div class="text-[11px] text-slate-400 mt-1">Discovered Cases</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Segmented</div>
-          <div class="text-2xl font-bold text-emerald-400 mt-1" id="kpiSegmented">--</div>
-          <div class="text-[11px] text-emerald-500/80 mt-1" id="kpiSegmentedPct">--% coverage</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Quantified</div>
+          <div class="text-2xl font-bold text-emerald-400 mt-1" id="kpiQuantified">--</div>
+          <div class="text-[11px] text-emerald-500/80 mt-1" id="kpiQuantifiedPct">--% analyzed</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Agatston CAC</div>
@@ -675,9 +675,13 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         cohortSummary = await res.json();
 
         document.getElementById('activeCohortPathDisplay').innerText = cohortSummary.root_dir || "Loaded";
+        document.getElementById('casesCountPill').innerText = cohortSummary.total_count || 0;
         document.getElementById('kpiTotal').innerText = cohortSummary.total_count || 0;
-        document.getElementById('kpiSegmented').innerText = cohortSummary.segmented_count || 0;
-        document.getElementById('kpiSegmentedPct').innerText = `${cohortSummary.segmented_pct || 0}% coverage`;
+        const qCount = cohortSummary.quantified_count || cohortSummary.segmented_count || 0;
+        const qPct = cohortSummary.quantified_pct || cohortSummary.segmented_pct || 0;
+        const maskCount = cohortSummary.mask_saved_count !== undefined ? cohortSummary.mask_saved_count : cohortSummary.segmented_count;
+        document.getElementById('kpiQuantified').innerText = qCount;
+        document.getElementById('kpiQuantifiedPct').innerText = `${qPct}% (${maskCount} 3D masks)`;
         document.getElementById('kpiCac').innerText = cohortSummary.cac_scored_count || 0;
         document.getElementById('kpiCacPct').innerText = `${cohortSummary.cac_scored_pct || 0}% scored`;
         document.getElementById('kpiMedianEat').innerText = cohortSummary.eat_volume_stats?.median ? `${cohortSummary.eat_volume_stats.median}` : '--';
