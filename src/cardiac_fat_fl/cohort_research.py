@@ -357,6 +357,18 @@ class CohortDataset:
             if p.metrics.get("EAT Total Volume (cm3)") is not None
             and not math.isnan(p.metrics.get("EAT Total Volume (cm3)", float("nan")))
         ]
+        eat_hus = [
+            p.metrics.get("EAT Total Mean Attenuation (HU)")
+            for p in p_list
+            if p.metrics.get("EAT Total Mean Attenuation (HU)") is not None
+            and not math.isnan(p.metrics.get("EAT Total Mean Attenuation (HU)", float("nan")))
+        ]
+        pvat_vols = [
+            p.metrics.get("PVAT Total Volume (cm3)")
+            for p in p_list
+            if p.metrics.get("PVAT Total Volume (cm3)") is not None
+            and not math.isnan(p.metrics.get("PVAT Total Volume (cm3)", float("nan")))
+        ]
         pvat_hus = [
             p.metrics.get("PVAT Total Mean Attenuation (HU)")
             for p in p_list
@@ -375,6 +387,7 @@ class CohortDataset:
             if not arr:
                 return {}
             a = np.array(arr)
+            sk = round(float(stats.skew(a)), 2) if len(a) > 2 else 0.0
             return {
                 "count": len(a),
                 "mean": round(float(np.mean(a)), 2),
@@ -383,6 +396,7 @@ class CohortDataset:
                 "iqr": round(float(np.percentile(a, 75) - np.percentile(a, 25)), 2),
                 "min": round(float(np.min(a)), 2),
                 "max": round(float(np.max(a)), 2),
+                "skewness": sk,
             }
 
         # 4. Correlations: EAT Volume vs Calcium Score, and PVAT HU vs Calcium Score
@@ -455,6 +469,8 @@ class CohortDataset:
             "active_inflammation_count": inflam_count,
             "active_inflammation_pct": inflam_pct,
             "eat_volume_stats": calc_stats(eat_vols),
+            "eat_attenuation_stats": calc_stats(eat_hus),
+            "pvat_volume_stats": calc_stats(pvat_vols),
             "pvat_attenuation_stats": calc_stats(pvat_hus),
             "calcium_score_stats": calc_stats(cacs),
             "chamber_volume_summaries": chamber_summaries,

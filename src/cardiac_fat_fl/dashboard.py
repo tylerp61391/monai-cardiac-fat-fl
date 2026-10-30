@@ -334,42 +334,71 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- ================= TAB 1: COHORT ANALYTICS ================= -->
     <section id="section-analytics" class="space-y-6">
       
-      <!-- KPI Scorecards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3.5">
+      <!-- KPI Scorecards Row 1: Pipeline & Coverage (4 cards) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Cohort</div>
           <div class="text-2xl font-bold text-white mt-1" id="kpiTotal">--</div>
-          <div class="text-[11px] text-slate-400 mt-1">Discovered Cases</div>
+          <div class="text-[11px] text-slate-400 mt-1">Discovered CT Cases</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Quantified</div>
           <div class="text-2xl font-bold text-emerald-400 mt-1" id="kpiQuantified">--</div>
-          <div class="text-[11px] text-emerald-500/80 mt-1" id="kpiQuantifiedPct">--% metrics</div>
+          <div class="text-[11px] text-emerald-500/80 mt-1" id="kpiQuantifiedPct">--% metrics in CSV</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">3D Masks</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">3D Masks on Disk</div>
           <div class="text-2xl font-bold text-cyan-400 mt-1" id="kpiMasks">--</div>
-          <div class="text-[11px] text-cyan-500/80 mt-1" id="kpiMasksPct">--% on disk</div>
+          <div class="text-[11px] text-cyan-500/80 mt-1" id="kpiMasksPct">--% .seg.nrrd</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">CAC Scored (N)</div>
           <div class="text-2xl font-bold text-amber-400 mt-1" id="kpiCac">--</div>
           <div class="text-[11px] text-amber-500/80 mt-1" id="kpiCacPct">--% of cohort</div>
         </div>
+      </div>
+
+      <!-- KPI Scorecards Row 2: Adipose Biomarkers (5 cards: EAT Vol, EAT HU, PVAT Vol, PVAT HU, Inflammation) -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Median EAT</div>
-          <div class="text-2xl font-bold text-sky-400 mt-1" id="kpiMedianEat">--</div>
-          <div class="text-[11px] text-slate-400 mt-1">cm³ Total Volume</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
+            <span>EAT Volume</span>
+            <span class="text-[10px] text-slate-500 font-mono">cm³</span>
+          </div>
+          <div class="text-2xl font-bold text-sky-400 mt-1" id="kpiEatVol">--</div>
+          <div class="text-[11px] text-slate-400 mt-1 truncate" id="kpiEatVolSub">Median: -- (IQR: --)</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Mean PVAT HU</div>
-          <div class="text-2xl font-bold text-indigo-400 mt-1" id="kpiMeanPvatHu">--</div>
-          <div class="text-[11px] text-slate-400 mt-1">Hounsfield Units</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
+            <span>EAT Attenuation</span>
+            <span class="text-[10px] text-slate-500 font-mono">HU</span>
+          </div>
+          <div class="text-2xl font-bold text-sky-300 mt-1" id="kpiEatHu">--</div>
+          <div class="text-[11px] text-slate-400 mt-1 truncate" id="kpiEatHuSub">Mean ± SD: --</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Inflammation</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
+            <span>PVAT Volume</span>
+            <span class="text-[10px] text-slate-500 font-mono">cm³</span>
+          </div>
+          <div class="text-2xl font-bold text-indigo-400 mt-1" id="kpiPvatVol">--</div>
+          <div class="text-[11px] text-slate-400 mt-1 truncate" id="kpiPvatVolSub">Median: -- (IQR: --)</div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
+            <span>PVAT Attenuation</span>
+            <span class="text-[10px] text-slate-500 font-mono">HU</span>
+          </div>
+          <div class="text-2xl font-bold text-indigo-300 mt-1" id="kpiPvatHu">--</div>
+          <div class="text-[11px] text-slate-400 mt-1 truncate" id="kpiPvatHuSub">Mean ± SD: --</div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow col-span-2 md:col-span-1">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
+            <span>Vascular Inflammation</span>
+            <i class="fa-solid fa-fire text-rose-400 text-xs"></i>
+          </div>
           <div class="text-2xl font-bold text-rose-400 mt-1" id="kpiInflam">--</div>
-          <div class="text-[11px] text-rose-500/80 mt-1">CRISP-CT > -70.1 HU</div>
+          <div class="text-[11px] text-rose-500/80 mt-1" id="kpiInflamPct">CRISP-CT > -70.1 HU</div>
         </div>
       </div>
 
@@ -692,9 +721,45 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         document.getElementById('kpiMasksPct').innerText = `${maskPct}% on disk`;
         document.getElementById('kpiCac').innerText = cohortSummary.cac_scored_count || 0;
         document.getElementById('kpiCacPct').innerText = `${cohortSummary.cac_scored_pct || 0}% of cohort`;
-        document.getElementById('kpiMedianEat').innerText = cohortSummary.eat_volume_stats?.median ? `${cohortSummary.eat_volume_stats.median}` : '--';
-        document.getElementById('kpiMeanPvatHu').innerText = cohortSummary.pvat_attenuation_stats?.mean ? `${cohortSummary.pvat_attenuation_stats.mean}` : '--';
+        // Row 2 Biomarkers: EAT Vol, EAT HU, PVAT Vol, PVAT HU, Inflammation
+        const ev = cohortSummary.eat_volume_stats;
+        if (ev && ev.mean !== undefined) {
+          document.getElementById('kpiEatVol').innerText = `${ev.mean.toFixed(1)}`;
+          document.getElementById('kpiEatVolSub').innerText = `Median ${ev.median.toFixed(1)} (IQR ${ev.iqr}) • Skew +${ev.skewness}`;
+        } else {
+          document.getElementById('kpiEatVol').innerText = '--';
+          document.getElementById('kpiEatVolSub').innerText = 'No data';
+        }
+
+        const eh = cohortSummary.eat_attenuation_stats;
+        if (eh && eh.mean !== undefined) {
+          document.getElementById('kpiEatHu').innerText = `${eh.mean.toFixed(1)}`;
+          document.getElementById('kpiEatHuSub').innerText = `Mean ± SD: ${eh.mean.toFixed(1)} ± ${eh.std.toFixed(1)} • Med ${eh.median.toFixed(1)}`;
+        } else {
+          document.getElementById('kpiEatHu').innerText = '--';
+          document.getElementById('kpiEatHuSub').innerText = 'No data';
+        }
+
+        const pv = cohortSummary.pvat_volume_stats;
+        if (pv && pv.mean !== undefined) {
+          document.getElementById('kpiPvatVol').innerText = `${pv.mean.toFixed(1)}`;
+          document.getElementById('kpiPvatVolSub').innerText = `Median ${pv.median.toFixed(1)} (IQR ${pv.iqr}) • Skew +${pv.skewness}`;
+        } else {
+          document.getElementById('kpiPvatVol').innerText = '--';
+          document.getElementById('kpiPvatVolSub').innerText = 'No data';
+        }
+
+        const ph = cohortSummary.pvat_attenuation_stats;
+        if (ph && ph.mean !== undefined) {
+          document.getElementById('kpiPvatHu').innerText = `${ph.mean.toFixed(1)}`;
+          document.getElementById('kpiPvatHuSub').innerText = `Mean ± SD: ${ph.mean.toFixed(1)} ± ${ph.std.toFixed(1)} • Med ${ph.median.toFixed(1)}`;
+        } else {
+          document.getElementById('kpiPvatHu').innerText = '--';
+          document.getElementById('kpiPvatHuSub').innerText = 'No data';
+        }
+
         document.getElementById('kpiInflam').innerText = cohortSummary.active_inflammation_count || 0;
+        document.getElementById('kpiInflamPct').innerText = `${cohortSummary.active_inflammation_pct || 0}% CRISP-CT > -70.1 HU`;
 
         // Correlation labels
         if (cohortSummary.correlations?.eat_vs_cac) {
