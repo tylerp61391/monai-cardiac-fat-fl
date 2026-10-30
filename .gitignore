@@ -69,6 +69,11 @@ cardiac_fat_report.*
 eat_pvat_report.dcm
 mpr_montage.png
 
+# Whitelist example clinical report deliverables
+!example_source_dir/**/cardiac_fat_report.*
+!example_source_dir/**/eat_pvat_report.dcm
+!example_source_dir/**/mpr_montage.png
+
 
 
 
