@@ -358,11 +358,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- KPI Scorecards Row 2: Adipose Biomarkers (5 cards: EAT Vol, EAT HU, PVAT Vol, PVAT HU, Inflammation) -->
+      <!-- KPI Scorecards Row 2: Adipose Biomarkers (5 cards: Mean EAT Vol, Mean EAT HU, Mean PVAT Vol, Mean PVAT HU, Inflammation) -->
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
-            <span>EAT Volume</span>
+            <span>Mean EAT Volume</span>
             <span class="text-[10px] text-slate-500 font-mono">cm³</span>
           </div>
           <div class="text-2xl font-bold text-sky-400 mt-1" id="kpiEatVol">--</div>
@@ -370,15 +370,15 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
-            <span>EAT Attenuation</span>
+            <span>Mean EAT HU</span>
             <span class="text-[10px] text-slate-500 font-mono">HU</span>
           </div>
           <div class="text-2xl font-bold text-sky-300 mt-1" id="kpiEatHu">--</div>
-          <div class="text-[11px] text-slate-400 mt-1 truncate" id="kpiEatHuSub">Mean ± SD: --</div>
+          <div class="text-[11px] text-slate-400 mt-1 truncate" id="kpiEatHuSub">SD: ±-- • Med: --</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
-            <span>PVAT Volume</span>
+            <span>Mean PVAT Volume</span>
             <span class="text-[10px] text-slate-500 font-mono">cm³</span>
           </div>
           <div class="text-2xl font-bold text-indigo-400 mt-1" id="kpiPvatVol">--</div>
@@ -386,11 +386,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
-            <span>PVAT Attenuation</span>
+            <span>Mean PVAT HU</span>
             <span class="text-[10px] text-slate-500 font-mono">HU</span>
           </div>
           <div class="text-2xl font-bold text-indigo-300 mt-1" id="kpiPvatHu">--</div>
-          <div class="text-[11px] text-slate-400 mt-1 truncate" id="kpiPvatHuSub">Mean ± SD: --</div>
+          <div class="text-[11px] text-slate-400 mt-1 truncate" id="kpiPvatHuSub">SD: ±-- • Med: --</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow col-span-2 md:col-span-1">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
@@ -734,7 +734,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const eh = cohortSummary.eat_attenuation_stats;
         if (eh && eh.mean !== undefined) {
           document.getElementById('kpiEatHu').innerText = `${eh.mean.toFixed(1)}`;
-          document.getElementById('kpiEatHuSub').innerText = `Mean ± SD: ${eh.mean.toFixed(1)} ± ${eh.std.toFixed(1)} • Med ${eh.median.toFixed(1)}`;
+          document.getElementById('kpiEatHuSub').innerText = `SD ±${eh.std.toFixed(1)} • Med ${eh.median.toFixed(1)}`;
         } else {
           document.getElementById('kpiEatHu').innerText = '--';
           document.getElementById('kpiEatHuSub').innerText = 'No data';
@@ -752,7 +752,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const ph = cohortSummary.pvat_attenuation_stats;
         if (ph && ph.mean !== undefined) {
           document.getElementById('kpiPvatHu').innerText = `${ph.mean.toFixed(1)}`;
-          document.getElementById('kpiPvatHuSub').innerText = `Mean ± SD: ${ph.mean.toFixed(1)} ± ${ph.std.toFixed(1)} • Med ${ph.median.toFixed(1)}`;
+          document.getElementById('kpiPvatHuSub').innerText = `SD ±${ph.std.toFixed(1)} • Med ${ph.median.toFixed(1)}`;
         } else {
           document.getElementById('kpiPvatHu').innerText = '--';
           document.getElementById('kpiPvatHuSub').innerText = 'No data';
