@@ -442,17 +442,21 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       <!-- Charts Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        <!-- Chart 1: EAT Volume vs Calcium Score -->
+        <!-- Chart 1: Agatston Calcium Score vs EAT Volume -->
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow flex flex-col">
           <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
-              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2" id="titleChartEat">
                 <i class="fa-solid fa-chart-line text-sky-400"></i>
-                Total EAT Volume vs. Agatston Calcium Score
+                Agatston CAC vs. Total EAT Volume
               </h3>
-              <p class="text-xs text-slate-400">Stratified by clinical plaque burden tiers</p>
+              <p class="text-xs text-slate-400" id="subChartEat">Coronary calcification as a function of epicardial fat volume</p>
             </div>
             <div class="flex items-center gap-1.5 text-xs">
+              <!-- Swap Axes -->
+              <button onclick="toggleAxisSwap('eat')" title="Swap X and Y Axes" class="px-2 py-1 bg-slate-700/80 hover:bg-slate-700 text-slate-300 rounded text-[11px] flex items-center gap-1 transition">
+                <i class="fa-solid fa-right-left text-[10px]"></i> Swap
+              </button>
               <!-- Scale toggle -->
               <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-700">
                 <button id="btnScaleEatLin" onclick="setScaleMode('eat', 'linear')" class="px-2 py-0.5 rounded text-[11px] font-medium bg-sky-600 text-white transition">Linear</button>
@@ -473,17 +477,21 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Chart 2: PVAT HU vs Calcium Score -->
+        <!-- Chart 2: Agatston CAC vs PVAT Attenuation -->
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow flex flex-col">
           <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
-              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2" id="titleChartPvat">
                 <i class="fa-solid fa-fire-flame-curved text-rose-400"></i>
-                PVAT Attenuation vs. Agatston CAC (CRISP-CT)
+                Agatston CAC vs. PVAT Attenuation
               </h3>
-              <p class="text-xs text-slate-400">Red line denotes -70.1 HU vascular inflammation threshold</p>
+              <p class="text-xs text-slate-400" id="subChartPvat">Coronary calcification stratified by pericoronary inflammation</p>
             </div>
             <div class="flex items-center gap-1.5 text-xs">
+              <!-- Swap Axes -->
+              <button onclick="toggleAxisSwap('pvat')" title="Swap X and Y Axes" class="px-2 py-1 bg-slate-700/80 hover:bg-slate-700 text-slate-300 rounded text-[11px] flex items-center gap-1 transition">
+                <i class="fa-solid fa-right-left text-[10px]"></i> Swap
+              </button>
               <!-- Scale toggle -->
               <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-700">
                 <button id="btnScalePvatLin" onclick="setScaleMode('pvat', 'linear')" class="px-2 py-0.5 rounded text-[11px] font-medium bg-rose-600 text-white transition">Linear</button>
@@ -808,9 +816,14 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="flex items-center flex-wrap gap-2 text-xs">
           <!-- Scale Toggle -->
           <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-700">
-            <button id="btnStudioScaleLin" onclick="setStudioScale('linear')" class="px-2.5 py-1 rounded text-xs font-medium bg-sky-600 text-white transition">Linear Scale</button>
+            <button id="btnStudioScaleLin" onclick="setStudioScale('linear')" class="px-2.5 py-1 rounded text-xs font-medium bg-sky-600 text-white transition">Linear</button>
             <button id="btnStudioScaleLog" onclick="setStudioScale('logarithmic')" class="px-2.5 py-1 rounded text-xs font-medium text-slate-400 hover:text-white transition">Log₁₀ CAC</button>
           </div>
+
+          <!-- Axis Swap -->
+          <button onclick="toggleStudioAxisSwap()" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition flex items-center gap-1" title="Swap X and Y Axes">
+            <i class="fa-solid fa-right-left text-[10px]"></i> Swap
+          </button>
 
           <!-- Color Mode -->
           <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-300">
@@ -969,10 +982,12 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
     let rawScatterPoints = [];
     let scaleModes = { eat: 'linear', pvat: 'linear' };
+    let axisSwap = { eat: false, pvat: false };
     let studioChart = null;
     let currentStudioMetric = 'eat';
     let studioScale = 'linear';
     let studioColorMode = 'tier';
+    let studioAxisSwap = false;
 
     const TIER_COLORS = {
       'Zero (0)': '#94a3b8',
@@ -1002,6 +1017,33 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       }
     }
 
+    function toggleAxisSwap(metric) {
+      axisSwap[metric] = !axisSwap[metric];
+      const isEat = (metric === 'eat');
+      const swapped = axisSwap[metric];
+      
+      const titleEl = document.getElementById(isEat ? 'titleChartEat' : 'titleChartPvat');
+      const subEl = document.getElementById(isEat ? 'subChartEat' : 'subChartPvat');
+      
+      if (isEat) {
+        titleEl.innerHTML = swapped 
+          ? '<i class="fa-solid fa-chart-line text-sky-400"></i> Total EAT Volume vs. Agatston CAC'
+          : '<i class="fa-solid fa-chart-line text-sky-400"></i> Agatston CAC vs. Total EAT Volume';
+        subEl.innerText = swapped
+          ? 'Epicardial adipose volume as a function of coronary calcification'
+          : 'Coronary calcification as a function of epicardial fat volume';
+      } else {
+        titleEl.innerHTML = swapped
+          ? '<i class="fa-solid fa-fire-flame-curved text-rose-400"></i> PVAT Attenuation vs. Agatston CAC'
+          : '<i class="fa-solid fa-fire-flame-curved text-rose-400"></i> Agatston CAC vs. PVAT Attenuation';
+        subEl.innerText = swapped
+          ? 'Pericoronary vascular inflammation (HU) vs. calcification'
+          : 'Coronary calcification stratified by pericoronary inflammation';
+      }
+
+      renderScatterCharts(rawScatterPoints);
+    }
+
     function setScaleMode(metric, mode) {
       scaleModes[metric] = mode;
       const isEat = (metric === 'eat');
@@ -1028,20 +1070,28 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     function buildScatterConfig(metric, pts, scaleMode, colorMode, inModal = false) {
       const isEat = (metric === 'eat');
       const isLog = (scaleMode === 'logarithmic');
+      const isSwapped = (inModal ? studioAxisSwap : axisSwap[metric]);
 
       const filtered = pts.filter(p => {
-        const yVal = isEat ? p.eat_volume_cm3 : p.pvat_mean_hu;
-        return yVal !== null && p.calcium_score !== null;
+        const fatVal = isEat ? p.eat_volume_cm3 : p.pvat_mean_hu;
+        return fatVal !== null && p.calcium_score !== null;
       });
 
       const chartPoints = filtered.map(p => {
         const rawCac = p.calcium_score;
-        const xVal = isLog ? Math.max(1, rawCac) : rawCac;
-        const yVal = isEat ? p.eat_volume_cm3 : p.pvat_mean_hu;
+        const cacVal = isLog ? Math.max(1, rawCac) : rawCac;
+        const fatVal = isEat ? p.eat_volume_cm3 : p.pvat_mean_hu;
+
+        // Default (!isSwapped): X = Fat (EAT/PVAT), Y = CAC
+        // Swapped (isSwapped):  X = CAC, Y = Fat (EAT/PVAT)
+        const xCoord = isSwapped ? cacVal : fatVal;
+        const yCoord = isSwapped ? fatVal : cacVal;
+
         return {
-          x: xVal,
-          y: yVal,
+          x: xCoord,
+          y: yCoord,
           originalCAC: rawCac,
+          fatValue: fatVal,
           label: p.participant_id,
           tier: p.calcium_risk_tier,
           crisp: p.crisp_ct_status,
@@ -1052,7 +1102,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       const colors = filtered.map(p => getPointColor(p, colorMode, defaultColor));
 
       const datasets = [{
-        label: isEat ? 'Participant CT' : 'Participant PVAT',
+        label: isEat ? 'Participant EAT' : 'Participant PVAT',
         data: chartPoints,
         backgroundColor: colors,
         borderColor: colors,
@@ -1061,26 +1111,43 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       }];
 
       if (!isEat && chartPoints.length > 0) {
-        const minX = Math.min(...chartPoints.map(p => p.x));
-        const maxX = Math.max(...chartPoints.map(p => p.x));
-        datasets.push({
-          type: 'line',
-          label: 'CRISP-CT Cutoff (-70.1 HU)',
-          data: [{ x: minX, y: -70.1 }, { x: maxX, y: -70.1 }],
-          borderColor: '#f43f5e',
-          borderWidth: 2,
-          borderDash: [6, 4],
-          pointRadius: 0,
-          fill: false,
-        });
+        if (!isSwapped) {
+          // Vertical cutoff line at X = -70.1 HU
+          const minY = Math.min(...chartPoints.map(p => p.y));
+          const maxY = Math.max(...chartPoints.map(p => p.y));
+          datasets.push({
+            type: 'line',
+            label: 'CRISP-CT Cutoff (-70.1 HU)',
+            data: [{ x: -70.1, y: minY }, { x: -70.1, y: maxY }],
+            borderColor: '#f43f5e',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+          });
+        } else {
+          // Horizontal cutoff line at Y = -70.1 HU
+          const minX = Math.min(...chartPoints.map(p => p.x));
+          const maxX = Math.max(...chartPoints.map(p => p.x));
+          datasets.push({
+            type: 'line',
+            label: 'CRISP-CT Cutoff (-70.1 HU)',
+            data: [{ x: minX, y: -70.1 }, { x: maxX, y: -70.1 }],
+            borderColor: '#f43f5e',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+          });
+        }
       }
 
-      const xScale = {
+      const cacScaleConfig = {
         type: isLog ? 'logarithmic' : 'linear',
         min: isLog ? 1 : undefined,
         title: {
           display: true,
-          text: isLog ? 'Agatston Calcium Score (Log₁₀ Scale)' : 'Agatston Calcium Score (Linear)',
+          text: isLog ? 'Agatston Calcium Score (Log₁₀)' : 'Agatston Calcium Score (Linear)',
           color: '#94a3b8'
         },
         grid: { color: '#334155' },
@@ -1104,7 +1171,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         }
       };
 
-      const yScale = {
+      const fatScaleConfig = {
         type: 'linear',
         title: {
           display: true,
@@ -1114,6 +1181,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         grid: { color: '#334155' },
         ticks: { color: '#94a3b8' }
       };
+
+      const xScale = isSwapped ? cacScaleConfig : fatScaleConfig;
+      const yScale = isSwapped ? fatScaleConfig : cacScaleConfig;
 
       return {
         type: 'scatter',
@@ -1136,9 +1206,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
                   const r = ctx.raw;
                   if (!r || r.originalCAC === undefined) return ctx.dataset.label;
                   const cacStr = r.originalCAC;
-                  const yStr = Number(r.y).toFixed(1);
+                  const fatStr = Number(r.fatValue).toFixed(1);
                   const unit = isEat ? 'cm³' : 'HU';
-                  return `Patient ${r.label} [${r.tier}]: CAC=${cacStr}, ${isEat ? 'EAT' : 'PVAT'}=${yStr} ${unit} (${r.crisp})`;
+                  return `Patient ${r.label} [${r.tier}]: ${isEat ? 'EAT' : 'PVAT'}=${fatStr} ${unit} ➔ CAC=${cacStr} (${r.crisp})`;
                 }
               }
             },
@@ -1169,15 +1239,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     function openChartModal(metric) {
       currentStudioMetric = metric;
       studioScale = scaleModes[metric] || 'linear';
+      studioAxisSwap = axisSwap[metric] || false;
       document.getElementById('chartStudioModal').classList.remove('hidden');
 
       const isEat = (metric === 'eat');
-      document.getElementById('studioModalTitle').innerText = isEat
-        ? 'Total EAT Volume vs. Agatston Calcium Score'
-        : 'PVAT Attenuation vs. Agatston CAC (CRISP-CT)';
-      document.getElementById('studioModalSubtitle').innerText = isEat
-        ? 'Epicardial adipose volume burden stratified across patient coronary plaque scores'
-        : 'Perivascular inflammation cutoff (-70.1 HU) vs. Agatston calcification';
+      updateStudioTitles();
       document.getElementById('studioModalIcon').className = isEat
         ? 'fa-solid fa-chart-line text-sky-400'
         : 'fa-solid fa-fire-flame-curved text-rose-400';
@@ -1188,6 +1254,22 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       updateStudioScaleButtons();
       renderStudioChart();
       renderStudioLegend();
+    }
+
+    function updateStudioTitles() {
+      const isEat = (currentStudioMetric === 'eat');
+      document.getElementById('studioModalTitle').innerText = isEat
+        ? (studioAxisSwap ? 'Total EAT Volume vs. Agatston CAC' : 'Agatston CAC vs. Total EAT Volume')
+        : (studioAxisSwap ? 'PVAT Attenuation vs. Agatston CAC' : 'Agatston CAC vs. PVAT Attenuation');
+      document.getElementById('studioModalSubtitle').innerText = isEat
+        ? 'Epicardial adipose volume burden vs. patient coronary calcification scores'
+        : 'Pericoronary vascular inflammation cutoff (-70.1 HU) vs. Agatston calcification';
+    }
+
+    function toggleStudioAxisSwap() {
+      studioAxisSwap = !studioAxisSwap;
+      updateStudioTitles();
+      renderStudioChart();
     }
 
     function closeChartModal() {
