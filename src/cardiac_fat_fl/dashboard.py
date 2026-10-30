@@ -537,6 +537,78 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
       </div>
+
+      <!-- Explanatory Scientific Guide: Vascular Inflammation & Pericoronary Fat Phenotyping -->
+      <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-700/80">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg shadow">
+              <i class="fa-solid fa-fire-flame-curved"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                Clinical Reference: Vascular Inflammation & Pericoronary Attenuation (CRISP-CT)
+                <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold">Biomarker Standard</span>
+              </h3>
+              <p class="text-xs text-slate-400">How perivascular adipose attenuation (HU) detects coronary plaque vulnerability and cardiac risk</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 font-mono">
+              Cutoff: <strong class="text-rose-400">&gt; -70.1 HU</strong>
+            </span>
+            <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 font-mono">
+              Lancet 2018 (CRISP-CT)
+            </span>
+          </div>
+        </div>
+
+        <!-- 3-Column Explanatory Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs text-slate-300">
+          
+          <!-- Column 1: Biological Mechanism -->
+          <div class="bg-slate-900/60 border border-slate-700/70 rounded-xl p-4 space-y-2">
+            <div class="font-bold text-sky-400 flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-dna text-xs"></i> 1. Biological Mechanism
+            </div>
+            <p class="leading-relaxed text-slate-300">
+              Coronary atherosclerosis is driven by vascular wall inflammation. Through <strong class="text-white">paracrine vascular-adipose crosstalk</strong>, inflammatory cytokines (such as TNF-α, IL-6, and IFN-γ) diffuse outward from the inflamed coronary vessel into adjacent pericoronary fat (PVAT).
+            </p>
+            <p class="leading-relaxed text-slate-400">
+              This inflammatory gradient inhibits preadipocyte lipid accumulation (adipogenesis) and triggers local microvascular remodeling and interstitial edema, reducing adipocyte size and lipid density.
+            </p>
+          </div>
+
+          <!-- Column 2: Radiologic Derivation on CT -->
+          <div class="bg-slate-900/60 border border-slate-700/70 rounded-xl p-4 space-y-2">
+            <div class="font-bold text-emerald-400 flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-microscope text-xs"></i> 2. Automated 3D CT Derivation
+            </div>
+            <p class="leading-relaxed text-slate-300">
+              Quiescent mature fat is lipid-dense and attenuates CT X-rays strongly negatively (typically <span class="font-mono text-emerald-400">-90 to -75 HU</span>). Water-rich edema and cellular infiltration shift attenuation upwards toward zero (<span class="font-mono text-white">0 HU</span>).
+            </p>
+            <ul class="space-y-1 text-slate-400 list-disc list-inside">
+              <li>Geometric derivation of LAD, LCX, and RCA coronary centerlines.</li>
+              <li>Anisotropic 3D Euclidean Distance Transform (EDT) radial dilation of <strong class="text-slate-300">10 mm</strong> around each vessel.</li>
+              <li>Voxel extraction restricted strictly to adipose HU window <span class="font-mono text-slate-300">[-190, -30] HU</span>.</li>
+            </ul>
+          </div>
+
+          <!-- Column 3: Clinical Validation & Interpretation -->
+          <div class="bg-slate-900/60 border border-slate-700/70 rounded-xl p-4 space-y-2">
+            <div class="font-bold text-rose-400 flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-heart-pulse text-xs"></i> 3. Clinical Trial Evidence (CRISP-CT)
+            </div>
+            <p class="leading-relaxed text-slate-300">
+              In the landmark Oxford <strong class="text-white">CRISP-CT study</strong> (<em>The Lancet</em> 2018; 392: 1314–21; N=3,912), pericoronary attenuation <strong class="text-rose-400">&gt; -70.1 HU</strong> independently predicted fatal and non-fatal myocardial infarction, identifying vulnerable plaque biology before stenosis occurs.
+            </p>
+            <div class="pt-1.5 border-t border-slate-800 text-[11px] text-slate-400">
+              In this cohort: <strong class="text-rose-400 font-mono text-xs" id="explActiveCount">--</strong> cases (<span id="explActivePct" class="font-mono">--%</span>) exceed -70.1 HU, flagging active coronaritis independent of anatomical calcium score.
+            </div>
+          </div>
+
+        </div>
+      </div>
     </section>
 
     <!-- ================= TAB 2: CASE EXPLORER ================= -->
@@ -868,6 +940,10 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
         document.getElementById('kpiInflam').innerText = cohortSummary.active_inflammation_count || 0;
         document.getElementById('kpiInflamPct').innerText = `${cohortSummary.active_inflammation_pct || 0}% CRISP-CT > -70.1 HU`;
+        const explCountEl = document.getElementById('explActiveCount');
+        if (explCountEl) explCountEl.innerText = `${cohortSummary.active_inflammation_count || 0}`;
+        const explPctEl = document.getElementById('explActivePct');
+        if (explPctEl) explPctEl.innerText = `${cohortSummary.active_inflammation_pct || 0}%`;
 
         // Correlation labels
         if (cohortSummary.correlations?.eat_vs_cac) {
