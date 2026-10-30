@@ -75,7 +75,18 @@ class CohortParticipant:
     scan_type: str = "CT"
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert participant record to dictionary."""
+        """Convert participant record to dictionary with JSON-safe values."""
+        clean_metrics = {}
+        for k, v in self.metrics.items():
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                clean_metrics[k] = None
+            else:
+                clean_metrics[k] = v
+
+        cac_val = self.calcium_score
+        if isinstance(cac_val, float) and (math.isnan(cac_val) or math.isinf(cac_val)):
+            cac_val = None
+
         return {
             "participant_id": self.participant_id,
             "study_dir": str(self.study_dir),
@@ -87,11 +98,11 @@ class CohortParticipant:
             "has_report_pdf": self.report_pdf is not None,
             "has_report_html": self.report_html is not None,
             "has_ohif": self.ohif_export_dir is not None,
-            "calcium_score": self.calcium_score,
+            "calcium_score": cac_val,
             "calcium_risk_tier": self.calcium_risk_tier,
             "crisp_ct_status": self.crisp_ct_status,
             "scan_type": self.scan_type,
-            "metrics": self.metrics,
+            "metrics": clean_metrics,
         }
 
 
@@ -479,15 +490,25 @@ class CohortDataset:
         }
 
     def get_scatter_data(self) -> List[Dict[str, Any]]:
-        """Extract paired datapoints for interactive research scatter plots."""
+        """Extract paired datapoints for interactive research scatter plots with strictly JSON-compliant values."""
         pts = []
+
+        def _clean(val: Any) -> Optional[float]:
+            if val is None:
+                return None
+            try:
+                f = float(val)
+                return None if (math.isnan(f) or math.isinf(f)) else f
+            except (ValueError, TypeError):
+                return None
+
         for p in self.participants.values():
             pts.append({
                 "participant_id": p.participant_id,
-                "eat_volume_cm3": p.metrics.get("EAT Total Volume (cm3)"),
-                "pvat_volume_cm3": p.metrics.get("PVAT Total Volume (cm3)"),
-                "pvat_mean_hu": p.metrics.get("PVAT Total Mean Attenuation (HU)"),
-                "calcium_score": p.calcium_score,
+                "eat_volume_cm3": _clean(p.metrics.get("EAT Total Volume (cm3)")),
+                "pvat_volume_cm3": _clean(p.metrics.get("PVAT Total Volume (cm3)")),
+                "pvat_mean_hu": _clean(p.metrics.get("PVAT Total Mean Attenuation (HU)")),
+                "calcium_score": _clean(p.calcium_score),
                 "calcium_risk_tier": p.calcium_risk_tier,
                 "crisp_ct_status": p.crisp_ct_status,
                 "has_seg": p.seg_path is not None,

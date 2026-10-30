@@ -56,6 +56,19 @@ def get_default_cohort_dir() -> Path:
     return Path(".").resolve()
 
 
+def sanitize_nans(obj: Any) -> Any:
+    """Recursively convert float NaN/Inf to None so JSON outputs are strictly RFC 8259 compliant."""
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: sanitize_nans(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize_nans(v) for v in obj]
+    return obj
+
+
 def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask:
     """Create and configure the Flask Cardiac Research Dashboard application."""
     global _ACTIVE_COHORT
@@ -79,13 +92,13 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             return jsonify({"error": "No active cohort loaded"}), 400
         summary = _ACTIVE_COHORT.compute_summary_analytics()
         summary["root_dir"] = str(_ACTIVE_COHORT.root_dir)
-        return jsonify(summary)
+        return jsonify(sanitize_nans(summary))
 
     @app.route("/api/cohort/scatter", methods=["GET"])
     def get_scatter_data():
         if _ACTIVE_COHORT is None:
             return jsonify([]), 400
-        return jsonify(_ACTIVE_COHORT.get_scatter_data())
+        return jsonify(sanitize_nans(_ACTIVE_COHORT.get_scatter_data()))
 
     @app.route("/api/cohort/cases", methods=["GET"])
     def get_cohort_cases():
@@ -124,14 +137,14 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
                 "available_segs": list(p.available_segmentations.keys()),
             })
 
-        return jsonify(cases)
+        return jsonify(sanitize_nans(cases))
 
     @app.route("/api/case/<pid>", methods=["GET"])
     def get_case_details(pid: str):
         if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
             return jsonify({"error": f"Participant {pid} not found"}), 404
         p = _ACTIVE_COHORT.participants[pid]
-        return jsonify(p.to_dict())
+        return jsonify(sanitize_nans(p.to_dict()))
 
     @app.route("/api/cohort/set_directory", methods=["POST"])
     def set_cohort_directory():
@@ -818,14 +831,22 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { title: { display: true, text: 'Agatston Calcium Score', color: '#94a3b8' }, grid: { color: '#334155' } },
-            y: { title: { display: true, text: 'Total EAT Volume (cm³)', color: '#94a3b8' }, grid: { color: '#334155' } },
+            x: {
+              title: { display: true, text: 'Agatston Calcium Score', color: '#94a3b8' },
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8' }
+            },
+            y: {
+              title: { display: true, text: 'Total EAT Volume (cm³)', color: '#94a3b8' },
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8' }
+            },
           },
           plugins: {
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: (ctx) => `Patient ${ctx.raw.label}: CAC=${ctx.raw.x}, EAT=${ctx.raw.y} cm³`
+                label: (ctx) => `Patient ${ctx.raw.label}: CAC=${ctx.raw.x}, EAT=${Number(ctx.raw.y).toFixed(1)} cm³`
               }
             }
           }
@@ -839,30 +860,62 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
       if (chartPvatCac) chartPvatCac.destroy();
       const ctxPvat = document.getElementById('chartPvatVsCac').getContext('2d');
+
+      const datasets = [{
+        label: 'Participant PVAT',
+        data: pvatPts,
+        backgroundColor: '#fb7185',
+        borderColor: '#e11d48',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }];
+
+      if (pvatPts.length > 0) {
+        const minX = Math.min(...pvatPts.map(p => p.x));
+        const maxX = Math.max(...pvatPts.map(p => p.x));
+        datasets.push({
+          type: 'line',
+          label: 'CRISP-CT Cutoff (-70.1 HU)',
+          data: [{ x: minX, y: -70.1 }, { x: maxX, y: -70.1 }],
+          borderColor: '#f43f5e',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+        });
+      }
+
       chartPvatCac = new Chart(ctxPvat, {
         type: 'scatter',
         data: {
-          datasets: [{
-            label: 'Participant PVAT',
-            data: pvatPts,
-            backgroundColor: '#fb7185',
-            borderColor: '#e11d48',
-            pointRadius: 4,
-            pointHoverRadius: 6,
-          }]
+          datasets: datasets
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { title: { display: true, text: 'Agatston Calcium Score', color: '#94a3b8' }, grid: { color: '#334155' } },
-            y: { title: { display: true, text: 'PVAT Mean Attenuation (HU)', color: '#94a3b8' }, min: -140, max: -40, grid: { color: '#334155' } },
+            x: {
+              title: { display: true, text: 'Agatston Calcium Score', color: '#94a3b8' },
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8' }
+            },
+            y: {
+              title: { display: true, text: 'PVAT Mean Attenuation (HU)', color: '#94a3b8' },
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8' }
+            },
           },
           plugins: {
-            legend: { display: false },
+            legend: {
+              display: true,
+              labels: {
+                color: '#94a3b8',
+                filter: (item) => item.text && item.text.includes('Cutoff')
+              }
+            },
             tooltip: {
               callbacks: {
-                label: (ctx) => `Patient ${ctx.raw.label}: CAC=${ctx.raw.x}, PVAT=${ctx.raw.y} HU`
+                label: (ctx) => `Patient ${ctx.raw.label || ''}: CAC=${ctx.raw.x}, PVAT=${Number(ctx.raw.y).toFixed(1)} HU`
               }
             }
           }
