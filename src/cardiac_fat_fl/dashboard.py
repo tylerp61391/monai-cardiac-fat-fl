@@ -351,17 +351,17 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       <!-- KPI Scorecards Row 1: Pipeline & Coverage (4 cards) -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Cohort</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Cohort (N)</div>
           <div class="text-2xl font-bold text-white mt-1" id="kpiTotal">--</div>
           <div class="text-[11px] text-slate-400 mt-1">Discovered CT Cases</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Quantified</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Quantified (N)</div>
           <div class="text-2xl font-bold text-emerald-400 mt-1" id="kpiQuantified">--</div>
           <div class="text-[11px] text-emerald-500/80 mt-1" id="kpiQuantifiedPct">--% metrics in CSV</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">3D Masks on Disk</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">3D Masks on Disk (N)</div>
           <div class="text-2xl font-bold text-cyan-400 mt-1" id="kpiMasks">--</div>
           <div class="text-[11px] text-cyan-500/80 mt-1" id="kpiMasksPct">--% .seg.nrrd</div>
         </div>
@@ -408,7 +408,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow col-span-2 md:col-span-1">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
-            <span>Vascular Inflammation</span>
+            <span>Vascular Inflammation (N)</span>
             <i class="fa-solid fa-fire text-rose-400 text-xs"></i>
           </div>
           <div class="text-2xl font-bold text-rose-400 mt-1" id="kpiInflam">--</div>
@@ -905,7 +905,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const ev = cohortSummary.eat_volume_stats;
         if (ev && ev.mean !== undefined) {
           document.getElementById('kpiEatVol').innerText = `${ev.mean.toFixed(1)}`;
-          document.getElementById('kpiEatVolSub').innerText = `Median ${ev.median.toFixed(1)} (IQR ${ev.iqr}) • Skew +${ev.skewness}`;
+          document.getElementById('kpiEatVolSub').innerText = `N=${ev.count} • Med ${ev.median.toFixed(1)} (IQR ${ev.iqr}) • Skew +${ev.skewness}`;
         } else {
           document.getElementById('kpiEatVol').innerText = '--';
           document.getElementById('kpiEatVolSub').innerText = 'No data';
@@ -914,7 +914,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const eh = cohortSummary.eat_attenuation_stats;
         if (eh && eh.mean !== undefined) {
           document.getElementById('kpiEatHu').innerText = `${eh.mean.toFixed(1)}`;
-          document.getElementById('kpiEatHuSub').innerText = `SD ±${eh.std.toFixed(1)} • Med ${eh.median.toFixed(1)}`;
+          document.getElementById('kpiEatHuSub').innerText = `N=${eh.count} • SD ±${eh.std.toFixed(1)} • Med ${eh.median.toFixed(1)}`;
         } else {
           document.getElementById('kpiEatHu').innerText = '--';
           document.getElementById('kpiEatHuSub').innerText = 'No data';
@@ -923,7 +923,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const pv = cohortSummary.pvat_volume_stats;
         if (pv && pv.mean !== undefined) {
           document.getElementById('kpiPvatVol').innerText = `${pv.mean.toFixed(1)}`;
-          document.getElementById('kpiPvatVolSub').innerText = `Median ${pv.median.toFixed(1)} (IQR ${pv.iqr}) • Skew +${pv.skewness}`;
+          document.getElementById('kpiPvatVolSub').innerText = `N=${pv.count} • Med ${pv.median.toFixed(1)} (IQR ${pv.iqr}) • Skew +${pv.skewness}`;
         } else {
           document.getElementById('kpiPvatVol').innerText = '--';
           document.getElementById('kpiPvatVolSub').innerText = 'No data';
@@ -932,7 +932,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const ph = cohortSummary.pvat_attenuation_stats;
         if (ph && ph.mean !== undefined) {
           document.getElementById('kpiPvatHu').innerText = `${ph.mean.toFixed(1)}`;
-          document.getElementById('kpiPvatHuSub').innerText = `SD ±${ph.std.toFixed(1)} • Med ${ph.median.toFixed(1)}`;
+          document.getElementById('kpiPvatHuSub').innerText = `N=${ph.count} • SD ±${ph.std.toFixed(1)} • Med ${ph.median.toFixed(1)}`;
         } else {
           document.getElementById('kpiPvatHu').innerText = '--';
           document.getElementById('kpiPvatHuSub').innerText = 'No data';
