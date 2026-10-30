@@ -1,6 +1,20 @@
 """Modernized MONAI & NVIDIA FLARE Cardiac Fat Quantification Package."""
 
 from cardiac_fat_fl.anatomy_segmenter import AnatomyMasks, UnifiedAnatomySegmenter
+from cardiac_fat_fl.clinical_report import (
+    encapsulate_pdf_to_dicom,
+    evaluate_clinical_risk,
+    export_clinical_imaging_report,
+    generate_clinical_report_html,
+    generate_clinical_report_pdf,
+    generate_mpr_snapshot,
+)
+from cardiac_fat_fl.cohort_research import (
+    CohortDataset,
+    CohortParticipant,
+    categorize_calcium_score,
+)
+from cardiac_fat_fl.dashboard import create_dashboard_app, launch_dashboard
 from cardiac_fat_fl.fl_client_algo import CardiacFatClientAlgo
 from cardiac_fat_fl.fl_stats_executor import (
     CardiacFatStatsExecutor,
@@ -39,13 +53,14 @@ from cardiac_fat_fl.pacs_daemon import (
     is_study_settled,
     process_study,
 )
-from cardiac_fat_fl.clinical_report import (
-    evaluate_clinical_risk,
-    export_clinical_imaging_report,
-    generate_clinical_report_html,
-    generate_clinical_report_pdf,
-    generate_mpr_snapshot,
-    encapsulate_pdf_to_dicom,
+from cardiac_fat_fl.segmentation_evaluator import (
+    CohortBenchmarkReport,
+    ParticipantBenchmarkResult,
+    SegmentationBenchmarkEngine,
+    compute_compartment_dice,
+    compute_compartment_iou,
+    compute_surface_distance_metrics,
+    compute_volume_metrics,
 )
 from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
 
@@ -90,5 +105,16 @@ __all__ = [
     "generate_clinical_report_pdf",
     "generate_mpr_snapshot",
     "encapsulate_pdf_to_dicom",
+    "CohortDataset",
+    "CohortParticipant",
+    "categorize_calcium_score",
+    "SegmentationBenchmarkEngine",
+    "CohortBenchmarkReport",
+    "ParticipantBenchmarkResult",
+    "compute_compartment_dice",
+    "compute_compartment_iou",
+    "compute_volume_metrics",
+    "compute_surface_distance_metrics",
+    "create_dashboard_app",
+    "launch_dashboard",
 ]
-

@@ -167,6 +167,42 @@ flowchart LR
 
 ---
 
+### 5. Interactive Cardiac Research Dashboard & Multi-Cohort Analytics
+
+`monai-cardiac-fat-fl` includes an embedded, research-grade web dashboard (`cardiac-fat-fl dashboard`) engineered for exploring large-scale cardiovascular cohorts (e.g. Stanford COCA, Harvard / MGH cohorts, institutional CT registries):
+
+```bash
+# Launch interactive dashboard on local cohort
+cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
+```
+
+- **Cohort Research Analytics**:
+  - Six clinical KPI cards: Total Cohort $N$, Segmented $N$ and % coverage, Agatston CAC scored $N$, Cohort Median EAT Volume ($\text{cm}^3$), Mean PVAT HU, and CRISP-CT Active Vascular Inflammation prevalence.
+  - Interactive Chart.js visualizations:
+    1. *EAT Total Volume vs. Agatston Calcium Score* (scatter plot with clinical risk stratification).
+    2. *PVAT Mean Attenuation vs. Agatston CAC Score* (scatter plot with CRISP-CT $-70.1\text{ HU}$ threshold line).
+    3. *Adipose Volume Distribution by Compartment* (EAT LA, LV, RA, RV, PVAT LAD, LCX, RCA).
+    4. *Agatston CAC Risk Tier Breakdown* (Zero, Minimal, Mild, Moderate, Severe).
+- **Case Explorer**: Instant search by participant ID, filter by CAC risk tier or active vascular inflammation status, and inspect 19-metric quantification scorecards.
+- **Dynamic Cohort Switcher**: Change active cohort directory on-the-fly without restarting the web server.
+
+### 6. Extensible Segmentation Method Benchmarking & DICE Engine
+
+To evaluate novel architectures, distillations, or candidate methods against ground truth or foundational models over time, `monai-cardiac-fat-fl` provides an extensible 3D segmentation benchmarking framework (`cardiac-fat-fl benchmark`):
+
+```bash
+# Benchmark candidate segmentation against ground truth across cohort
+cardiac-fat-fl benchmark --cohort-dir "/path/to/cohort" --candidate "eat_pvat.seg.nrrd" --reference "ground_truth.seg.nrrd" -o "benchmark_results.csv"
+```
+
+- **Computed Multi-Compartment Metrics**:
+  - **Dice Similarity Coefficient (DSC)** and **Intersection over Union (IoU / Jaccard)** for all 8 compartments and PVAT Total.
+  - **Volumetric Agreement**: Predicted Volume ($\text{cm}^3$), Target Volume ($\text{cm}^3$), Absolute Volume Difference ($\text{cm}^3$), and Relative Volume Error (RVE %).
+  - **Boundary Surface Distance**: Mean Absolute Surface Distance (MASD) and 95th Percentile Hausdorff Distance (HD95) in mm.
+  - **Structured Exports**: Exports cohort benchmark summaries and per-patient breakdowns to CSV and JSON.
+
+---
+
 ## Clinical & Anatomical Specifications
 
 ### 1. Adipose Attenuation Window
@@ -767,6 +803,8 @@ The test suite validates:
 - **Mathematical Equivalency**: $0.00\text{ cm}^3$ and $0.00\text{ HU}$ agreement against reference baseline models.
 - **DICOM-SEG Compliance**: Proper SOP Class UID `1.2.840.10008.5.1.4.1.1.66.4` and 8 segment sequence items.
 - **NVFLARE Client Lifecycle**: Initialization, training steps, evaluation, and FedBN layer isolation.
+- **Research Dashboard & Multi-Cohort Analytics**: Dynamic cohort loading, Agatston CAC linking, and research correlation statistics.
+- **Segmentation Benchmarking & DICE Engine**: Multi-compartment DSC, IoU, RVE%, and Hausdorff surface distances across candidate methods.
 
 ---
 

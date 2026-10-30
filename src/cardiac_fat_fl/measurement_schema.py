@@ -54,6 +54,9 @@ class SegmentationCompartment(IntEnum):
         return [c.name for c in cls]
 
 
+SEGMENTATION_COMPARTMENTS: Final[List[SegmentationCompartment]] = list(SegmentationCompartment)
+
+
 class ReportedRegion(StrEnum):
     """The 9 reported anatomical regions in `cardiac_fat_measurements.csv`.
 

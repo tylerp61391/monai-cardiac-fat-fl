@@ -99,3 +99,43 @@ def test_cli_federated_train(synthetic_cohort_dir: Path) -> None:
     )
     assert result.exit_code == 0
     assert "Federated client training step completed successfully" in result.stdout
+
+
+def test_cli_dashboard_help() -> None:
+    """Test CLI dashboard command help."""
+    result = runner.invoke(app, ["dashboard", "--help"])
+    assert result.exit_code == 0
+    assert "Launch the interactive Cardiac Research Dashboard" in result.stdout
+
+
+def test_cli_benchmark_command(synthetic_cohort_dir: Path, tmp_path: Path) -> None:
+    """Test CLI benchmark command comparing segmentation masks."""
+    # Ensure quantify has been run so eat_pvat.seg.nrrd exists
+    p1_seg = synthetic_cohort_dir / "PATIENT_001" / "eat_pvat.seg.nrrd"
+    if not p1_seg.is_file():
+        runner.invoke(app, ["quantify", str(synthetic_cohort_dir), "--save-seg"])
+
+    csv_out = tmp_path / "benchmark_summary.csv"
+    json_out = tmp_path / "benchmark_summary.json"
+
+    # Self-comparison should yield 100% Dice
+    result = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "--cohort-dir",
+            str(synthetic_cohort_dir),
+            "--candidate",
+            "eat_pvat.seg.nrrd",
+            "--reference",
+            "eat_pvat.seg.nrrd",
+            "--output-csv",
+            str(csv_out),
+            "--output-json",
+            str(json_out),
+        ],
+    )
+    assert result.exit_code == 0, f"Benchmark failed: {result.stdout}"
+    assert "Multi-Compartment Segmentation Benchmark" in result.stdout
+    assert csv_out.is_file()
+    assert json_out.is_file()

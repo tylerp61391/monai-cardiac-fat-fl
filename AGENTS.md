@@ -34,7 +34,10 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 | `pacs_daemon.py` | 338 | `DaemonConfig`, `PACSWatchdogDaemon`, `is_study_settled`, `find_pending_studies`, `process_study` | Automated clinical PACS watchdog and auto-router daemon (zero-click processing, file settling check, dry-run mode, and fault-tolerant error quarantine). |
 | `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
 | `ohif_viewer.py` | 244 | `launch_ohif_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
-| `cli.py` | 1311 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cohort_research.py` | 442 | `CohortDataset`, `CohortParticipant`, `categorize_calcium_score` | Smart cohort discovery (flat, nested, COCA gated/non-gated), Agatston CAC linking, and correlation analytics (EAT/PVAT vs CAC). |
+| `dashboard.py` | 550 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard server (Flask, Chart.js, KPI scorecards, case explorer, DICE benchmark runner, case deep dive). |
+| `segmentation_evaluator.py` | 480 | `SegmentationBenchmarkEngine`, `CohortBenchmarkReport`, `compute_compartment_dice`, `compute_volume_metrics`, `compute_surface_distance_metrics` | Extensible multi-compartment segmentation evaluation, DICE metrics, IoU, RVE, MASD/HD95. |
+| `cli.py` | 1420 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `fl_client_algo.py` | 409 | `CardiacFatClientAlgo` | NVFLARE client training/evaluation executor (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
@@ -53,7 +56,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests: `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_cli.py` (101L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L).
+- Unit/Integration tests: `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (105L), `test_dashboard.py` (75L).
 
 ---
 
@@ -189,6 +192,36 @@ To generate a Cleerly/HeartFlow-style clinical diagnostic report with 3-view ort
 3. **HL7 FHIR Interoperability (EHR Integration)**:
    - `eat_pvat_report.dcm` maps automatically to FHIR `DocumentReference` (`application/pdf`) and `DiagnosticReport` (CRISP-CT inflammation summary and risk tier).
    - `eat_pvat_sr.dcm` maps to discrete numeric FHIR `Observation` resources (LOINC `84245-0` for EAT volume in cm3, RadLex/LOINC for vessel PVAT HU attenuation).
+
+---
+
+### Recipe 8: Launch Interactive Cardiac Research Dashboard
+
+To launch the web dashboard for exploring cohorts, clinical metrics, Agatston CAC scores, and correlation analytics:
+
+1. **CLI Execution**:
+   ```bash
+   cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
+   ```
+   *(Or set environment variable `CARDIAC_COHORT_DIR=/path/to/cohort`)*.
+2. **Dashboard Features**:
+   - High-impact interactive research plots (EAT Volume vs. Agatston CAC Score, PVAT HU vs. CAC with -70.1 HU CRISP-CT threshold line).
+   - Full case explorer with real-time search, risk tier filtering, and one-click deep-dive inspection.
+   - Dynamic cohort switcher allowing on-the-fly path updates without server restart.
+
+### Recipe 9: Run Extensible Multi-Compartment Segmentation DICE Benchmark
+
+To benchmark a candidate segmentation method against ground truth or alternative algorithms across a cohort:
+
+1. **CLI Execution**:
+   ```bash
+   cardiac-fat-fl benchmark --cohort-dir "/path/to/cohort" --candidate "eat_pvat.seg.nrrd" --reference "ground_truth.seg.nrrd" -o "benchmark_results.csv"
+   ```
+2. **Computed Multi-Compartment Metrics**:
+   - Dice Similarity Coefficient (DSC) & IoU for all 8 compartments + PVAT Total.
+   - Absolute Volume Difference ($\text{cm}^3$) & Relative Volume Error (RVE %).
+   - Mean Absolute Surface Distance (MASD) & 95th Percentile Hausdorff Distance (HD95).
+   - Export to structured CSV and JSON.
 
 ---
 

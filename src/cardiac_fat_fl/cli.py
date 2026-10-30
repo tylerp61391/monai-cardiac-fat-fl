@@ -1306,6 +1306,118 @@ def report_cmd(
         webbrowser.open(artifacts["report_html"].as_uri())
 
 
+@app.command("dashboard")
+def dashboard(
+    cohort_dir: Optional[Path] = typer.Option(
+        None,
+        "--cohort-dir",
+        "-c",
+        help="Path to cohort directory (e.g. Stanford COCA, Harvard CardiacFatQuant, or example_source_dir). If omitted, checks CARDIAC_COHORT_DIR or defaults to example_source_dir.",
+    ),
+    port: int = typer.Option(8050, "--port", "-p", help="Port to bind dashboard server."),
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host address to bind."),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Don't open browser automatically."),
+) -> None:
+    """Launch the interactive Cardiac Research Dashboard."""
+    from cardiac_fat_fl.dashboard import launch_dashboard
+
+    launch_dashboard(
+        cohort_dir=cohort_dir,
+        host=host,
+        port=port,
+        auto_open=not no_browser,
+    )
+
+
+@app.command("benchmark")
+def benchmark(
+    cohort_dir: Path = typer.Option(
+        ...,
+        "--cohort-dir",
+        "-c",
+        help="Cohort directory containing participant scans and segmentations.",
+        exists=True,
+    ),
+    candidate: str = typer.Option("eat_pvat.seg.nrrd", "--candidate", help="Filename or pattern of candidate segmentation mask."),
+    reference: str = typer.Option("ground_truth.seg.nrrd", "--reference", help="Filename or pattern of reference / ground truth segmentation mask."),
+    limit: int = typer.Option(50, "--limit", "-l", help="Maximum number of cases to evaluate."),
+    output_csv: Optional[Path] = typer.Option(None, "--output-csv", "-o", help="Path to export benchmark summary CSV."),
+    output_json: Optional[Path] = typer.Option(None, "--output-json", help="Path to export benchmark summary JSON."),
+) -> None:
+    """Execute multi-compartment segmentation benchmarking and DICE evaluation across a cohort."""
+    from cardiac_fat_fl.cohort_research import CohortDataset
+    from cardiac_fat_fl.segmentation_evaluator import SegmentationBenchmarkEngine
+
+    console.print(f"[bold cyan]Initializing Segmentation Benchmark Engine on:[/bold cyan] {cohort_dir}")
+    cohort = CohortDataset(cohort_dir)
+    engine = SegmentationBenchmarkEngine(candidate_name=candidate, reference_name=reference)
+
+    pairs = []
+    for pid, p in cohort.participants.items():
+        if len(pairs) >= limit:
+            break
+        p_dir = p.study_dir
+        cand_p = p_dir / candidate if not (p_dir / candidate).is_file() else (p_dir / candidate)
+        ref_p = p_dir / reference if not (p_dir / reference).is_file() else (p_dir / reference)
+
+        if not cand_p.is_file():
+            for fname in p.available_segmentations.values():
+                if candidate.lower() in fname.name.lower():
+                    cand_p = fname
+                    break
+        if not ref_p.is_file():
+            for fname in p.available_segmentations.values():
+                if reference.lower() in fname.name.lower():
+                    ref_p = fname
+                    break
+
+        if cand_p.is_file() and ref_p.is_file():
+            try:
+                c_mt = read_nrrd_as_metatensor(cand_p)
+                r_mt = read_nrrd_as_metatensor(ref_p)
+                c_arr = c_mt.detach().cpu().numpy()
+                r_arr = r_mt.detach().cpu().numpy()
+                sp = tuple(c_mt.meta.get("spacing", (1.0, 1.0, 1.0)))
+                pairs.append((pid, c_arr, r_arr, sp))
+            except Exception as e:
+                console.print(f"[yellow]Skipping {pid}: {e}[/yellow]")
+
+    if not pairs:
+        console.print(f"[bold red]No matching cases found containing both '{candidate}' and '{reference}' in {cohort_dir}.[/bold red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[bold green]Evaluating {len(pairs)} cases...[/bold green]")
+    report = engine.evaluate_cohort(pairs)
+
+    table = Table(title=f"Multi-Compartment Segmentation Benchmark (Mean Dice: {report.mean_overall_dice*100:.2f}%)")
+    table.add_column("Compartment", style="cyan")
+    table.add_column("Mean Dice", justify="right", style="green")
+    table.add_column("Median Dice", justify="right")
+    table.add_column("Dice IQR", justify="right")
+    table.add_column("Mean IoU", justify="right", style="cyan")
+    table.add_column("Abs Vol Diff (cm3)", justify="right")
+    table.add_column("Rel Vol Err (%)", justify="right")
+
+    for comp, stats_dict in report.compartment_summary.items():
+        table.add_row(
+            comp,
+            f"{stats_dict['mean_dice']*100:.1f}%",
+            f"{stats_dict['median_dice']*100:.1f}%",
+            f"{stats_dict['iqr_dice']*100:.1f}%",
+            f"{stats_dict['mean_iou']*100:.1f}%",
+            f"{stats_dict['mean_abs_volume_diff_cm3']:.2f}",
+            f"{stats_dict['mean_relative_volume_error_pct']:.1f}%",
+        )
+    console.print(table)
+
+    if output_csv:
+        engine.export_summary_csv(report, output_csv)
+        console.print(f"[green]Exported benchmark CSV:[/green] {output_csv}")
+    if output_json:
+        engine.export_summary_json(report, output_json)
+        console.print(f"[green]Exported benchmark JSON:[/green] {output_json}")
+
+
 if __name__ == "__main__":
     app()
 
