@@ -335,33 +335,38 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     <section id="section-analytics" class="space-y-6">
       
       <!-- KPI Scorecards -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3.5">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Cohort</div>
           <div class="text-2xl font-bold text-white mt-1" id="kpiTotal">--</div>
           <div class="text-[11px] text-slate-400 mt-1">Discovered Cases</div>
         </div>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Quantified</div>
           <div class="text-2xl font-bold text-emerald-400 mt-1" id="kpiQuantified">--</div>
-          <div class="text-[11px] text-emerald-500/80 mt-1" id="kpiQuantifiedPct">--% analyzed</div>
+          <div class="text-[11px] text-emerald-500/80 mt-1" id="kpiQuantifiedPct">--% metrics</div>
         </div>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">3D Masks</div>
+          <div class="text-2xl font-bold text-cyan-400 mt-1" id="kpiMasks">--</div>
+          <div class="text-[11px] text-cyan-500/80 mt-1" id="kpiMasksPct">--% on disk</div>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Agatston CAC</div>
           <div class="text-2xl font-bold text-amber-400 mt-1" id="kpiCac">--</div>
           <div class="text-[11px] text-amber-500/80 mt-1" id="kpiCacPct">--% scored</div>
         </div>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Median EAT</div>
           <div class="text-2xl font-bold text-sky-400 mt-1" id="kpiMedianEat">--</div>
           <div class="text-[11px] text-slate-400 mt-1">cm³ Total Volume</div>
         </div>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Mean PVAT HU</div>
           <div class="text-2xl font-bold text-indigo-400 mt-1" id="kpiMeanPvatHu">--</div>
           <div class="text-[11px] text-slate-400 mt-1">Hounsfield Units</div>
         </div>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Inflammation</div>
           <div class="text-2xl font-bold text-rose-400 mt-1" id="kpiInflam">--</div>
           <div class="text-[11px] text-rose-500/80 mt-1">CRISP-CT > -70.1 HU</div>
@@ -680,8 +685,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const qCount = cohortSummary.quantified_count || cohortSummary.segmented_count || 0;
         const qPct = cohortSummary.quantified_pct || cohortSummary.segmented_pct || 0;
         const maskCount = cohortSummary.mask_saved_count !== undefined ? cohortSummary.mask_saved_count : cohortSummary.segmented_count;
+        const maskPct = cohortSummary.mask_saved_pct !== undefined ? cohortSummary.mask_saved_pct : cohortSummary.segmented_pct;
         document.getElementById('kpiQuantified').innerText = qCount;
-        document.getElementById('kpiQuantifiedPct').innerText = `${qPct}% (${maskCount} 3D masks)`;
+        document.getElementById('kpiQuantifiedPct').innerText = `${qPct}% metrics`;
+        document.getElementById('kpiMasks').innerText = maskCount;
+        document.getElementById('kpiMasksPct').innerText = `${maskPct}% on disk`;
         document.getElementById('kpiCac').innerText = cohortSummary.cac_scored_count || 0;
         document.getElementById('kpiCacPct').innerText = `${cohortSummary.cac_scored_pct || 0}% scored`;
         document.getElementById('kpiMedianEat').innerText = cohortSummary.eat_volume_stats?.median ? `${cohortSummary.eat_volume_stats.median}` : '--';
