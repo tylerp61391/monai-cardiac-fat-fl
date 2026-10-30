@@ -289,6 +289,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
   <title>Cardiac Research Dashboard | EAT & PVAT Analytics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -443,13 +444,28 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         
         <!-- Chart 1: EAT Volume vs Calcium Score -->
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow flex flex-col">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
               <h3 class="text-sm font-bold text-white flex items-center gap-2">
                 <i class="fa-solid fa-chart-line text-sky-400"></i>
                 Total EAT Volume vs. Agatston Calcium Score
               </h3>
               <p class="text-xs text-slate-400">Stratified by clinical plaque burden tiers</p>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs">
+              <!-- Scale toggle -->
+              <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-700">
+                <button id="btnScaleEatLin" onclick="setScaleMode('eat', 'linear')" class="px-2 py-0.5 rounded text-[11px] font-medium bg-sky-600 text-white transition">Linear</button>
+                <button id="btnScaleEatLog" onclick="setScaleMode('eat', 'logarithmic')" class="px-2 py-0.5 rounded text-[11px] font-medium text-slate-400 hover:text-white transition">Log₁₀</button>
+              </div>
+              <!-- Reset Zoom -->
+              <button onclick="resetChartZoom('eat')" title="Reset Zoom" class="px-2 py-1 bg-slate-700/80 hover:bg-slate-700 text-slate-300 rounded text-[11px] flex items-center gap-1 transition">
+                <i class="fa-solid fa-arrows-rotate text-[10px]"></i> Reset
+              </button>
+              <!-- Pop-out Studio -->
+              <button onclick="openChartModal('eat')" title="Pop-out Studio View" class="p-1.5 bg-slate-700/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-xs transition">
+                <i class="fa-solid fa-expand"></i>
+              </button>
             </div>
           </div>
           <div class="relative flex-1 min-h-[300px]">
@@ -459,13 +475,28 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
         <!-- Chart 2: PVAT HU vs Calcium Score -->
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow flex flex-col">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
               <h3 class="text-sm font-bold text-white flex items-center gap-2">
                 <i class="fa-solid fa-fire-flame-curved text-rose-400"></i>
                 PVAT Attenuation vs. Agatston CAC (CRISP-CT)
               </h3>
               <p class="text-xs text-slate-400">Red line denotes -70.1 HU vascular inflammation threshold</p>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs">
+              <!-- Scale toggle -->
+              <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-700">
+                <button id="btnScalePvatLin" onclick="setScaleMode('pvat', 'linear')" class="px-2 py-0.5 rounded text-[11px] font-medium bg-rose-600 text-white transition">Linear</button>
+                <button id="btnScalePvatLog" onclick="setScaleMode('pvat', 'logarithmic')" class="px-2 py-0.5 rounded text-[11px] font-medium text-slate-400 hover:text-white transition">Log₁₀</button>
+              </div>
+              <!-- Reset Zoom -->
+              <button onclick="resetChartZoom('pvat')" title="Reset Zoom" class="px-2 py-1 bg-slate-700/80 hover:bg-slate-700 text-slate-300 rounded text-[11px] flex items-center gap-1 transition">
+                <i class="fa-solid fa-arrows-rotate text-[10px]"></i> Reset
+              </button>
+              <!-- Pop-out Studio -->
+              <button onclick="openChartModal('pvat')" title="Pop-out Studio View" class="p-1.5 bg-slate-700/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-xs transition">
+                <i class="fa-solid fa-expand"></i>
+              </button>
             </div>
           </div>
           <div class="relative flex-1 min-h-[300px]">
@@ -683,6 +714,70 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Modal: High-Res Interactive Chart Studio Pop-Out -->
+  <div id="chartStudioModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden z-50 flex items-center justify-center p-3 md:p-6">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-6xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Studio Header -->
+      <div class="p-4 border-b border-slate-700 flex flex-wrap items-center justify-between gap-3 bg-slate-800/90">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-sm font-bold">
+            <i class="fa-solid fa-chart-line" id="studioModalIcon"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <span id="studioModalTitle">Interactive Correlation Studio</span>
+              <span id="studioCaseCountPill" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-700 text-slate-300 font-mono">--</span>
+            </h2>
+            <p class="text-xs text-slate-400" id="studioModalSubtitle">Multi-dimensional cardiac adipose phenotyping & Agatston risk</p>
+          </div>
+        </div>
+
+        <!-- Toolbar Controls -->
+        <div class="flex items-center flex-wrap gap-2 text-xs">
+          <!-- Scale Toggle -->
+          <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-700">
+            <button id="btnStudioScaleLin" onclick="setStudioScale('linear')" class="px-2.5 py-1 rounded text-xs font-medium bg-sky-600 text-white transition">Linear Scale</button>
+            <button id="btnStudioScaleLog" onclick="setStudioScale('logarithmic')" class="px-2.5 py-1 rounded text-xs font-medium text-slate-400 hover:text-white transition">Log₁₀ CAC</button>
+          </div>
+
+          <!-- Color Mode -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-300">
+            <span class="text-slate-400 text-[11px]">Color:</span>
+            <select id="studioColorModeSelect" onchange="setStudioColorMode(this.value)" class="bg-transparent text-xs text-white focus:outline-none cursor-pointer">
+              <option value="tier">Clinical CAC Tier</option>
+              <option value="inflammation">CRISP-CT Status</option>
+              <option value="single">Single Accent</option>
+            </select>
+          </div>
+
+          <!-- Zoom & Reset -->
+          <button onclick="zoomStudio(1.2)" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+          <button onclick="zoomStudio(0.8)" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+          <button onclick="resetStudioZoom()" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition flex items-center gap-1" title="Reset Pan & Zoom"><i class="fa-solid fa-arrows-rotate text-[10px]"></i> Reset</button>
+
+          <!-- Export PNG -->
+          <button onclick="downloadStudioImage()" class="px-3 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium transition flex items-center gap-1.5" title="Export Publication-Quality PNG"><i class="fa-solid fa-download"></i> PNG</button>
+
+          <!-- Close -->
+          <button onclick="closeChartModal()" class="text-slate-400 hover:text-white text-lg ml-2"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+
+      <!-- Studio Chart Body -->
+      <div class="p-5 flex-1 min-h-[460px] relative bg-slate-900/60">
+        <canvas id="chartStudioCanvas"></canvas>
+      </div>
+
+      <!-- Studio Footer: Dynamic Legend & User Guidance -->
+      <div class="p-3 border-t border-slate-700 bg-slate-800/90 flex flex-wrap items-center justify-between text-xs gap-3">
+        <div class="flex items-center flex-wrap gap-4 text-slate-400" id="studioLegendContainer"></div>
+        <div class="text-[11px] text-slate-400 italic">
+          💡 Use mousewheel or trackpad to zoom freely on both axes; click and drag to pan through dense clusters.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JavaScript Logic & Chart.js Visualizations -->
   <script>
     let activeTab = 'analytics';
@@ -796,83 +891,102 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       }
     }
 
+    let rawScatterPoints = [];
+    let scaleModes = { eat: 'linear', pvat: 'linear' };
+    let studioChart = null;
+    let currentStudioMetric = 'eat';
+    let studioScale = 'linear';
+    let studioColorMode = 'tier';
+
+    const TIER_COLORS = {
+      'Zero (0)': '#94a3b8',
+      'Minimal (1-10)': '#34d399',
+      'Mild (11-100)': '#38bdf8',
+      'Moderate (101-400)': '#fbbf24',
+      'Severe (>400)': '#f43f5e',
+      'Unknown': '#64748b'
+    };
+
+    function getPointColor(p, mode, defaultColor) {
+      if (mode === 'tier') return TIER_COLORS[p.calcium_risk_tier] || '#64748b';
+      if (mode === 'inflammation') {
+        return p.crisp_ct_status === 'Active Vascular Inflammation' ? '#f43f5e' : '#38bdf8';
+      }
+      return defaultColor;
+    }
+
     async function fetchScatterData() {
       try {
         const res = await fetch('/api/cohort/scatter');
         if (!res.ok) return;
-        const pts = await res.json();
-        renderScatterCharts(pts);
+        rawScatterPoints = await res.json();
+        renderScatterCharts(rawScatterPoints);
       } catch (err) {
         console.error("fetchScatterData error:", err);
       }
     }
 
-    function renderScatterCharts(pts) {
-      // 1. EAT Volume vs Calcium Score
-      const eatPts = pts
-        .filter(p => p.eat_volume_cm3 !== null && p.calcium_score !== null)
-        .map(p => ({ x: p.calcium_score, y: p.eat_volume_cm3, label: p.participant_id }));
+    function setScaleMode(metric, mode) {
+      scaleModes[metric] = mode;
+      const isEat = (metric === 'eat');
+      const linBtn = document.getElementById(isEat ? 'btnScaleEatLin' : 'btnScalePvatLin');
+      const logBtn = document.getElementById(isEat ? 'btnScaleEatLog' : 'btnScalePvatLog');
+      const activeBg = isEat ? 'bg-sky-600' : 'bg-rose-600';
 
-      if (chartEatCac) chartEatCac.destroy();
-      const ctxEat = document.getElementById('chartEatVsCac').getContext('2d');
-      chartEatCac = new Chart(ctxEat, {
-        type: 'scatter',
-        data: {
-          datasets: [{
-            label: 'Participant CT',
-            data: eatPts,
-            backgroundColor: '#38bdf8',
-            borderColor: '#0284c7',
-            pointRadius: 4,
-            pointHoverRadius: 6,
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              title: { display: true, text: 'Agatston Calcium Score', color: '#94a3b8' },
-              grid: { color: '#334155' },
-              ticks: { color: '#94a3b8' }
-            },
-            y: {
-              title: { display: true, text: 'Total EAT Volume (cm³)', color: '#94a3b8' },
-              grid: { color: '#334155' },
-              ticks: { color: '#94a3b8' }
-            },
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => `Patient ${ctx.raw.label}: CAC=${ctx.raw.x}, EAT=${Number(ctx.raw.y).toFixed(1)} cm³`
-              }
-            }
-          }
-        }
+      if (mode === 'linear') {
+        linBtn.className = `px-2 py-0.5 rounded text-[11px] font-medium ${activeBg} text-white transition`;
+        logBtn.className = 'px-2 py-0.5 rounded text-[11px] font-medium text-slate-400 hover:text-white transition';
+      } else {
+        linBtn.className = 'px-2 py-0.5 rounded text-[11px] font-medium text-slate-400 hover:text-white transition';
+        logBtn.className = `px-2 py-0.5 rounded text-[11px] font-medium ${activeBg} text-white transition`;
+      }
+
+      renderScatterCharts(rawScatterPoints);
+    }
+
+    function resetChartZoom(metric) {
+      if (metric === 'eat' && chartEatCac) chartEatCac.resetZoom();
+      if (metric === 'pvat' && chartPvatCac) chartPvatCac.resetZoom();
+    }
+
+    function buildScatterConfig(metric, pts, scaleMode, colorMode, inModal = false) {
+      const isEat = (metric === 'eat');
+      const isLog = (scaleMode === 'logarithmic');
+
+      const filtered = pts.filter(p => {
+        const yVal = isEat ? p.eat_volume_cm3 : p.pvat_mean_hu;
+        return yVal !== null && p.calcium_score !== null;
       });
 
-      // 2. PVAT HU vs Calcium Score
-      const pvatPts = pts
-        .filter(p => p.pvat_mean_hu !== null && p.calcium_score !== null)
-        .map(p => ({ x: p.calcium_score, y: p.pvat_mean_hu, label: p.participant_id }));
+      const chartPoints = filtered.map(p => {
+        const rawCac = p.calcium_score;
+        const xVal = isLog ? Math.max(1, rawCac) : rawCac;
+        const yVal = isEat ? p.eat_volume_cm3 : p.pvat_mean_hu;
+        return {
+          x: xVal,
+          y: yVal,
+          originalCAC: rawCac,
+          label: p.participant_id,
+          tier: p.calcium_risk_tier,
+          crisp: p.crisp_ct_status,
+        };
+      });
 
-      if (chartPvatCac) chartPvatCac.destroy();
-      const ctxPvat = document.getElementById('chartPvatVsCac').getContext('2d');
+      const defaultColor = isEat ? '#38bdf8' : '#fb7185';
+      const colors = filtered.map(p => getPointColor(p, colorMode, defaultColor));
 
       const datasets = [{
-        label: 'Participant PVAT',
-        data: pvatPts,
-        backgroundColor: '#fb7185',
-        borderColor: '#e11d48',
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        label: isEat ? 'Participant CT' : 'Participant PVAT',
+        data: chartPoints,
+        backgroundColor: colors,
+        borderColor: colors,
+        pointRadius: inModal ? 5 : 4,
+        pointHoverRadius: inModal ? 8 : 6,
       }];
 
-      if (pvatPts.length > 0) {
-        const minX = Math.min(...pvatPts.map(p => p.x));
-        const maxX = Math.max(...pvatPts.map(p => p.x));
+      if (!isEat && chartPoints.length > 0) {
+        const minX = Math.min(...chartPoints.map(p => p.x));
+        const maxX = Math.max(...chartPoints.map(p => p.x));
         datasets.push({
           type: 'line',
           label: 'CRISP-CT Cutoff (-70.1 HU)',
@@ -885,29 +999,56 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         });
       }
 
-      chartPvatCac = new Chart(ctxPvat, {
-        type: 'scatter',
-        data: {
-          datasets: datasets
+      const xScale = {
+        type: isLog ? 'logarithmic' : 'linear',
+        min: isLog ? 1 : undefined,
+        title: {
+          display: true,
+          text: isLog ? 'Agatston Calcium Score (Log₁₀ Scale)' : 'Agatston Calcium Score (Linear)',
+          color: '#94a3b8'
         },
+        grid: { color: '#334155' },
+        ticks: {
+          color: '#94a3b8',
+          callback: function(val) {
+            const num = Number(val);
+            if (isLog) {
+              if ([1, 10, 100, 1000, 10000, 100000, 1000000, 4000000].includes(num)) {
+                if (num >= 1000000) return (num / 1000000) + 'M';
+                if (num >= 1000) return (num / 1000) + 'k';
+                return num;
+              }
+              return '';
+            } else {
+              if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+              if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
+              return num;
+            }
+          }
+        }
+      };
+
+      const yScale = {
+        type: 'linear',
+        title: {
+          display: true,
+          text: isEat ? 'Total EAT Volume (cm³)' : 'PVAT Mean Attenuation (HU)',
+          color: '#94a3b8'
+        },
+        grid: { color: '#334155' },
+        ticks: { color: '#94a3b8' }
+      };
+
+      return {
+        type: 'scatter',
+        data: { datasets: datasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            x: {
-              title: { display: true, text: 'Agatston Calcium Score', color: '#94a3b8' },
-              grid: { color: '#334155' },
-              ticks: { color: '#94a3b8' }
-            },
-            y: {
-              title: { display: true, text: 'PVAT Mean Attenuation (HU)', color: '#94a3b8' },
-              grid: { color: '#334155' },
-              ticks: { color: '#94a3b8' }
-            },
-          },
+          scales: { x: xScale, y: yScale },
           plugins: {
             legend: {
-              display: true,
+              display: !isEat,
               labels: {
                 color: '#94a3b8',
                 filter: (item) => item.text && item.text.includes('Cutoff')
@@ -915,12 +1056,141 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             },
             tooltip: {
               callbacks: {
-                label: (ctx) => `Patient ${ctx.raw.label || ''}: CAC=${ctx.raw.x}, PVAT=${Number(ctx.raw.y).toFixed(1)} HU`
+                label: (ctx) => {
+                  const r = ctx.raw;
+                  if (!r || r.originalCAC === undefined) return ctx.dataset.label;
+                  const cacStr = r.originalCAC;
+                  const yStr = Number(r.y).toFixed(1);
+                  const unit = isEat ? 'cm³' : 'HU';
+                  return `Patient ${r.label} [${r.tier}]: CAC=${cacStr}, ${isEat ? 'EAT' : 'PVAT'}=${yStr} ${unit} (${r.crisp})`;
+                }
+              }
+            },
+            zoom: {
+              pan: { enabled: true, mode: 'xy' },
+              zoom: {
+                wheel: { enabled: true, speed: 0.08 },
+                pinch: { enabled: true },
+                mode: 'xy'
               }
             }
           }
         }
-      });
+      };
+    }
+
+    function renderScatterCharts(pts) {
+      if (chartEatCac) chartEatCac.destroy();
+      const ctxEat = document.getElementById('chartEatVsCac').getContext('2d');
+      chartEatCac = new Chart(ctxEat, buildScatterConfig('eat', pts, scaleModes.eat, 'single', false));
+
+      if (chartPvatCac) chartPvatCac.destroy();
+      const ctxPvat = document.getElementById('chartPvatVsCac').getContext('2d');
+      chartPvatCac = new Chart(ctxPvat, buildScatterConfig('pvat', pts, scaleModes.pvat, 'single', false));
+    }
+
+    // ================= POP-OUT STUDIO MODAL LOGIC =================
+    function openChartModal(metric) {
+      currentStudioMetric = metric;
+      studioScale = scaleModes[metric] || 'linear';
+      document.getElementById('chartStudioModal').classList.remove('hidden');
+
+      const isEat = (metric === 'eat');
+      document.getElementById('studioModalTitle').innerText = isEat
+        ? 'Total EAT Volume vs. Agatston Calcium Score'
+        : 'PVAT Attenuation vs. Agatston CAC (CRISP-CT)';
+      document.getElementById('studioModalSubtitle').innerText = isEat
+        ? 'Epicardial adipose volume burden stratified across patient coronary plaque scores'
+        : 'Perivascular inflammation cutoff (-70.1 HU) vs. Agatston calcification';
+      document.getElementById('studioModalIcon').className = isEat
+        ? 'fa-solid fa-chart-line text-sky-400'
+        : 'fa-solid fa-fire-flame-curved text-rose-400';
+
+      const validN = rawScatterPoints.filter(p => (isEat ? p.eat_volume_cm3 : p.pvat_mean_hu) !== null && p.calcium_score !== null).length;
+      document.getElementById('studioCaseCountPill').innerText = `${validN} paired cases`;
+
+      updateStudioScaleButtons();
+      renderStudioChart();
+      renderStudioLegend();
+    }
+
+    function closeChartModal() {
+      document.getElementById('chartStudioModal').classList.add('hidden');
+      if (studioChart) {
+        studioChart.destroy();
+        studioChart = null;
+      }
+    }
+
+    function setStudioScale(mode) {
+      studioScale = mode;
+      updateStudioScaleButtons();
+      renderStudioChart();
+    }
+
+    function updateStudioScaleButtons() {
+      const isEat = currentStudioMetric === 'eat';
+      const activeBg = isEat ? 'bg-sky-600' : 'bg-rose-600';
+      const linBtn = document.getElementById('btnStudioScaleLin');
+      const logBtn = document.getElementById('btnStudioScaleLog');
+      if (studioScale === 'linear') {
+        linBtn.className = `px-2.5 py-1 rounded text-xs font-medium ${activeBg} text-white transition`;
+        logBtn.className = 'px-2.5 py-1 rounded text-xs font-medium text-slate-400 hover:text-white transition';
+      } else {
+        linBtn.className = 'px-2.5 py-1 rounded text-xs font-medium text-slate-400 hover:text-white transition';
+        logBtn.className = `px-2.5 py-1 rounded text-xs font-medium ${activeBg} text-white transition`;
+      }
+    }
+
+    function setStudioColorMode(mode) {
+      studioColorMode = mode;
+      renderStudioChart();
+      renderStudioLegend();
+    }
+
+    function zoomStudio(factor) {
+      if (studioChart) studioChart.zoom(factor);
+    }
+
+    function resetStudioZoom() {
+      if (studioChart) studioChart.resetZoom();
+    }
+
+    function downloadStudioImage() {
+      if (!studioChart) return;
+      const url = studioChart.toBase64Image('image/png', 1.0);
+      const a = document.createElement('a');
+      a.download = `cardiac_fat_${currentStudioMetric}_vs_cac_${studioScale}.png`;
+      a.href = url;
+      a.click();
+    }
+
+    function renderStudioChart() {
+      if (studioChart) studioChart.destroy();
+      const ctx = document.getElementById('chartStudioCanvas').getContext('2d');
+      studioChart = new Chart(ctx, buildScatterConfig(currentStudioMetric, rawScatterPoints, studioScale, studioColorMode, true));
+    }
+
+    function renderStudioLegend() {
+      const container = document.getElementById('studioLegendContainer');
+      if (studioColorMode === 'tier') {
+        container.innerHTML = `
+          <span class="font-semibold text-slate-300">Plaque Burden:</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#94a3b8]"></span> Zero (0)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#34d399]"></span> Minimal (1-10)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></span> Mild (11-100)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#fbbf24]"></span> Moderate (101-400)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#f43f5e]"></span> Severe (>400)</span>
+        `;
+      } else if (studioColorMode === 'inflammation') {
+        container.innerHTML = `
+          <span class="font-semibold text-slate-300">CRISP-CT Cutoff:</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></span> Normal Fat (&le; -70.1 HU)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#f43f5e]"></span> Active Inflammation (> -70.1 HU)</span>
+        `;
+      } else {
+        container.innerHTML = `<span class="text-slate-400">Single accent color mode</span>`;
+      }
     }
 
     function renderCompartmentChart(summaries) {
