@@ -352,9 +352,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           <div class="text-[11px] text-cyan-500/80 mt-1" id="kpiMasksPct">--% on disk</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
-          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Agatston CAC</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">CAC Scored (N)</div>
           <div class="text-2xl font-bold text-amber-400 mt-1" id="kpiCac">--</div>
-          <div class="text-[11px] text-amber-500/80 mt-1" id="kpiCacPct">--% scored</div>
+          <div class="text-[11px] text-amber-500/80 mt-1" id="kpiCacPct">--% of cohort</div>
         </div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
           <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Median EAT</div>
@@ -691,7 +691,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         document.getElementById('kpiMasks').innerText = maskCount;
         document.getElementById('kpiMasksPct').innerText = `${maskPct}% on disk`;
         document.getElementById('kpiCac').innerText = cohortSummary.cac_scored_count || 0;
-        document.getElementById('kpiCacPct').innerText = `${cohortSummary.cac_scored_pct || 0}% scored`;
+        document.getElementById('kpiCacPct').innerText = `${cohortSummary.cac_scored_pct || 0}% of cohort`;
         document.getElementById('kpiMedianEat').innerText = cohortSummary.eat_volume_stats?.median ? `${cohortSummary.eat_volume_stats.median}` : '--';
         document.getElementById('kpiMeanPvatHu').innerText = cohortSummary.pvat_attenuation_stats?.mean ? `${cohortSummary.pvat_attenuation_stats.mean}` : '--';
         document.getElementById('kpiInflam').innerText = cohortSummary.active_inflammation_count || 0;
