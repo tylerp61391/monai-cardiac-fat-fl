@@ -821,16 +821,17 @@ Run all automated unit tests via `pytest`:
 pytest -v
 ```
 
-The test suite validates 73 automated unit and integration tests across all modules:
+The test suite validates 76 automated unit and integration tests across all modules:
 
 - **Transform Correctness**: Strict $[-190.0, -30.0]\text{ HU}$ thresholding, Voronoi chamber partitioning, and radial vessel dilation.
 - **Header Coordinate Integrity**: Orientation preservation across NRRD and DICOM formats with multi-series max-slice collision resolution.
-- **Mathematical Equivalency**: $0.00\text{ cm}^3$ and $0.00\text{ HU}$ agreement against reference baseline models.
-- **DICOM-SEG Compliance**: Proper SOP Class UID `1.2.840.10008.5.1.4.1.1.66.4` and 8 segment sequence items.
+- **Mathematical Equivalency**: .00\text{ cm}^3$ and .00\text{ HU}$ agreement against reference baseline models.
+- **DICOM-SEG Compliance**: Proper SOP Class UID 1.2.840.10008.5.1.4.1.1.66.4 and 8 segment sequence items.
 - **NVFLARE Client Lifecycle**: Initialization, training steps, evaluation, and FedBN layer isolation.
-- **Research Dashboard & OHIF Workstation**: Dynamic cohort loading, Agatston CAC linking, natural numerical sorting, `/viewer/<pid>/` routes, and research correlation statistics.
+- **Research Dashboard & OHIF Workstation**: Dynamic cohort loading, Agatston CAC linking across all 5 tiers, natural numerical sorting, /viewer/<pid>/ routes, and research correlation statistics.
+- **Publication-Grade Visualizations & 300 DPI Figure Export**: Multi-panel composite figures, omnibus ANOVA & Kruskal-Wallis hypothesis testing, post-hoc pairwise Mann-Whitney U tests with Bonferroni correction, and bivariate linear regression.
 - **Segmentation Benchmarking & DICE Engine**: Multi-compartment DSC, IoU, RVE%, and Hausdorff surface distances across candidate methods.
-
+- **Epic on FHIR & open.epic MCP**: Standard US Core R4 resource mappings (Observation, DiagnosticReport, DocumentReference) and agentic developer workflows detailed in [docs/EPIC_FHIR_MCP_INTEGRATION.md](docs/EPIC_FHIR_MCP_INTEGRATION.md).
 ---
 
 ## Security & Healthcare Compliance

@@ -95,6 +95,34 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         summary["root_dir"] = str(_ACTIVE_COHORT.root_dir)
         return jsonify(sanitize_nans(summary))
 
+    @app.route("/api/cohort/statistics", methods=["GET"])
+    def get_cohort_statistics():
+        if _ACTIVE_COHORT is None:
+            return jsonify({"error": "No active cohort loaded"}), 400
+        stats_data = {
+            "tier_group_comparisons": _ACTIVE_COHORT.compute_tier_group_comparisons(),
+            "bivariate_regression": _ACTIVE_COHORT.compute_bivariate_regression(),
+        }
+        return jsonify(sanitize_nans(stats_data))
+
+    @app.route("/api/cohort/publication-figure", methods=["GET"])
+    def get_publication_figure():
+        if _ACTIVE_COHORT is None:
+            return jsonify({"error": "No active cohort loaded"}), 400
+        from cardiac_fat_fl.publication_figure import generate_publication_figure
+
+        try:
+            dpi = int(request.args.get("dpi", 300))
+            png_bytes = generate_publication_figure(_ACTIVE_COHORT, dpi=dpi)
+            return send_file(
+                io.BytesIO(png_bytes),
+                mimetype="image/png",
+                as_attachment=True,
+                download_name="cardiac_fat_publication_figure_300dpi.png",
+            )
+        except Exception as e:
+            return jsonify({"error": f"Error generating publication figure: {e}"}), 500
+
     @app.route("/api/cohort/scatter", methods=["GET"])
     def get_scatter_data():
         if _ACTIVE_COHORT is None:
@@ -488,7 +516,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             <p class="text-xs text-slate-400">Pearson and Spearman rank association with coronary calcification</p>
           </div>
         </div>
-        <div class="flex items-center gap-6 text-xs">
+        <div class="flex items-center gap-4 text-xs flex-wrap">
           <div>
             <span class="text-slate-400">EAT vs. Agatston CAC:</span>
             <span class="font-mono font-bold text-sky-300 ml-1" id="corrEatCac">--</span>
@@ -497,7 +525,109 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             <span class="text-slate-400">PVAT HU vs. Agatston CAC:</span>
             <span class="font-mono font-bold text-indigo-300 ml-1" id="corrPvatCac">--</span>
           </div>
+          <a href="/api/cohort/publication-figure" target="_blank" download="cardiac_fat_publication_figure_300dpi.png"
+             class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center gap-1.5 transition shadow-sm ml-2 group"
+             title="Download 300 DPI multi-panel publication composite figure for JACC / Radiology">
+            <i class="fa-solid fa-file-image group-hover:scale-110 transition-transform"></i>
+            <span>Export 300 DPI Figure</span>
+          </a>
         </div>
+      </div>
+
+      <!-- Publication Analytics: Tier Group Comparison & Bivariate Model -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Card 1: 5-Tier CAC Box & Whiskers with Omnibus ANOVA / Kruskal -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow flex flex-col">
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-simple text-purple-400"></i>
+                CAC Risk Tier Group Comparison
+              </h3>
+              <p class="text-xs text-slate-400" id="boxPlotSub">Distribution of Total EAT Volume (cm³) across Agatston plaque categories</p>
+            </div>
+            <!-- Metric Toggle -->
+            <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-700 text-xs">
+              <button id="btnBoxEat" onclick="setBoxMetric('eat_volume')" class="px-2.5 py-1 rounded text-[11px] font-medium bg-purple-600 text-white transition">Total EAT (cm³)</button>
+              <button id="btnBoxPvat" onclick="setBoxMetric('pvat_attenuation')" class="px-2.5 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-white transition">PVAT (HU)</button>
+            </div>
+          </div>
+
+          <!-- Statistical Callout -->
+          <div class="bg-slate-900/80 border border-slate-700/80 rounded-lg p-3 mb-3 flex items-center justify-between flex-wrap gap-2 text-xs">
+            <div>
+              <span class="text-slate-400">One-Way ANOVA:</span>
+              <span class="font-mono font-bold text-purple-300 ml-1" id="statAnova">F = -- (p = --)</span>
+            </div>
+            <div>
+              <span class="text-slate-400">Kruskal-Wallis:</span>
+              <span class="font-mono font-bold text-sky-300 ml-1" id="statKruskal">H = -- (p = --)</span>
+            </div>
+            <div id="statSignifBadge" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+              Significant (p &lt; 0.05)
+            </div>
+          </div>
+
+          <!-- SVG Box & Whiskers Plot Container -->
+          <div class="relative flex-1 min-h-[260px] flex items-center justify-center" id="boxPlotSvgContainer">
+            <!-- Rendered by renderTierBoxPlot() -->
+          </div>
+
+          <!-- Pairwise Significance Matrix Summary -->
+          <div class="mt-3 pt-3 border-t border-slate-700/60 text-[11px] text-slate-400 flex items-center justify-between flex-wrap gap-2">
+            <span>Post-Hoc Mann-Whitney (Bonferroni):</span>
+            <div id="pairwiseChips" class="flex items-center gap-1.5 flex-wrap">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Bivariate Regression Model (EAT Volume vs PVAT Attenuation) -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow flex flex-col">
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-code-merge text-cyan-400"></i>
+                Adipose Deposition Model: EAT Vol vs. PVAT HU
+              </h3>
+              <p class="text-xs text-slate-400">Bivariate correlation independent of coronary calcification (N = 997)</p>
+            </div>
+            <span class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 font-mono text-[11px] text-cyan-300 font-semibold" id="bivariateEqBadge">
+              PVAT HU = -0.110 × EAT Vol - 64.74
+            </span>
+          </div>
+
+          <!-- Bivariate Regression Scorecards -->
+          <div class="grid grid-cols-4 gap-2 mb-3 text-center">
+            <div class="bg-slate-900/80 border border-slate-700/60 rounded-lg p-2">
+              <div class="text-[10px] text-slate-400 uppercase">Pearson r</div>
+              <div class="font-mono text-sm font-bold text-cyan-300" id="bivPearson">-0.411</div>
+              <div class="text-[9px] text-slate-500">p &lt; 10⁻⁴⁰</div>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-700/60 rounded-lg p-2">
+              <div class="text-[10px] text-slate-400 uppercase">Spearman ρ</div>
+              <div class="font-mono text-sm font-bold text-sky-300" id="bivSpearman">-0.476</div>
+              <div class="text-[9px] text-slate-500">p &lt; 10⁻⁵⁰</div>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-700/60 rounded-lg p-2">
+              <div class="text-[10px] text-slate-400 uppercase">Model R²</div>
+              <div class="font-mono text-sm font-bold text-indigo-300" id="bivR2">0.169</div>
+              <div class="text-[9px] text-slate-500">Goodness of Fit</div>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-700/60 rounded-lg p-2">
+              <div class="text-[10px] text-slate-400 uppercase">CRISP-CT Cutoff</div>
+              <div class="font-mono text-sm font-bold text-rose-400">-70.1 HU</div>
+              <div class="text-[9px] text-rose-500">Inflammation</div>
+            </div>
+          </div>
+
+          <!-- Chart / Scatter Canvas Container -->
+          <div class="relative flex-1 min-h-[260px]">
+            <canvas id="chartBivariateRegression"></canvas>
+          </div>
+        </div>
+
       </div>
 
       <!-- Charts Grid -->
@@ -1061,9 +1191,279 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
         renderRiskTiersChart(cohortSummary.risk_tier_counts || {});
         renderCompartmentChart(cohortSummary.chamber_volume_summaries || {});
+        renderTierBoxPlot();
+        renderBivariateRegression();
       } catch (err) {
         console.error("fetchSummary error:", err);
       }
+    }
+
+    let activeBoxMetric = 'eat_volume';
+    let chartBivariate = null;
+
+    function setBoxMetric(metric) {
+      activeBoxMetric = metric;
+      const btnEat = document.getElementById('btnBoxEat');
+      const btnPvat = document.getElementById('btnBoxPvat');
+      if (metric === 'eat_volume') {
+        btnEat.className = 'px-2.5 py-1 rounded text-[11px] font-medium bg-purple-600 text-white transition';
+        btnPvat.className = 'px-2.5 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-white transition';
+        document.getElementById('boxPlotSub').innerText = 'Distribution of Total EAT Volume (cm³) across Agatston plaque burden categories';
+      } else {
+        btnEat.className = 'px-2.5 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-white transition';
+        btnPvat.className = 'px-2.5 py-1 rounded text-[11px] font-medium bg-rose-600 text-white transition';
+        document.getElementById('boxPlotSub').innerText = 'Distribution of PVAT Mean Attenuation (HU) with CRISP-CT threshold (-70.1 HU)';
+      }
+      renderTierBoxPlot();
+    }
+
+    function renderTierBoxPlot() {
+      if (!cohortSummary || !cohortSummary.tier_group_comparisons) return;
+      const data = cohortSummary.tier_group_comparisons[activeBoxMetric];
+      if (!data) return;
+
+      const anova = data.anova || {};
+      const kruskal = data.kruskal_wallis || {};
+      const fStr = anova.f_stat !== null && anova.f_stat !== undefined ? `F = ${anova.f_stat}` : 'F = --';
+      const fpStr = anova.p_value !== null && anova.p_value !== undefined ? `p = ${anova.p_value < 0.0001 ? '<0.0001' : anova.p_value.toFixed(4)}` : 'p = --';
+      const hStr = kruskal.h_stat !== null && kruskal.h_stat !== undefined ? `H = ${kruskal.h_stat}` : 'H = --';
+      const hpStr = kruskal.p_value !== null && kruskal.p_value !== undefined ? `p = ${kruskal.p_value < 0.0001 ? '<0.0001' : kruskal.p_value.toFixed(4)}` : 'p = --';
+
+      document.getElementById('statAnova').innerText = `${fStr} (${fpStr})`;
+      document.getElementById('statKruskal').innerText = `${hStr} (${hpStr})`;
+
+      const isSig = anova.significant || kruskal.significant;
+      const badgeEl = document.getElementById('statSignifBadge');
+      if (isSig) {
+        badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-500/40';
+        badgeEl.innerText = 'Significant (p < 0.05)';
+      } else {
+        badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700';
+        badgeEl.innerText = 'Not Significant';
+      }
+
+      // Pairwise chips
+      const pwContainer = document.getElementById('pairwiseChips');
+      const pwList = data.pairwise || [];
+      if (pwList.length === 0) {
+        pwContainer.innerHTML = '<span class="text-slate-500">None computed</span>';
+      } else {
+        pwContainer.innerHTML = pwList.slice(0, 4).map(pw => {
+          const isStars = pw.stars !== 'ns';
+          const chipColor = isStars ? 'bg-purple-950/80 text-purple-300 border-purple-500/50' : 'bg-slate-900 text-slate-500 border-slate-800';
+          const g1 = pw.group1.split(' ')[0];
+          const g2 = pw.group2.split(' ')[0];
+          return `<span class="px-2 py-0.5 rounded border text-[10px] font-mono ${chipColor}">${g1} vs ${g2}: ${pw.stars} (p=${pw.p_adj < 0.001 ? '<0.001' : pw.p_adj.toFixed(3)})</span>`;
+        }).join('');
+      }
+
+      // Render SVG Box Plot
+      const tiers = cohortSummary.tier_group_comparisons.CAC_TIERS || ["Zero (0)", "Minimal (1-10)", "Mild (11-100)", "Moderate (101-400)", "Severe (>400)"];
+      const isEat = activeBoxMetric === 'eat_volume';
+      const yMin = isEat ? 0 : -95;
+      const yMax = isEat ? 160 : -45;
+      const unit = isEat ? 'cm³' : 'HU';
+      const accent = isEat ? '#9333ea' : '#ef4444';
+
+      const svgW = 560;
+      const svgH = 260;
+      const padL = 50;
+      const padR = 20;
+      const padT = 30;
+      const padB = 40;
+      const plotW = svgW - padL - padR;
+      const plotH = svgH - padT - padB;
+
+      function toY(val) {
+        const c = Math.max(yMin, Math.min(yMax, val));
+        return padT + plotH - ((c - yMin) / (yMax - yMin)) * plotH;
+      }
+
+      let svg = `<svg viewBox="0 0 ${svgW} ${svgH}" class="w-full h-full select-none">`;
+
+      // Threshold line for PVAT HU
+      if (!isEat) {
+        const threshY = toY(-70.1);
+        svg += `<rect x="${padL}" y="${padT}" width="${plotW}" height="${threshY - padT}" fill="#fda4af" fill-opacity="0.08" />`;
+        svg += `<line x1="${padL}" y1="${threshY}" x2="${padL + plotW}" y2="${threshY}" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="4,4" />`;
+        svg += `<text x="${padL + 6}" y="${threshY - 4}" fill="#f43f5e" font-size="9" font-family="monospace">Inflammation Threshold (-70.1 HU)</text>`;
+      }
+
+      // Y-axis gridlines & labels
+      for (let i = 0; i <= 4; i++) {
+        const v = yMin + i * (yMax - yMin) / 4;
+        const y = toY(v);
+        svg += `<line x1="${padL}" y1="${y}" x2="${padL + plotW}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="2,3" />`;
+        svg += `<text x="${padL - 8}" y="${y + 3}" fill="#94a3b8" font-size="10" text-anchor="end" font-family="monospace">${v.toFixed(0)}</text>`;
+      }
+
+      // X-axis line & Y-axis line
+      svg += `<line x1="${padL}" y1="${padT + plotH}" x2="${padL + plotW}" y2="${padT + plotH}" stroke="#475569" stroke-width="1.5" />`;
+      svg += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="#475569" stroke-width="1.5" />`;
+
+      // Draw each tier's box
+      const step = plotW / tiers.length;
+      const boxW = Math.min(45, step * 0.65);
+      const tierColors = {
+        "Zero (0)": "#3b82f6",
+        "Minimal (1-10)": "#10b981",
+        "Mild (11-100)": "#eab308",
+        "Moderate (101-400)": "#f97316",
+        "Severe (>400)": "#ef4444"
+      };
+
+      tiers.forEach((tKey, idx) => {
+        const cx = padL + step * (idx + 0.5);
+        const tInfo = data.tiers ? data.tiers[tKey] : null;
+        const n = tInfo ? tInfo.n : 0;
+        const shortName = tKey.split(' ')[0];
+        const color = tierColors[tKey] || accent;
+
+        if (!tInfo || n === 0) {
+          svg += `<text x="${cx}" y="${padT + plotH + 15}" fill="#64748b" font-size="10" text-anchor="middle">${shortName}</text>`;
+          svg += `<text x="${cx}" y="${padT + plotH + 28}" fill="#475569" font-size="8" text-anchor="middle">N=0</text>`;
+          return;
+        }
+
+        const yQ1 = toY(tInfo.q1);
+        const yMed = toY(tInfo.median);
+        const yQ3 = toY(tInfo.q3);
+        const yWLow = toY(tInfo.whisker_low);
+        const yWHigh = toY(tInfo.whisker_high);
+
+        // Whiskers
+        svg += `<line x1="${cx}" y1="${yQ3}" x2="${cx}" y2="${yWHigh}" stroke="#94a3b8" stroke-width="1.5" />`;
+        svg += `<line x1="${cx - boxW/3}" y1="${yWHigh}" x2="${cx + boxW/3}" y2="${yWHigh}" stroke="#94a3b8" stroke-width="1.5" />`;
+        svg += `<line x1="${cx}" y1="${yQ1}" x2="${cx}" y2="${yWLow}" stroke="#94a3b8" stroke-width="1.5" />`;
+        svg += `<line x1="${cx - boxW/3}" y1="${yWLow}" x2="${cx + boxW/3}" y2="${yWLow}" stroke="#94a3b8" stroke-width="1.5" />`;
+
+        // Box
+        const boxTop = Math.min(yQ1, yQ3);
+        const boxH = Math.max(2, Math.abs(yQ1 - yQ3));
+        svg += `<rect x="${cx - boxW/2}" y="${boxTop}" width="${boxW}" height="${boxH}" rx="4" fill="${color}" fill-opacity="0.35" stroke="${color}" stroke-width="1.5" />`;
+
+        // Median line
+        svg += `<line x1="${cx - boxW/2}" y1="${yMed}" x2="${cx + boxW/2}" y2="${yMed}" stroke="#ffffff" stroke-width="2.5" />`;
+
+        // Outlier dots
+        (tInfo.outliers || []).slice(0, 5).forEach(outVal => {
+          const oy = toY(outVal);
+          svg += `<circle cx="${cx}" cy="${oy}" r="2.5" fill="#f43f5e" opacity="0.8" />`;
+        });
+
+        // X Labels
+        svg += `<text x="${cx}" y="${padT + plotH + 15}" fill="#e2e8f0" font-size="10" font-weight="600" text-anchor="middle">${shortName}</text>`;
+        svg += `<text x="${cx}" y="${padT + plotH + 28}" fill="#94a3b8" font-size="8" font-family="monospace" text-anchor="middle">N=${n}</text>`;
+      });
+
+      svg += '</svg>';
+      document.getElementById('boxPlotSvgContainer').innerHTML = svg;
+    }
+
+    function renderBivariateRegression() {
+      if (!cohortSummary || !cohortSummary.bivariate_regression) return;
+      const biv = cohortSummary.bivariate_regression;
+
+      document.getElementById('bivariateEqBadge').innerText = biv.equation || 'N/A';
+      document.getElementById('bivPearson').innerText = biv.pearson_r !== undefined ? biv.pearson_r.toFixed(3) : '--';
+      document.getElementById('bivSpearman').innerText = biv.spearman_rho !== undefined ? biv.spearman_rho.toFixed(3) : '--';
+      document.getElementById('bivR2').innerText = biv.r_squared !== undefined ? biv.r_squared.toFixed(3) : '--';
+
+      if (!rawScatterPoints || rawScatterPoints.length === 0) return;
+
+      const validPoints = rawScatterPoints
+        .filter(p => p.eat_volume_cm3 !== null && p.pvat_mean_hu !== null)
+        .map(p => ({
+          x: p.eat_volume_cm3,
+          y: p.pvat_mean_hu,
+          label: p.participant_id,
+          crisp: p.crisp_ct_status
+        }));
+
+      if (validPoints.length === 0) return;
+
+      const slope = biv.slope || 0;
+      const intercept = biv.intercept || 0;
+      const xMin = 0;
+      const xMax = 180;
+      const lineData = [
+        { x: xMin, y: slope * xMin + intercept },
+        { x: xMax, y: slope * xMax + intercept }
+      ];
+
+      if (chartBivariate) chartBivariate.destroy();
+      const ctx = document.getElementById('chartBivariateRegression').getContext('2d');
+
+      chartBivariate = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: 'Participants',
+              data: validPoints,
+              backgroundColor: validPoints.map(p => p.crisp === 'Active Vascular Inflammation' ? 'rgba(244, 63, 94, 0.7)' : 'rgba(56, 189, 248, 0.6)'),
+              borderColor: 'transparent',
+              pointRadius: 3,
+              pointHoverRadius: 5
+            },
+            {
+              label: 'Linear Fit',
+              type: 'line',
+              data: lineData,
+              borderColor: '#38bdf8',
+              borderWidth: 2.5,
+              borderDash: [],
+              pointRadius: 0,
+              fill: false
+            },
+            {
+              label: 'Inflammation Threshold (-70.1 HU)',
+              type: 'line',
+              data: [{ x: 0, y: -70.1 }, { x: 180, y: -70.1 }],
+              borderColor: '#f43f5e',
+              borderWidth: 1.5,
+              borderDash: [5, 5],
+              pointRadius: 0,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              title: { display: true, text: 'Total EAT Volume (cm³)', color: '#94a3b8', font: { size: 11, weight: 'bold' } },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' },
+              ticks: { color: '#94a3b8', font: { size: 10 } },
+              min: 0,
+              max: 180
+            },
+            y: {
+              title: { display: true, text: 'PVAT Mean Attenuation (HU)', color: '#94a3b8', font: { size: 11, weight: 'bold' } },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' },
+              ticks: { color: '#94a3b8', font: { size: 10 } },
+              min: -95,
+              max: -45
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const r = ctx.raw;
+                  if (ctx.datasetIndex === 0) {
+                    return `Patient ${r.label}: EAT=${r.x.toFixed(1)} cm³, PVAT=${r.y.toFixed(1)} HU (${r.crisp})`;
+                  }
+                  return ctx.dataset.label;
+                }
+              }
+            }
+          }
+        }
+      });
     }
 
     let rawScatterPoints = [];
@@ -1098,6 +1498,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         if (!res.ok) return;
         rawScatterPoints = await res.json();
         renderScatterCharts(rawScatterPoints);
+        renderBivariateRegression();
       } catch (err) {
         console.error("fetchScatterData error:", err);
       }

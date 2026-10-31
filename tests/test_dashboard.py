@@ -110,3 +110,27 @@ def test_dashboard_ohif_viewer_routes(test_app):
     res_404 = client.get("/patient/NON_EXISTENT/")
     assert res_404.status_code == 404
 
+
+def test_dashboard_api_statistics(test_app):
+    """Verify /api/cohort/statistics returns ANOVA, Kruskal-Wallis, and bivariate regression."""
+    client = test_app.test_client()
+    res = client.get("/api/cohort/statistics")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "tier_group_comparisons" in data
+    assert "bivariate_regression" in data
+    assert "CAC_TIERS" in data["tier_group_comparisons"]
+    assert "eat_volume" in data["tier_group_comparisons"]
+    assert "pvat_attenuation" in data["tier_group_comparisons"]
+
+
+def test_dashboard_api_publication_figure(test_app):
+    """Verify /api/cohort/publication-figure returns valid 300 DPI PNG attachment."""
+    client = test_app.test_client()
+    res = client.get("/api/cohort/publication-figure?dpi=150")
+    assert res.status_code == 200
+    assert res.content_type == "image/png"
+    assert len(res.data) > 1000
+    # Check PNG magic bytes: \x89PNG\r\n\x1a\n
+    assert res.data[:8] == b"\x89PNG\r\n\x1a\n"
+

@@ -114,6 +114,67 @@ def test_cohort_dataset_with_synthetic_calcium_scores(tmp_path: Path):
     assert "eat_vs_cac" in summary["correlations"]
     assert pytest.approx(summary["correlations"]["eat_vs_cac"]["pearson_r"], 1e-2) == 1.0
 
+    # Test Tier Group Comparisons and Bivariate Regression
+    tier_stats = cohort.compute_tier_group_comparisons()
+    assert "CAC_TIERS" in tier_stats
+    assert "eat_volume" in tier_stats
+    assert "pvat_attenuation" in tier_stats
+    assert "tiers" in tier_stats["eat_volume"]
+    assert "anova" in tier_stats["eat_volume"]
+    assert "kruskal_wallis" in tier_stats["eat_volume"]
+
+    bivariate = cohort.compute_bivariate_regression()
+    assert bivariate["n_paired"] == 5
+    assert "pearson_r" in bivariate
+    assert "slope" in bivariate
+    assert "equation" in bivariate
+    assert bivariate["r_squared"] >= 0.0
+
+
+def test_publication_figure_generation(tmp_path: Path):
+    """Verify that generate_publication_figure produces a valid 300 DPI image."""
+    from cardiac_fat_fl.publication_figure import generate_publication_figure
+    from PIL import Image
+
+    # Use synthetic cohort setup
+    p_dir = tmp_path / "study_patients"
+    p_dir.mkdir()
+    scores_rows = []
+    meas_rows = []
+    for i in range(1, 11):
+        pid = f"PAT_{i:03d}"
+        case_dir = p_dir / pid
+        case_dir.mkdir()
+        (case_dir / "eat_pvat.seg.nrrd").write_text("dummy")
+
+        scores_rows.append({"PatientId": pid, "TotalScore": i * 50})
+        meas_rows.append({
+            "participant_id": pid,
+            "EAT Total Volume (cm3)": 50.0 + i * 5.0,
+            "PVAT Total Mean Attenuation (HU)": -80.0 + i * 2.0,
+            "EAT LA Volume (cm3)": 10.0,
+            "EAT LV Volume (cm3)": 15.0,
+            "EAT RA Volume (cm3)": 8.0,
+            "EAT RV Volume (cm3)": 20.0,
+            "PVAT LAD Volume (cm3)": 5.0,
+            "PVAT LCX Volume (cm3)": 4.0,
+            "PVAT RCA Volume (cm3)": 6.0,
+        })
+
+    pd.DataFrame(scores_rows).to_csv(tmp_path / "scores_gated.csv", index=False)
+    pd.DataFrame(meas_rows).to_csv(tmp_path / "cardiac_fat_measurements.csv", index=False)
+
+    cohort = CohortDataset(tmp_path)
+    out_img = tmp_path / "test_fig_300dpi.png"
+    png_bytes = generate_publication_figure(cohort, output_path=out_img, width=1200, height=900, dpi=300)
+
+    assert len(png_bytes) > 10000
+    assert out_img.is_file()
+
+    im = Image.open(out_img)
+    assert im.size == (1200, 900)
+    assert im.mode == "RGB"
+
 def test_cohort_dataset_natural_sorting(tmp_path: Path):
     """Verify that participant IDs are sorted naturally (0, 1, 2, ..., 10, 100) not alphabetically."""
     for pid in ["100", "0", "10", "2", "1", "20"]:

@@ -55,6 +55,15 @@ def categorize_calcium_score(score: Optional[float]) -> str:
     return "Severe (>400)"
 
 
+CAC_TIER_ORDER: List[str] = [
+    "Zero (0)",
+    "Minimal (1-10)",
+    "Mild (11-100)",
+    "Moderate (101-400)",
+    "Severe (>400)",
+]
+
+
 @dataclass
 class CohortParticipant:
     """Represents a single research participant in a cardiac CT cohort."""
@@ -126,16 +135,36 @@ class CohortDataset:
         for sc in score_candidates:
             try:
                 df = pd.read_csv(sc)
-                cols_lower = {c.lower(): c for c in df.columns}
-                id_col = cols_lower.get("patientid") or cols_lower.get("patient_id") or cols_lower.get("id") or df.columns[0]
-                score_col = cols_lower.get("totalscore") or cols_lower.get("total_score") or cols_lower.get("score") or cols_lower.get("cac") or (df.columns[1] if len(df.columns) > 1 else None)
+                cols_lower = {c.strip().lower(): c for c in df.columns}
+                id_col = (
+                    cols_lower.get("patientid")
+                    or cols_lower.get("patient_id")
+                    or cols_lower.get("filename")
+                    or cols_lower.get("id")
+                    or df.columns[0]
+                )
+                score_col = (
+                    cols_lower.get("totalscore")
+                    or cols_lower.get("total_score")
+                    or cols_lower.get("total")
+                    or cols_lower.get("score")
+                    or cols_lower.get("cac")
+                    or (df.columns[1] if len(df.columns) > 1 else None)
+                )
 
+                is_nongated = "nongated" in sc.name.lower()
                 if score_col:
                     for _, row in df.iterrows():
                         pid = str(row[id_col]).strip()
                         try:
                             score_val = float(row[score_col])
-                            self.calcium_scores[pid] = score_val
+                            if is_nongated or pid.endswith(("A", "a")):
+                                clean_id = pid.rstrip("Aa").strip()
+                                if clean_id:
+                                    self.calcium_scores[f"nongated_{clean_id}"] = score_val
+                                    self.calcium_scores[f"{clean_id}A"] = score_val
+                            else:
+                                self.calcium_scores[pid] = score_val
                         except (ValueError, TypeError):
                             continue
             except Exception:
@@ -476,6 +505,10 @@ class CohortDataset:
             ]
             chamber_summaries[chamber] = calc_stats(vals)
 
+        # 7. Advanced group comparisons and bivariate regression
+        tier_comparisons = self.compute_tier_group_comparisons()
+        bivariate_reg = self.compute_bivariate_regression()
+
         return {
             "total_count": total_n,
             "quantified_count": self.quantified_count,
@@ -496,7 +529,176 @@ class CohortDataset:
             "chamber_volume_summaries": chamber_summaries,
             "risk_tier_counts": tier_counts,
             "correlations": corrs,
+            "tier_group_comparisons": tier_comparisons,
+            "bivariate_regression": bivariate_reg,
         }
+
+    def compute_bivariate_regression(self) -> Dict[str, Any]:
+        """Compute bivariate linear regression and correlation for EAT Volume vs PVAT HU."""
+        paired: List[Tuple[float, float]] = []
+        for p in self.participants.values():
+            vol = p.metrics.get("EAT Total Volume (cm3)")
+            hu = p.metrics.get("PVAT Total Mean Attenuation (HU)")
+            if vol is not None and hu is not None and not (math.isnan(vol) or math.isnan(hu)):
+                paired.append((float(vol), float(hu)))
+
+        if len(paired) < 3:
+            return {
+                "n_paired": len(paired),
+                "pearson_r": 0.0,
+                "pearson_p": 1.0,
+                "spearman_rho": 0.0,
+                "spearman_p": 1.0,
+                "slope": 0.0,
+                "intercept": 0.0,
+                "r_squared": 0.0,
+                "p_value": 1.0,
+                "std_err": 0.0,
+                "equation": "N/A",
+                "crisp_ct_threshold": -70.1,
+            }
+
+        vols, hus = zip(*paired)
+        r_val, p_r = stats.pearsonr(vols, hus)
+        rho_val, p_rho = stats.spearmanr(vols, hus)
+        slope, intercept, r_value, p_value, std_err = stats.linregress(vols, hus)
+
+        return {
+            "n_paired": len(paired),
+            "x_label": "Total EAT Volume (cm3)",
+            "y_label": "PVAT Total Mean Attenuation (HU)",
+            "pearson_r": round(float(r_val), 3),
+            "pearson_p": float(p_r),
+            "spearman_rho": round(float(rho_val), 3),
+            "spearman_p": float(p_rho),
+            "slope": round(float(slope), 4),
+            "intercept": round(float(intercept), 2),
+            "r_squared": round(float(r_value ** 2), 4),
+            "p_value": float(p_value),
+            "std_err": round(float(std_err), 4),
+            "equation": f"PVAT HU = {slope:.3f} × EAT Vol + {intercept:.2f}",
+            "crisp_ct_threshold": -70.1,
+        }
+
+    def compute_tier_group_comparisons(self) -> Dict[str, Any]:
+        """Compute comprehensive distribution metrics and hypothesis testing across 5 CAC tiers."""
+        results: Dict[str, Any] = {"CAC_TIERS": CAC_TIER_ORDER}
+
+        targets = [
+            ("eat_volume", "EAT Total Volume (cm3)", "cm3"),
+            ("pvat_attenuation", "PVAT Total Mean Attenuation (HU)", "HU"),
+        ]
+
+        for metric_id, metric_key, unit in targets:
+            tier_arrays: Dict[str, List[float]] = {t: [] for t in CAC_TIER_ORDER}
+            for p in self.participants.values():
+                if p.calcium_risk_tier in tier_arrays:
+                    v = p.metrics.get(metric_key)
+                    if v is not None and not math.isnan(v):
+                        tier_arrays[p.calcium_risk_tier].append(float(v))
+
+            tiers_out: Dict[str, Dict[str, Any]] = {}
+            for t_name, arr in tier_arrays.items():
+                if not arr:
+                    tiers_out[t_name] = {
+                        "n": 0, "mean": None, "std": None, "median": None,
+                        "q1": None, "q3": None, "iqr": None, "min": None,
+                        "max": None, "whisker_low": None, "whisker_high": None,
+                        "outliers": [], "raw_sample": [],
+                    }
+                    continue
+
+                a = np.array(arr)
+                q1 = float(np.percentile(a, 25))
+                med = float(np.median(a))
+                q3 = float(np.percentile(a, 75))
+                iqr = q3 - q1
+                w_low_limit = q1 - 1.5 * iqr
+                w_high_limit = q3 + 1.5 * iqr
+                non_outliers = a[(a >= w_low_limit) & (a <= w_high_limit)]
+                w_low = float(np.min(non_outliers)) if len(non_outliers) > 0 else float(np.min(a))
+                w_high = float(np.max(non_outliers)) if len(non_outliers) > 0 else float(np.max(a))
+                outliers = [float(x) for x in a[(a < w_low_limit) | (a > w_high_limit)]]
+
+                tiers_out[t_name] = {
+                    "n": len(a),
+                    "mean": round(float(np.mean(a)), 2),
+                    "std": round(float(np.std(a)), 2),
+                    "median": round(med, 2),
+                    "q1": round(q1, 2),
+                    "q3": round(q3, 2),
+                    "iqr": round(iqr, 2),
+                    "min": round(float(np.min(a)), 2),
+                    "max": round(float(np.max(a)), 2),
+                    "whisker_low": round(w_low, 2),
+                    "whisker_high": round(w_high, 2),
+                    "outliers": [round(x, 2) for x in outliers],
+                    "raw_sample": [round(x, 2) for x in a[:50]],  # Jittered points sample for UI
+                }
+
+            # Omnibus testing
+            valid_arrays = [arr for arr in tier_arrays.values() if len(arr) >= 2]
+            anova_res: Dict[str, Any] = {"f_stat": None, "p_value": None, "significant": False}
+            kruskal_res: Dict[str, Any] = {"h_stat": None, "p_value": None, "significant": False}
+
+            if len(valid_arrays) >= 2:
+                try:
+                    f_val, f_p = stats.f_oneway(*valid_arrays)
+                    anova_res = {
+                        "f_stat": round(float(f_val), 3),
+                        "p_value": float(f_p),
+                        "significant": bool(f_p < 0.05),
+                    }
+                except Exception:
+                    pass
+
+                try:
+                    h_val, h_p = stats.kruskal(*valid_arrays)
+                    kruskal_res = {
+                        "h_stat": round(float(h_val), 3),
+                        "p_value": float(h_p),
+                        "significant": bool(h_p < 0.05),
+                    }
+                except Exception:
+                    pass
+
+            # Post-hoc pairwise comparisons with Bonferroni correction
+            pairwise: List[Dict[str, Any]] = []
+            active_tiers = [t for t in CAC_TIER_ORDER if len(tier_arrays[t]) >= 2]
+            num_comparisons = max(1, len(active_tiers) * (len(active_tiers) - 1) // 2)
+
+            for i in range(len(active_tiers)):
+                for j in range(i + 1, len(active_tiers)):
+                    t1, t2 = active_tiers[i], active_tiers[j]
+                    try:
+                        u_stat, p_raw = stats.mannwhitneyu(tier_arrays[t1], tier_arrays[t2], alternative="two-sided")
+                        p_adj = min(1.0, float(p_raw) * num_comparisons)
+                        stars = "ns"
+                        if p_adj < 0.0001: stars = "****"
+                        elif p_adj < 0.001: stars = "***"
+                        elif p_adj < 0.01: stars = "**"
+                        elif p_adj < 0.05: stars = "*"
+                        pairwise.append({
+                            "group1": t1,
+                            "group2": t2,
+                            "u_stat": round(float(u_stat), 1),
+                            "p_raw": float(p_raw),
+                            "p_adj": float(p_adj),
+                            "stars": stars,
+                        })
+                    except Exception:
+                        pass
+
+            results[metric_id] = {
+                "metric_label": metric_key,
+                "unit": unit,
+                "tiers": tiers_out,
+                "anova": anova_res,
+                "kruskal_wallis": kruskal_res,
+                "pairwise": pairwise,
+            }
+
+        return results
 
     def get_scatter_data(self) -> List[Dict[str, Any]]:
         """Extract paired datapoints for interactive research scatter plots with strictly JSON-compliant values."""
