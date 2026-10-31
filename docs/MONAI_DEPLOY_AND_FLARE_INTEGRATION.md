@@ -120,16 +120,45 @@ sequenceDiagram
 
 ---
 
-## 4. Hospital DevOps & Infrastructure Deployment
+## 4. MONAI Deploy Application Package (MAP) Architecture & DevOps
 
-### A. Standalone CLI & Development Mode
+### A. 3-Node Operator Directed Acyclic Graph (DAG)
+
+The MAP application (`CardiacFatQuantApplication` in [`src/cardiac_fat_fl/monai_deploy.py`](../src/cardiac_fat_fl/monai_deploy.py)) structures inference and clinical export as a modular 3-operator DAG:
+
+| MONAI Deploy Operator | Underlying Module | Input Port (`op_input`) | Output Port (`op_output`) | Clinical Function |
+| :--- | :--- | :--- | :--- | :--- |
+| **`CardiacCTStudyLoaderOp`** | [`io_metatensor.py`](../src/cardiac_fat_fl/io_metatensor.py) | `input_path` (`/var/monai/input`) | `ct_metatensor` (`MetaTensor`), `source_dcm_dir` (`Path`) | Ingests clinical axial DICOM series, NRRD, or NIfTI; natural sorting; resolves multi-series scout collisions via max-slice detection. |
+| **`CardiacFatQuantifierOp`** | [`anatomy_segmenter.py`](../src/cardiac_fat_fl/anatomy_segmenter.py), [`transforms.py`](../src/cardiac_fat_fl/transforms.py) | `ct_metatensor` (`MetaTensor`) | `seg_mask_8ch` (`np.ndarray`), `anatomy_masks` (`AnatomyMasks`), `metrics` (`dict`) | Executes dual-network segmentation (WholeBody 1.5mm SegResNet + DeepHeartSeg ONNX pericardium + coronary sulci), Voronoi chamber allocation, 10mm anisotropic EDT vessel dilation, and $[-190.0, -30.0] HU$ fat attenuation math. |
+| **`DicomSegAndSrWriterOp`** | [`ohif_exporter.py`](../src/cardiac_fat_fl/ohif_exporter.py), [`dicom_sr.py`](../src/cardiac_fat_fl/dicom_sr.py) | `seg_mask_8ch`, `metrics`, `source_dcm_dir`, `output_path` (`/var/monai/output`) | Writes artifacts to `/var/monai/output` | Packages multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`), Comprehensive 3D DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), 8-channel NRRD (`eat_pvat.seg.nrrd`), and 19-column CSV metrics. |
+
+### B. MAP Container Layout & Hardware Resource Contracts
+
+Conforming to the **MONAI Application Package (MAP)** specification and NVIDIA Holoscan SDK contracts, the container declares explicit directory mount points and hardware envelopes in [`deploy/app.yaml`](../deploy/app.yaml):
+
+- **Directory Mounts**:
+  - `/var/monai/input`: Read-only clinical DICOM CT study directory mounted by MONAI Workflow Manager or Kubernetes PVC.
+  - `/var/monai/output`: Writable directory receiving `eat_pvat_seg.dcm`, `eat_pvat_sr.dcm`, and `cardiac_fat_measurements.csv`.
+  - `/opt/holoscan/models`: Model directory containing SHA-256 verified weights (`wholeBody_ct_segmentation/models/model.pt`, `deepheartseg_loc.onnx`, `deepheartseg_heart.onnx`).
+- **Hardware Envelopes**:
+  - `cpu`: `4` cores
+  - `memory`: `16Gi` system RAM
+  - `gpu`: `1` NVIDIA GPU (≥ 8 GB VRAM; runtime footprint $pprox 2.5\text{ GB}$)
+  - `gpuMemory`: `8Gi`
+- **Container Artifacts**:
+  - [`deploy/Dockerfile`](../deploy/Dockerfile): Production OCI container image build recipe.
+  - [`deploy/app.py`](../deploy/app.py): Application entrypoint executing the 3-operator pipeline.
+  - [`deploy/app.yaml`](../deploy/app.yaml): Declarative MAP manifest validated by `tests/test_monai_deploy.py`.
+
+### C. Standalone CLI & Development Mode
+
 
 ```bash
 # Execute the MONAI Deploy 3-operator DAG directly on an existing CT study:
 cardiac-fat-fl map-run -i "example_source_dir/0506" -o "scratch/map_output"
 ```
 
-### B. Single-Command Turnkey Clinical Testbed (Docker Compose)
+### D. Single-Command Turnkey Clinical Testbed (Docker Compose)
 
 Spin up an enterprise PACS ([Orthanc](https://www.orthanc-server.com/)), the MONAI Deploy Informatics Gateway (MIG), and the MAP container worker:
 
@@ -141,7 +170,7 @@ docker compose -f deploy/docker-compose.monai-deploy.yml up -d
 - **DICOM DIMSE Port**: `localhost:4242` (AET: `ORTHANC`)
 - **MONAI Informatics Gateway SCP**: `localhost:11112` (AET: `MONAIMIG`)
 
-### C. Enterprise Kubernetes Batch Job (Production Clinical Deployment)
+### E. Enterprise Kubernetes Batch Job (Production Clinical Deployment)
 
 ```yaml
 apiVersion: batch/v1
