@@ -13,6 +13,7 @@ within MONAI MetaTensor objects.
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -141,6 +142,7 @@ def discover_participants(
                     prefix_pid = f"nongated_{ng_pid}" if gated_dir.is_dir() else ng_pid
                     participants.append((prefix_pid, ng_path))
             if participants:
+                participants.sort(key=lambda item: [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", str(item[0]))])
                 return participants
 
     # Fallback: check if root itself is a single participant study directory
@@ -165,6 +167,7 @@ def discover_participants(
                 )
                 participants.append((root.name, ranked[0]))
 
+    participants.sort(key=lambda item: [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", str(item[0]))])
     return participants
 
 

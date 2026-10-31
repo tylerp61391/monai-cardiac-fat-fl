@@ -19,6 +19,7 @@ import csv
 import json
 import math
 import os
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -324,6 +325,14 @@ class CohortDataset:
                 crisp_ct_status=crisp_status,
                 scan_type=scan_type,
             )
+
+        # Ensure participants are sorted in natural human numerical order (0, 1, 2, ..., 10, 11, ..., 100)
+        self.participants = dict(
+            sorted(
+                self.participants.items(),
+                key=lambda item: [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", str(item[0]))],
+            )
+        )
 
     @property
     def total_count(self) -> int:

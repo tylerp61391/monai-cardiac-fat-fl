@@ -15,6 +15,7 @@ import io
 import json
 import math
 import os
+import re
 import threading
 import urllib.parse
 import webbrowser
@@ -137,6 +138,13 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
                 "available_segs": list(p.available_segmentations.keys()),
             })
 
+        # Natural human numerical order (0, 1, 2, ..., 10, 11, ..., 100)
+        cases.sort(
+            key=lambda c: [
+                int(t) if t.isdigit() else t.lower()
+                for t in re.split(r"(\d+)", str(c.get("participant_id", "")))
+            ]
+        )
         return jsonify(sanitize_nans(cases))
 
     @app.route("/api/case/<pid>", methods=["GET"])
@@ -657,21 +665,36 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/60 uppercase tracking-wider font-semibold text-slate-400 border-b border-slate-700">
+            <thead class="bg-slate-900/60 uppercase tracking-wider font-semibold text-slate-400 border-b border-slate-700 select-none">
               <tr>
-                <th class="px-4 py-3">Participant ID</th>
-                <th class="px-4 py-3">Scan Type</th>
-                <th class="px-4 py-3">Agatston CAC</th>
-                <th class="px-4 py-3">EAT Volume</th>
-                <th class="px-4 py-3">PVAT Volume</th>
-                <th class="px-4 py-3">PVAT Mean HU</th>
-                <th class="px-4 py-3">CRISP-CT Status</th>
+                <th class="px-3 py-3 w-12 text-slate-500 font-mono text-center">#</th>
+                <th onclick="sortTableBy('participant_id')" class="px-4 py-3 cursor-pointer hover:text-white transition">
+                  Participant ID <i id="sortIcon_participant_id" class="fa-solid fa-arrow-down-1-9 text-sky-400 ml-1 text-[11px]"></i>
+                </th>
+                <th onclick="sortTableBy('scan_type')" class="px-4 py-3 cursor-pointer hover:text-white transition">
+                  Scan Type <i id="sortIcon_scan_type" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+                </th>
+                <th onclick="sortTableBy('calcium_score')" class="px-4 py-3 cursor-pointer hover:text-white transition">
+                  Agatston CAC <i id="sortIcon_calcium_score" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+                </th>
+                <th onclick="sortTableBy('eat_volume_cm3')" class="px-4 py-3 cursor-pointer hover:text-white transition">
+                  EAT Volume <i id="sortIcon_eat_volume_cm3" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+                </th>
+                <th onclick="sortTableBy('pvat_volume_cm3')" class="px-4 py-3 cursor-pointer hover:text-white transition">
+                  PVAT Volume <i id="sortIcon_pvat_volume_cm3" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+                </th>
+                <th onclick="sortTableBy('pvat_mean_hu')" class="px-4 py-3 cursor-pointer hover:text-white transition">
+                  PVAT Mean HU <i id="sortIcon_pvat_mean_hu" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+                </th>
+                <th onclick="sortTableBy('crisp_ct_status')" class="px-4 py-3 cursor-pointer hover:text-white transition">
+                  CRISP-CT Status <i id="sortIcon_crisp_ct_status" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+                </th>
                 <th class="px-4 py-3">Artifacts</th>
                 <th class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="casesTableBody" class="divide-y divide-slate-700/60">
-              <tr><td colspan="9" class="text-center py-8 text-slate-400">Loading cases...</td></tr>
+              <tr><td colspan="10" class="text-center py-8 text-slate-400">Loading cases...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1430,13 +1453,52 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       });
     }
 
+    let sortColumn = 'participant_id';
+    let sortDirection = 'asc';
+
+    function naturalCompare(a, b) {
+      return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+    }
+
+    function sortTableBy(col) {
+      if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = col;
+        sortDirection = 'asc';
+      }
+      updateSortIcons();
+      applyCaseFilters();
+    }
+
+    function updateSortIcons() {
+      const cols = ['participant_id', 'scan_type', 'calcium_score', 'eat_volume_cm3', 'pvat_volume_cm3', 'pvat_mean_hu', 'crisp_ct_status'];
+      cols.forEach(c => {
+        const el = document.getElementById(`sortIcon_${c}`);
+        if (!el) return;
+        if (c === sortColumn) {
+          if (c === 'participant_id') {
+            el.className = sortDirection === 'asc'
+              ? 'fa-solid fa-arrow-down-1-9 text-sky-400 ml-1 text-[11px]'
+              : 'fa-solid fa-arrow-up-9-1 text-sky-400 ml-1 text-[11px]';
+          } else {
+            el.className = sortDirection === 'asc'
+              ? 'fa-solid fa-arrow-down-short-wide text-sky-400 ml-1 text-[11px]'
+              : 'fa-solid fa-arrow-up-wide-short text-sky-400 ml-1 text-[11px]';
+          }
+        } else {
+          el.className = 'fa-solid fa-sort text-slate-600 ml-1 text-[11px]';
+        }
+      });
+    }
+
     async function fetchCases() {
       try {
         const res = await fetch('/api/cohort/cases');
         if (!res.ok) return;
         rawCases = await res.json();
         document.getElementById('casesCountPill').innerText = rawCases.length;
-        renderCasesTable(rawCases);
+        applyCaseFilters();
       } catch (err) {
         console.error("fetchCases error:", err);
       }
@@ -1448,12 +1510,28 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       const segOnly = document.getElementById('caseSegOnly').checked;
       const inflamOnly = document.getElementById('caseInflamOnly').checked;
 
-      const filtered = rawCases.filter(c => {
+      let filtered = rawCases.filter(c => {
         if (q && !c.participant_id.toLowerCase().includes(q)) return false;
         if (tier && c.calcium_risk_tier !== tier) return false;
         if (segOnly && !c.has_seg) return false;
         if (inflamOnly && c.crisp_ct_status !== 'Active Vascular Inflammation') return false;
         return true;
+      });
+
+      filtered.sort((a, b) => {
+        let valA = a[sortColumn];
+        let valB = b[sortColumn];
+
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+
+        let comp = 0;
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          comp = valA - valB;
+        } else {
+          comp = naturalCompare(valA, valB);
+        }
+        return sortDirection === 'asc' ? comp : -comp;
       });
 
       renderCasesTable(filtered);
@@ -1462,11 +1540,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     function renderCasesTable(cases) {
       const tbody = document.getElementById('casesTableBody');
       if (cases.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-8 text-slate-400">No matching cases found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-slate-400">No matching cases found</td></tr>';
         return;
       }
 
-      tbody.innerHTML = cases.map(c => {
+      tbody.innerHTML = cases.map((c, idx) => {
         const segBadge = c.has_seg 
           ? '<span class="px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-400 border border-emerald-500/40 text-[10px]">Segmented</span>'
           : '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Unsegmented</span>';
@@ -1477,6 +1555,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
         return `
           <tr class="hover:bg-slate-700/40 transition">
+            <td class="px-3 py-2.5 font-mono text-slate-500 text-center text-[11px]">${idx + 1}</td>
             <td class="px-4 py-2.5 font-mono font-medium text-white">${c.participant_id}</td>
             <td class="px-4 py-2.5 text-slate-400">${c.scan_type}</td>
             <td class="px-4 py-2.5 font-mono text-amber-300">${c.calcium_score !== null ? c.calcium_score : '--'} <span class="text-[10px] text-slate-400 ml-1">(${c.calcium_risk_tier})</span></td>

@@ -114,3 +114,13 @@ def test_cohort_dataset_with_synthetic_calcium_scores(tmp_path: Path):
     assert "eat_vs_cac" in summary["correlations"]
     assert pytest.approx(summary["correlations"]["eat_vs_cac"]["pearson_r"], 1e-2) == 1.0
 
+def test_cohort_dataset_natural_sorting(tmp_path: Path):
+    """Verify that participant IDs are sorted naturally (0, 1, 2, ..., 10, 100) not alphabetically."""
+    for pid in ["100", "0", "10", "2", "1", "20"]:
+        case_dir = tmp_path / pid
+        case_dir.mkdir()
+        (case_dir / "scan.nrrd").write_text("dummy")
+
+    cohort = CohortDataset(tmp_path)
+    assert list(cohort.participants.keys()) == ["0", "1", "2", "10", "20", "100"]
+
