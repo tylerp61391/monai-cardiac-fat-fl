@@ -224,7 +224,12 @@ def read_medical_image_as_metatensor(path_or_dir: Union[str, Path]) -> MetaTenso
                 raise ValueError(f"No DICOM slices found in {dcm_dir}")
             reader.SetFileNames(dcm_files)
         else:
-            file_names = reader.GetGDCMSeriesFileNames(str(dcm_dir), series_ids[0])
+            # Select the series with the maximum number of slices (prevents picking stray 1-slice scouts/localizers)
+            best_series_id = max(
+                series_ids,
+                key=lambda sid: len(reader.GetGDCMSeriesFileNames(str(dcm_dir), sid)),
+            )
+            file_names = reader.GetGDCMSeriesFileNames(str(dcm_dir), best_series_id)
             reader.SetFileNames(file_names)
 
         sitk_image = reader.Execute()
