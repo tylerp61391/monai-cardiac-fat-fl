@@ -45,16 +45,16 @@ CRISP_CT_INFLAMMATION_HU_THRESHOLD = -70.1  # PVAT HU > -70.1 indicates active v
 EAT_VOLUME_NORMAL_MAX_CM3 = 100.0           # < 100 cm3: Normal
 EAT_VOLUME_MODERATE_MAX_CM3 = 125.0         # 100 - 125 cm3: Moderate; > 125 cm3: Elevated / High MACE risk
 
-# Compartment Colors for MPR Overlays (RGB + Alpha)
+# Compartment Colors for MPR Overlays (RGB + Alpha) - Synchronized with OHIF v3.13 and 3D Slicer DICOM-SEG
 COMPARTMENT_COLORS: Dict[int, Tuple[int, int, int]] = {
-    SegmentationCompartment.EAT_TOTAL: (220, 38, 38),   # Crimson
-    SegmentationCompartment.EAT_LA: (168, 85, 247),     # Purple
-    SegmentationCompartment.EAT_LV: (239, 68, 68),      # Red
-    SegmentationCompartment.EAT_RA: (236, 72, 153),     # Pink
-    SegmentationCompartment.EAT_RV: (249, 115, 22),     # Orange
-    SegmentationCompartment.PVAT_LAD: (6, 182, 212),    # Cyan
-    SegmentationCompartment.PVAT_LCX: (59, 130, 246),   # Blue
-    SegmentationCompartment.PVAT_RCA: (234, 179, 8),    # Gold / Yellow
+    SegmentationCompartment.EAT_TOTAL: (147, 51, 234),  # Purple (#9333ea)
+    SegmentationCompartment.EAT_LA: (59, 130, 246),     # Blue (#3b82f6)
+    SegmentationCompartment.EAT_LV: (6, 182, 212),      # Cyan (#06b6d4)
+    SegmentationCompartment.EAT_RA: (16, 185, 129),     # Emerald Green (#10b981)
+    SegmentationCompartment.EAT_RV: (234, 179, 8),      # Gold / Amber (#eab308)
+    SegmentationCompartment.PVAT_LAD: (249, 115, 22),   # Orange (#f97316)
+    SegmentationCompartment.PVAT_LCX: (239, 68, 68),    # Red / Coral (#ef4444)
+    SegmentationCompartment.PVAT_RCA: (236, 72, 153),   # Pink / Magenta (#ec4899)
 }
 
 

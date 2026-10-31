@@ -522,6 +522,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
               </h3>
               <p class="text-xs text-slate-400">Mean volume (cm³) across chambers and coronary vessels</p>
             </div>
+            <span class="text-[11px] font-semibold text-sky-400 bg-sky-950/70 border border-sky-800/60 px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+              <i class="fa-solid fa-palette text-[10px]"></i> OHIF &amp; 3D Slicer Colors
+            </span>
           </div>
           <div class="relative flex-1 min-h-[280px]">
             <canvas id="chartCompartments"></canvas>
@@ -1355,6 +1358,17 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       const labels = ['EAT LA', 'EAT LV', 'EAT RA', 'EAT RV', 'PVAT LAD', 'PVAT LCX', 'PVAT RCA'];
       const means = labels.map(l => summaries[l]?.mean || 0);
 
+      // Colors strictly synchronized with OHIF v3.13, 3D Slicer DICOM-SEG, and Clinical Reports
+      const compartmentColors = [
+        '#3b82f6', // EAT LA: Blue
+        '#06b6d4', // EAT LV: Cyan
+        '#10b981', // EAT RA: Emerald Green
+        '#eab308', // EAT RV: Gold / Amber
+        '#f97316', // PVAT LAD: Orange
+        '#ef4444', // PVAT LCX: Red
+        '#ec4899', // PVAT RCA: Pink / Magenta
+      ];
+
       if (chartComps) chartComps.destroy();
       const ctx = document.getElementById('chartCompartments').getContext('2d');
       chartComps = new Chart(ctx, {
@@ -1364,7 +1378,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           datasets: [{
             label: 'Mean Volume (cm³)',
             data: means,
-            backgroundColor: ['#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#f43f5e', '#ec4899', '#d946ef'],
+            backgroundColor: compartmentColors,
+            borderColor: compartmentColors,
+            borderWidth: 1,
             borderRadius: 6,
           }]
         },
@@ -1372,10 +1388,17 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { title: { display: true, text: 'Volume (cm³)', color: '#94a3b8' }, grid: { color: '#334155' } },
-            x: { grid: { display: false } }
+            y: { title: { display: true, text: 'Volume (cm³)', color: '#94a3b8' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { weight: '600' } } }
           },
-          plugins: { legend: { display: false } }
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${Number(ctx.raw).toFixed(2)} cm³`
+              }
+            }
+          }
         }
       });
     }
@@ -1484,13 +1507,28 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const tbody = document.getElementById('modalMetricsBody');
         const metrics = data.metrics || {};
         const regions = ["EAT Total", "EAT LA", "EAT LV", "EAT RA", "EAT RV", "PVAT LAD", "PVAT LCX", "PVAT RCA", "PVAT Total"];
+        const regionColors = {
+          "EAT Total": "#9333ea",
+          "EAT LA": "#3b82f6",
+          "EAT LV": "#06b6d4",
+          "EAT RA": "#10b981",
+          "EAT RV": "#eab308",
+          "PVAT LAD": "#f97316",
+          "PVAT LCX": "#ef4444",
+          "PVAT RCA": "#ec4899",
+          "PVAT Total": "#f43f5e"
+        };
 
         tbody.innerHTML = regions.map(reg => {
           const vol = metrics[`${reg} Volume (cm3)`];
           const hu = metrics[`${reg} Mean Attenuation (HU)`];
+          const dotColor = regionColors[reg] || '#64748b';
           return `
             <tr>
-              <td class="p-2 font-medium text-white">${reg}</td>
+              <td class="p-2 font-medium text-white flex items-center gap-2">
+                <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${dotColor}; box-shadow: 0 0 6px ${dotColor}80;"></span>
+                ${reg}
+              </td>
               <td class="p-2 text-right font-mono text-sky-300">${vol !== undefined && !isNaN(vol) ? vol.toFixed(2) : '--'}</td>
               <td class="p-2 text-right font-mono text-indigo-300">${hu !== undefined && !isNaN(hu) ? hu.toFixed(1) : '--'}</td>
             </tr>
