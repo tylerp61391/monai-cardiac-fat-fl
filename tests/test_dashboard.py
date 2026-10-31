@@ -89,3 +89,24 @@ def test_dashboard_set_directory(test_app, tmp_path: Path):
     assert data["success"] is True
     assert data["total_count"] == 0
 
+def test_dashboard_ohif_viewer_routes(test_app):
+    """Verify /patient/<pid>/ and /viewer/<pid>/ routes serve OHIF workstation."""
+    client = test_app.test_client()
+    # Test redirect without trailing slash
+    res_redir = client.get("/patient/0506")
+    assert res_redir.status_code == 302
+    assert res_redir.headers["Location"].endswith("/patient/0506/")
+
+    # Test viewer index
+    res_index = client.get("/patient/0506/")
+    assert res_index.status_code == 200
+    assert b"<!DOCTYPE html>" in res_index.data or b"OHIF" in res_index.data
+
+    # Test viewer subfile (studies.json)
+    res_studies = client.get("/patient/0506/studies.json")
+    assert res_studies.status_code == 200
+
+    # 404 for non-existent participant
+    res_404 = client.get("/patient/NON_EXISTENT/")
+    assert res_404.status_code == 404
+

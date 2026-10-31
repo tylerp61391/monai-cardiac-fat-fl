@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-from flask import Flask, Response, jsonify, render_template_string, request, send_file
+from flask import Flask, Response, jsonify, redirect, render_template_string, request, send_file, send_from_directory
 
 from cardiac_fat_fl.cohort_research import CohortDataset, CohortParticipant
 from cardiac_fat_fl.io_metatensor import read_nrrd_as_metatensor
@@ -153,6 +153,59 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             return jsonify({"error": f"Participant {pid} not found"}), 404
         p = _ACTIVE_COHORT.participants[pid]
         return jsonify(sanitize_nans(p.to_dict()))
+
+    def _serve_ohif_page(pid: str):
+        if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
+            return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
+
+        p = _ACTIVE_COHORT.participants[pid]
+        export_dir = p.study_dir / "ohif_export"
+
+        if not (export_dir / "index.html").exists():
+            from cardiac_fat_fl.ohif_exporter import export_sample_to_ohif
+
+            try:
+                export_sample_to_ohif(
+                    sample_dir=p.study_dir,
+                    available_participants=list(_ACTIVE_COHORT.participants.keys()),
+                )
+            except Exception as e:
+                return (
+                    f"<h3>Error generating OHIF viewer package for patient {pid}:</h3><pre>{e}</pre>",
+                    500,
+                )
+
+        return send_file(export_dir / "index.html")
+
+    def _serve_ohif_subfile(pid: str, subpath: str):
+        if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
+            return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
+
+        p = _ACTIVE_COHORT.participants[pid]
+        export_dir = (p.study_dir / "ohif_export").resolve()
+        target_path = (export_dir / subpath).resolve()
+
+        if not str(target_path).startswith(str(export_dir)):
+            return "Forbidden", 403
+
+        if not target_path.exists():
+            return f"Asset {subpath} not found for participant {pid}", 404
+
+        return send_from_directory(str(export_dir), subpath)
+
+    @app.route("/viewer/<pid>/")
+    @app.route("/viewer/<pid>")
+    @app.route("/patient/<pid>/")
+    @app.route("/patient/<pid>")
+    def serve_viewer(pid: str):
+        if not request.path.endswith("/"):
+            return redirect(f"{request.path}/", code=302)
+        return _serve_ohif_page(pid)
+
+    @app.route("/viewer/<pid>/<path:subpath>")
+    @app.route("/patient/<pid>/<path:subpath>")
+    def serve_viewer_asset(pid: str, subpath: str):
+        return _serve_ohif_subfile(pid, subpath)
 
     @app.route("/api/cohort/set_directory", methods=["POST"])
     def set_cohort_directory():
@@ -689,7 +742,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
                 <th onclick="sortTableBy('crisp_ct_status')" class="px-4 py-3 cursor-pointer hover:text-white transition">
                   CRISP-CT Status <i id="sortIcon_crisp_ct_status" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
                 </th>
-                <th class="px-4 py-3">Artifacts</th>
+                <th onclick="sortTableBy('has_seg')" class="px-4 py-3 cursor-pointer hover:text-white transition select-none">
+                  Artifacts <i id="sortIcon_has_seg" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+                </th>
                 <th class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -756,7 +811,12 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           <i class="fa-solid fa-user-doctor text-sky-400"></i>
           Case Deep Dive: <span id="modalCaseId" class="font-mono text-sky-300">--</span>
         </h3>
-        <button onclick="closeCaseModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+        <div class="flex items-center gap-2">
+          <a id="modalOhifBtn" href="#" target="_blank" class="hidden px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs items-center gap-1.5 shadow transition">
+            <i class="fa-solid fa-cube"></i> Open in OHIF <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+          </a>
+          <button onclick="closeCaseModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
       </div>
 
       <div class="grid grid-cols-3 gap-3 text-xs">
@@ -1472,7 +1532,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     }
 
     function updateSortIcons() {
-      const cols = ['participant_id', 'scan_type', 'calcium_score', 'eat_volume_cm3', 'pvat_volume_cm3', 'pvat_mean_hu', 'crisp_ct_status'];
+      const cols = ['participant_id', 'scan_type', 'calcium_score', 'eat_volume_cm3', 'pvat_volume_cm3', 'pvat_mean_hu', 'crisp_ct_status', 'has_seg'];
       cols.forEach(c => {
         const el = document.getElementById(`sortIcon_${c}`);
         if (!el) return;
@@ -1522,6 +1582,12 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         let valA = a[sortColumn];
         let valB = b[sortColumn];
 
+        if (sortColumn === 'has_seg') {
+          let numA = valA ? 1 : 0;
+          let numB = valB ? 1 : 0;
+          return sortDirection === 'asc' ? numB - numA : numA - numB;
+        }
+
         if (valA === null || valA === undefined) return 1;
         if (valB === null || valB === undefined) return -1;
 
@@ -1546,8 +1612,14 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
       tbody.innerHTML = cases.map((c, idx) => {
         const segBadge = c.has_seg 
-          ? '<span class="px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-400 border border-emerald-500/40 text-[10px]">Segmented</span>'
-          : '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Unsegmented</span>';
+          ? `<a href="/patient/${encodeURIComponent(c.participant_id)}/" target="_blank"
+                class="px-2.5 py-1 rounded bg-emerald-950/80 hover:bg-emerald-800 text-emerald-300 hover:text-white border border-emerald-500/50 text-[10px] font-semibold flex items-center gap-1.5 transition shadow-sm group cursor-pointer"
+                title="Launch OHIF 2D MPR & 3D Slicer Viewer for Patient ${c.participant_id}">
+               <i class="fa-solid fa-cube text-[10px] text-emerald-400 group-hover:scale-110 transition-transform"></i>
+               <span>Segmented</span>
+               <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-75 group-hover:opacity-100"></i>
+             </a>`
+          : '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-500 text-[10px] border border-slate-700/50">Unsegmented</span>';
 
         const inflamBadge = c.crisp_ct_status === 'Active Vascular Inflammation'
           ? '<span class="px-2 py-0.5 rounded bg-rose-900/60 text-rose-400 border border-rose-500/40 text-[10px]"><i class="fa-solid fa-fire text-[9px] mr-1"></i>Active</span>'
@@ -1564,7 +1636,14 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             <td class="px-4 py-2.5 font-mono text-indigo-300">${c.pvat_mean_hu !== null && c.pvat_mean_hu !== undefined ? c.pvat_mean_hu.toFixed(1) + ' HU' : '--'}</td>
             <td class="px-4 py-2.5">${inflamBadge}</td>
             <td class="px-4 py-2.5 flex items-center gap-1.5">${segBadge}</td>
-            <td class="px-4 py-2.5 text-right space-x-2">
+            <td class="px-4 py-2.5 text-right space-x-2 whitespace-nowrap">
+              ${c.has_seg ? `
+                <a href="/patient/${encodeURIComponent(c.participant_id)}/" target="_blank"
+                   class="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 text-xs font-medium px-2 py-0.5 rounded bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 transition shadow-sm"
+                   title="Open interactive OHIF Viewer for Patient ${c.participant_id}">
+                  <i class="fa-solid fa-cube text-[10px]"></i> View OHIF
+                </a>
+              ` : ''}
               <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-400 hover:text-sky-300 text-xs font-medium">Deep Dive</button>
             </td>
           </tr>
@@ -1582,6 +1661,16 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         document.getElementById('modalScanType').innerText = data.scan_type;
         document.getElementById('modalCacScore').innerText = data.calcium_score !== null ? `${data.calcium_score} (${data.calcium_risk_tier})` : 'Not available';
         document.getElementById('modalCrispStatus').innerText = data.crisp_ct_status;
+
+        const ohifBtn = document.getElementById('modalOhifBtn');
+        if (data.has_seg) {
+          ohifBtn.href = `/patient/${encodeURIComponent(pid)}/`;
+          ohifBtn.classList.remove('hidden');
+          ohifBtn.classList.add('flex');
+        } else {
+          ohifBtn.classList.add('hidden');
+          ohifBtn.classList.remove('flex');
+        }
 
         const tbody = document.getElementById('modalMetricsBody');
         const metrics = data.metrics || {};
