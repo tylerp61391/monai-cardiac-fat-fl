@@ -167,9 +167,9 @@ flowchart LR
 
 ---
 
-### 5. Interactive Cardiac Research Dashboard & Multi-Cohort Analytics
+### 5. Interactive Cardiac Research Dashboard & Embedded OHIF Workstation
 
-`monai-cardiac-fat-fl` includes an embedded, research-grade web dashboard (`cardiac-fat-fl dashboard`) engineered for exploring large-scale cardiovascular cohorts (e.g. Stanford COCA, Harvard / MGH cohorts, institutional CT registries):
+`monai-cardiac-fat-fl` includes an embedded, research-grade web dashboard (`cardiac-fat-fl dashboard`) engineered for exploring large-scale cardiovascular cohorts (e.g. Stanford COCA, Harvard / MGH cohorts, institutional CT registries) with native **OHIF v3.13 Next** Medical Workstation integration:
 
 ```bash
 # Launch interactive dashboard on local cohort
@@ -177,15 +177,26 @@ cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
 ```
 
 - **Cohort Research Analytics**:
-  - Six clinical KPI cards: Total Cohort $N$, Segmented $N$ and % coverage, Agatston CAC scored $N$, Cohort Median EAT Volume ($\text{cm}^3$), Mean PVAT HU, and CRISP-CT Active Vascular Inflammation prevalence.
+  - Six clinical KPI cards: Total Cohort $N$, Segmented $N$ and % coverage, Agatston CAC scored $N$, Cohort Median EAT Volume ($	ext{cm}^3$), Mean PVAT HU, and CRISP-CT Active Vascular Inflammation prevalence.
   - Interactive Chart.js visualizations:
     1. *EAT Total Volume vs. Agatston Calcium Score* (scatter plot with clinical risk stratification).
-    2. *PVAT Mean Attenuation vs. Agatston CAC Score* (scatter plot with CRISP-CT $-70.1\text{ HU}$ threshold line).
-    3. *Adipose Volume Distribution by Compartment* (EAT LA, LV, RA, RV, PVAT LAD, LCX, RCA).
+    2. *PVAT Mean Attenuation vs. Agatston CAC Score* (scatter plot with CRISP-CT $-70.1	ext{ HU}$ threshold line).
+    3. *Adipose Volume Distribution by Compartment* (EAT LA, LV, RA, RV, PVAT LAD, LCX, RCA with canonical synchronized palette).
     4. *Agatston CAC Risk Tier Breakdown* (Zero, Minimal, Mild, Moderate, Severe).
-- **Case Explorer**: Instant search by participant ID, filter by CAC risk tier or active vascular inflammation status, and inspect 19-metric quantification scorecards.
+- **Embedded OHIF v3.13 Medical Workstation Integration**:
+  - Full zero-footprint web PACS workstation embedded directly at `/viewer/<participant_id>/` and `/patient/<participant_id>/`.
+  - **1-Click Launch**: Launch the 2D MPR and 3D Slicer volume rendering directly by clicking the green `Segmented` badge pill in the Case Explorer, clicking `View OHIF` in the table actions, or clicking `Open in OHIF` inside the Case Deep Dive modal.
+  - **Dynamic On-the-Fly Export**: If DICOM-SEG and slice instances are not pre-exported on disk, navigating to the viewer dynamically exports them in real time without manual export steps.
+- **Natural Human Numerical Sorting**:
+  - Cases sort naturally (`0, 1, 2, ... 9, 10, 11, ... 100`) rather than machine lexicographical sorting (`0, 1, 10, 100, 2`).
+  - Includes a dedicated `#` consecutive row counter column for human-readable tracking across filtered sub-cohorts.
+- **Interactive Multi-Column Sortable Table**:
+  - Click any column header (Participant ID, Scan Type, Agatston CAC, EAT Volume, PVAT Volume, PVAT Mean HU, CRISP-CT Status, Artifacts) to sort ascending or descending.
+  - Sorting on `Artifacts` groups cases with available 3D masks (`Segmented`) vs pending/unsegmented (`Unsegmented`).
+- **Multi-Series DICOM Collision Resilience**:
+  - Auto-selects the primary 3D cardiac CT series (`max(series_ids, key=len)`), preventing 1-slice scout/localizer collisions from failing volume segmentation.
 - **Dynamic Cohort Switcher**: Change active cohort directory on-the-fly without restarting the web server.
-
+- **Comprehensive Guide**: See [`docs/RESEARCH_DASHBOARD_AND_OHIF_WORKSTATION.md`](docs/RESEARCH_DASHBOARD_AND_OHIF_WORKSTATION.md) for full architecture and clinical cohort translation specs.
 ### 6. Extensible Segmentation Method Benchmarking & DICE Engine
 
 To evaluate novel architectures, distillations, or candidate methods against ground truth or foundational models over time, `monai-cardiac-fat-fl` provides an extensible 3D segmentation benchmarking framework (`cardiac-fat-fl benchmark`):
@@ -237,6 +248,21 @@ Matches reference MGH `CardiacFatQuant` exactly:
 $$\text{Volume } (\text{cm}^3) = \frac{\text{Voxel Count} \times (s_x \times s_y \times s_z)}{1000.0}$$
 
 *Empty masks gracefully output `0.0` volume and `NaN` mean attenuation.*
+
+### 4. Canonical 8-Compartment Color Palette
+
+To maintain consistent visual recognition across analytical dashboards, 3D Slicer, OHIF web viewports, and clinical PDF diagnostic reports, compartment colors are hardcoded identically across all 4 visualization interfaces:
+
+| Compartment | Channel | Hex Color | RGB Triplet | Anatomical Region |
+| :--- | :---: | :---: | :---: | :--- |
+| `EAT_Total` | `Ch 0` | `#9333ea` | `(147, 51, 234)` | Total Epicardial Adipose Tissue |
+| `EAT_LA` | `Ch 1` | `#3b82f6` | `(59, 130, 246)` | Left Atrium epicardial fat |
+| `EAT_LV` | `Ch 2` | `#06b6d4` | `(6, 182, 212)` | Left Ventricle epicardial fat |
+| `EAT_RA` | `Ch 3` | `#10b981` | `(16, 185, 129)` | Right Atrium epicardial fat |
+| `EAT_RV` | `Ch 4` | `#eab308` | `(234, 179, 8)` | Right Ventricle epicardial fat |
+| `PVAT_LAD` | `Ch 5` | `#f97316` | `(249, 115, 22)` | Left Anterior Descending pericoronary fat |
+| `PVAT_LCX` | `Ch 6` | `#ef4444` | `(239, 68, 68)` | Left Circumflex pericoronary fat |
+| `PVAT_RCA` | `Ch 7` | `#ec4899` | `(236, 72, 153)` | Right Coronary Artery pericoronary fat |
 
 ---
 
@@ -796,14 +822,14 @@ Run all automated unit tests via `pytest`:
 pytest -v
 ```
 
-The test suite validates:
+The test suite validates 73 automated unit and integration tests across all modules:
 
 - **Transform Correctness**: Strict $[-190.0, -30.0]\text{ HU}$ thresholding, Voronoi chamber partitioning, and radial vessel dilation.
-- **Header Coordinate Integrity**: Orientation preservation across NRRD and DICOM formats.
+- **Header Coordinate Integrity**: Orientation preservation across NRRD and DICOM formats with multi-series max-slice collision resolution.
 - **Mathematical Equivalency**: $0.00\text{ cm}^3$ and $0.00\text{ HU}$ agreement against reference baseline models.
 - **DICOM-SEG Compliance**: Proper SOP Class UID `1.2.840.10008.5.1.4.1.1.66.4` and 8 segment sequence items.
 - **NVFLARE Client Lifecycle**: Initialization, training steps, evaluation, and FedBN layer isolation.
-- **Research Dashboard & Multi-Cohort Analytics**: Dynamic cohort loading, Agatston CAC linking, and research correlation statistics.
+- **Research Dashboard & OHIF Workstation**: Dynamic cohort loading, Agatston CAC linking, natural numerical sorting, `/viewer/<pid>/` routes, and research correlation statistics.
 - **Segmentation Benchmarking & DICE Engine**: Multi-compartment DSC, IoU, RVE%, and Hausdorff surface distances across candidate methods.
 
 ---

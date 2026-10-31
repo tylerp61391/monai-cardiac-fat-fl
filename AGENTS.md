@@ -18,31 +18,31 @@ This document is automatically loaded into agent context. It provides the codeba
 
 ## 2. Codebase Map & Token Efficiency Guide
 
-To minimize token usage, **do not read `README.md` (583 lines) or full large files** unless explicitly editing them. Jump directly to the relevant module and line range below:
+To minimize token usage, **do not read `README.md` (800+ lines) or full large files** unless explicitly editing them. Jump directly to the relevant module and line range below:
 
 ### Source Modules (`src/cardiac_fat_fl/`)
 
 | File | Lines | Key Symbols & Line Ranges | Responsibility |
 | :--- | :---: | :--- | :--- |
-| `measurement_schema.py` | 148 | `ADIPOSE_HU_MIN/MAX`, `SegmentationCompartment`, `ReportedRegion`, `MEASUREMENT_CSV_COLUMNS`, `calculate_volume_cm3` | **Read first** for data contracts, enums, and 19-column CSV validation. |
-| `anatomy_segmenter.py` | 577 | `AnatomyMasks`, `UnifiedAnatomySegmenter` | 3D anatomy engine: NGC `monai_wholebody_ct_segmentation` (1.5mm SegResNet), DeepHeartSeg ONNX pericardium, and geometric coronary sulci derivation. |
+| `measurement_schema.py` | 151 | `ADIPOSE_HU_MIN/MAX`, `SegmentationCompartment`, `ReportedRegion`, `MEASUREMENT_CSV_COLUMNS`, `calculate_volume_cm3` | **Read first** for data contracts, enums, and 19-column CSV validation. |
+| `anatomy_segmenter.py` | 726 | `AnatomyMasks`, `UnifiedAnatomySegmenter` | 3D anatomy engine: NGC `monai_wholebody_ct_segmentation` (1.5mm SegResNet), DeepHeartSeg ONNX pericardium, and geometric coronary sulci derivation. |
 | `transforms.py` | 439 | `ComputeEatPvatMasksd`, `QuantifyAdiposeMetricsd` | MONAI dictionary transforms for 8-compartment fat masking, 10mm anisotropic EDT radial dilation, and volume/HU calculation. |
-| `io_metatensor.py` | 551 | `discover_participants`, `read_nrrd_as_metatensor`, `write_eat_pvat_seg_nrrd` | Header-preserving 3D I/O for NRRD, NIfTI, and DICOM series. |
+| `io_metatensor.py` | 576 | `discover_participants`, `read_dicom_series_as_metatensor`, `read_nrrd_as_metatensor`, `write_eat_pvat_seg_nrrd` | Header-preserving 3D I/O for NRRD, NIfTI, and DICOM series with natural sorting and multi-series max-slice collision resolution. |
 | `clinical_report.py` | 819 | `evaluate_clinical_risk`, `generate_mpr_snapshot`, `generate_clinical_report_html`, `generate_clinical_report_pdf`, `encapsulate_pdf_to_dicom`, `export_clinical_imaging_report` | SOTA Cleerly/HeartFlow-style clinical imaging report (risk stratification, 3-view orthogonal MPR snapshots with 8-compartment overlays, vector PDF, and DICOM Encapsulated PDF SOP `.104.1`). |
 | `dicom_sr.py` | 345 | `create_cardiac_fat_sr`, `export_cardiac_fat_sr` | DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`) structured report builder using SNOMED-CT / LOINC / UCUM codes. |
-| `pacs_client.py` | 320 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
-| `pacs_daemon.py` | 338 | `DaemonConfig`, `PACSWatchdogDaemon`, `is_study_settled`, `find_pending_studies`, `process_study` | Automated clinical PACS watchdog and auto-router daemon (zero-click processing, file settling check, dry-run mode, and fault-tolerant error quarantine). |
+| `pacs_client.py` | 349 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
+| `pacs_daemon.py` | 407 | `DaemonConfig`, `PACSWatchdogDaemon`, `is_study_settled`, `find_pending_studies`, `process_study` | Automated clinical PACS watchdog and auto-router daemon (zero-click processing, file settling check, dry-run mode, and fault-tolerant error quarantine). |
 | `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
 | `ohif_viewer.py` | 244 | `launch_ohif_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
-| `cohort_research.py` | 442 | `CohortDataset`, `CohortParticipant`, `categorize_calcium_score` | Smart cohort discovery (flat, nested, COCA gated/non-gated), Agatston CAC linking, and correlation analytics (EAT/PVAT vs CAC). |
-| `dashboard.py` | 550 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard server (Flask, Chart.js, KPI scorecards, case explorer, DICE benchmark runner, case deep dive). |
+| `cohort_research.py` | 525 | `CohortDataset`, `CohortParticipant`, `categorize_calcium_score` | Smart cohort discovery (flat, nested, COCA gated/non-gated with natural numerical sorting), Agatston CAC linking, and correlation analytics (EAT/PVAT vs CAC). |
+| `dashboard.py` | 1863 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard & embedded OHIF workstation server (Flask, Chart.js, KPI scorecards, case explorer with natural multi-column sorting, `/viewer/<pid>/` launcher, DICE benchmark runner). |
 | `segmentation_evaluator.py` | 480 | `SegmentationBenchmarkEngine`, `CohortBenchmarkReport`, `compute_compartment_dice`, `compute_volume_metrics`, `compute_surface_distance_metrics` | Extensible multi-compartment segmentation evaluation, DICE metrics, IoU, RVE, MASD/HD95. |
-| `cli.py` | 1420 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cli.py` | 1423 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `fl_client_algo.py` | 409 | `CardiacFatClientAlgo` | NVFLARE client training/evaluation executor (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
 | `hardware.py` | 219 | `detect_hardware`, `validate_worker_concurrency` | Host CPU/RAM/GPU profiler and OOM-safe worker concurrency throttling. |
-| `monai_deploy.py` | 390 | `CardiacCTStudyLoaderOp`, `CardiacFatQuantifierOp`, `DicomSegAndSrWriterOp`, `CardiacFatQuantApplication` | MONAI Deploy Application Package (MAP) DAG for clinical Holoscan / Informatics Gateway deployment. |
+| `monai_deploy.py` | 412 | `CardiacCTStudyLoaderOp`, `CardiacFatQuantifierOp`, `DicomSegAndSrWriterOp`, `CardiacFatQuantApplication` | MONAI Deploy Application Package (MAP) DAG for clinical Holoscan / Informatics Gateway deployment. |
 
 ### Deployment & Infrastructure Layout
 
@@ -56,7 +56,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests: `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (105L), `test_dashboard.py` (75L).
+- Unit/Integration tests (73 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (105L), `test_dashboard.py` (75L).
 
 ---
 
@@ -66,7 +66,7 @@ To minimize token usage, **do not read `README.md` (583 lines) or full large fil
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (56 tests; run before committing):
+- **Run Full Test Suite** (73 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v
@@ -195,7 +195,7 @@ To generate a Cleerly/HeartFlow-style clinical diagnostic report with 3-view ort
 
 ---
 
-### Recipe 8: Launch Interactive Cardiac Research Dashboard
+### Recipe 8: Launch Interactive Cardiac Research Dashboard & Embedded OHIF
 
 To launch the web dashboard for exploring cohorts, clinical metrics, Agatston CAC scores, and correlation analytics:
 
@@ -205,9 +205,14 @@ To launch the web dashboard for exploring cohorts, clinical metrics, Agatston CA
    ```
    *(Or set environment variable `CARDIAC_COHORT_DIR=/path/to/cohort`)*.
 2. **Dashboard Features**:
-   - High-impact interactive research plots (EAT Volume vs. Agatston CAC Score, PVAT HU vs. CAC with -70.1 HU CRISP-CT threshold line).
-   - Full case explorer with real-time search, risk tier filtering, and one-click deep-dive inspection.
-   - Dynamic cohort switcher allowing on-the-fly path updates without server restart.
+   - **Embedded OHIF v3.13 Medical Workstation**: Direct routes `/viewer/<pid>/` and `/patient/<pid>/` serving full zero-footprint workstation.
+   - **1-Click Launchers**: Clickable `Segmented` badge pill in the Case Explorer table, `View OHIF` button in Actions column, and `Open in OHIF` in Deep Dive modal.
+   - **On-the-Fly Export**: Automatically generates multi-frame DICOM-SEG and slice instances if not already pre-exported.
+   - **Natural Numerical Sorting**: Alphanumeric sorting across participant IDs (`0, 1, 2, ... 10, ... 100`) and dedicated `#` consecutive row counter column.
+   - **Multi-Column Sortable Table**: Interactive sort for Participant ID, Scan Type, CAC, EAT Vol, PVAT Vol, PVAT HU, CRISP-CT Status, and `Artifacts` (`has_seg`).
+   - **Canonical 4-Way Color Palette**: Identical colors across OHIF, 3D Slicer, Clinical Report, and Research Dashboard.
+   - **Multi-Series DICOM Collision Resilience**: Automatic selection of primary 3D volume (`max(series_ids, key=len)`), preventing 1-slice scout collisions.
+   - **Dynamic Cohort Switcher**: Change active cohort directory on-the-fly without server restart.
 
 ### Recipe 9: Run Extensible Multi-Compartment Segmentation DICE Benchmark
 
@@ -238,7 +243,17 @@ Whenever modifying preprocessing, segmentation, transforms, or reporting:
    - `participant_id` + 9 regions (`EAT_Total`, `EAT_LA`, `EAT_LV`, `EAT_RA`, `EAT_RV`, `PVAT_LAD`, `PVAT_LCX`, `PVAT_RCA`, `PVAT_Total`) × 2 metrics (`Volume (cm3)`, `Mean Attenuation (HU)`).
    - `PVAT_Total` is the boolean union of LAD, LCX, and RCA masks.
    - Empty masks MUST return `0.0` for volume and `NaN` (blank in CSV; omitted in DICOM-SR NUM sequence) for mean HU.
-4. **Coordinate, DICOM & FHIR Standards Compliance**:
+4. **Canonical 8-Compartment Color Palette**:
+   - Synchronized identically across OHIF v3.13, 3D Slicer DICOM-SEG, Clinical Reports (PDF/HTML/PNG), and Research Dashboard:
+     - `EAT_Total`: `#9333ea` (RGB `147, 51, 234`)
+     - `EAT_LA`: `#3b82f6` (RGB `59, 130, 246`)
+     - `EAT_LV`: `#06b6d4` (RGB `6, 182, 212`)
+     - `EAT_RA`: `#10b981` (RGB `16, 185, 129`)
+     - `EAT_RV`: `#eab308` (RGB `234, 179, 8`)
+     - `PVAT_LAD`: `#f97316` (RGB `249, 115, 22`)
+     - `PVAT_LCX`: `#ef4444` (RGB `239, 68, 68`)
+     - `PVAT_RCA`: `#ec4899` (RGB `236, 72, 153`)
+5. **Coordinate, DICOM & FHIR Standards Compliance**:
    - Origin, spacing, and direction cosines must be preserved identically across input and output volumes.
    - DICOM-SEG SOP Class UID: `1.2.840.10008.5.1.4.1.1.66.4`.
    - DICOM-SR Comprehensive 3D SR SOP Class UID: `1.2.840.10008.5.1.4.1.1.88.34` (TID 1500).
