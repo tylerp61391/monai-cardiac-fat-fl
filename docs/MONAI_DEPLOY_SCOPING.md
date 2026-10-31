@@ -101,14 +101,14 @@ In accordance with the **MONAI Application Package (MAP)** specification, the co
    ]
    ```
 
-2. Implement the 3 operators in `monai_deploy_roadmap/app_skeleton.py` (already drafted in this folder) wrapping `read_medical_image_as_metatensor`, `ComputeEatPvatMasksd`, `QuantifyAdiposeMetricsd`, `export_segmentation_to_dicom_seg`, and `export_cardiac_fat_sr`.
+2. Implement the 3 operators in `deploy/app_skeleton.py` (already drafted in this folder) wrapping `read_medical_image_as_metatensor`, `ComputeEatPvatMasksd`, `QuantifyAdiposeMetricsd`, `export_segmentation_to_dicom_seg`, and `export_cardiac_fat_sr`.
 
 ### Phase 2: Local Execution & CLI Verification (~0.5 Day)
 
 Test the application locally outside Docker using a single COCA or `example_source_dir` study:
 
 ```bash
-python monai_deploy_roadmap/app_skeleton.py \
+python deploy/app_skeleton.py \
   -i "example_source_dir/0506/ohif_export/dicom/0506/CT_1" \
   -o "scratch/map_output" \
   -m "models"
@@ -125,8 +125,8 @@ Verify that `scratch/map_output/` contains:
 Use the MONAI Deploy CLI packager (`monai-deploy package`) to build the Holoscan/MAP OCI container image:
 
 ```bash
-monai-deploy package monai_deploy_roadmap \
-  --config monai_deploy_roadmap/app.yaml \
+monai-deploy package deploy \
+  --config deploy/app.yaml \
   --models models \
   --tag ghcr.io/tylerp61391/monai-cardiac-fat-map:1.0.0 \
   --platform x64-workstation
@@ -157,8 +157,8 @@ All 4 phases are fully implemented, verified, and integrated into the continuous
 
 - [`src/cardiac_fat_fl/monai_deploy.py`](../src/cardiac_fat_fl/monai_deploy.py) — 3-node MONAI Deploy Operator DAG (`CardiacCTStudyLoaderOp`, `CardiacFatQuantifierOp`, `DicomSegAndSrWriterOp`) and `CardiacFatQuantApplication` with dual-mode SDK/standalone support.
 - [`src/cardiac_fat_fl/cli.py`](../src/cardiac_fat_fl/cli.py) — `cardiac-fat-fl map-run` CLI command.
-- [`monai_deploy_roadmap/app.py`](app.py) — Official MAP application entrypoint.
-- [`monai_deploy_roadmap/app.yaml`](app.yaml) — Declarative MAP manifest conforming to MONAI Deploy App SDK v0.6+ & NVIDIA Holoscan SDK specifications.
-- [`monai_deploy_roadmap/Dockerfile`](Dockerfile) — Production OCI Docker container image for Kubernetes / Argo Workflows deployment.
-- [`monai_deploy_roadmap/docker-compose.monai-deploy.yml`](docker-compose.monai-deploy.yml) — Turnkey clinical testbed launching Orthanc PACS, MONAI Informatics Gateway (MIG), and the MAP container.
+- [`deploy/app.py`](app.py) — Official MAP application entrypoint.
+- [`deploy/app.yaml`](app.yaml) — Declarative MAP manifest conforming to MONAI Deploy App SDK v0.6+ & NVIDIA Holoscan SDK specifications.
+- [`deploy/Dockerfile`](Dockerfile) — Production OCI Docker container image for Kubernetes / Argo Workflows deployment.
+- [`deploy/docker-compose.monai-deploy.yml`](docker-compose.monai-deploy.yml) — Turnkey clinical testbed launching Orthanc PACS, MONAI Informatics Gateway (MIG), and the MAP container.
 - [`tests/test_monai_deploy.py`](../tests/test_monai_deploy.py) — Comprehensive automated unit & integration test suite.

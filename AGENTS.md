@@ -12,7 +12,7 @@ This document is automatically loaded into agent context. It provides the codeba
 - **Privacy & FL**: Coordinates multi-hospital federated model distillation (FedProx + FedBN) and cohort moment aggregation (Welford) with zero patient DICOM/image transfer.
 - **Visualization & PACS**: Converts studies into web-ready DICOM + DICOM-SEG volumes served via a local DCM4CHEE-compatible static JSON-DICOM server for interactive OHIF 2D MPR and 3D Slicer rendering.
 - **PACS Archive Push & HL7 FHIR Bridge**: Natively exports and transmits standard multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), DICOM Encapsulated PDF (`1.2.840.10008.5.1.4.1.1.104.1`), and CT volumes to institutional PACS via DICOMweb (STOW-RS) and DIMSE (C-STORE), integrating directly with hospital HL7 FHIR R4/R5 interoperability buses (DiagnosticReport, DocumentReference, Observation).
-- **MONAI Deploy & Kubernetes**: Turnkey MONAI Deploy Application Package (MAP) with 3-operator DAG (`monai_deploy.py`), Docker Compose PACS testbed (`monai_deploy_roadmap/`), and Kubernetes hospital cluster manifests (`k8s/`).
+- **MONAI Deploy & Kubernetes**: Turnkey MONAI Deploy Application Package (MAP) with 3-operator DAG (`monai_deploy.py`), Docker Compose PACS testbed (`deploy/`), and Kubernetes hospital cluster manifests (`k8s/`).
 
 ---
 
@@ -50,8 +50,8 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | :--- | :--- | :--- |
 | `k8s/hospital-clinical-testbed.yaml` | Kubernetes manifests | Provisions `clinical-ai` namespace, Orthanc PACS Deployment/Service (8042/4242), and MAP batch Job. |
 | `k8s/README.md` | Kubernetes deployment guide | Quickstart instructions for deploying, port-forwarding, pushing studies, and tearing down on clusters. |
-| `monai_deploy_roadmap/docker-compose.monai-deploy.yml` | Turnkey Docker testbed | Spins up local Orthanc PACS on `:8042` and `:4242` for DICOMweb/DIMSE testing. |
-| `monai_deploy_roadmap/app.yaml` | MAP container manifest | OCI image specification obeying MONAI Deploy / NVIDIA Holoscan SDK resource contracts. |
+| `deploy/docker-compose.monai-deploy.yml` | Turnkey Docker testbed | Spins up local Orthanc PACS on `:8042` and `:4242` for DICOMweb/DIMSE testing. |
+| `deploy/app.yaml` | MAP container manifest | OCI image specification obeying MONAI Deploy / NVIDIA Holoscan SDK resource contracts. |
 
 ### Test Suite (`tests/`)
 

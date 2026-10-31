@@ -39,7 +39,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY models/ /opt/holoscan/models/
 
 # Copy MAP entrypoint script
-COPY monai_deploy_roadmap/app.py /opt/holoscan/app/app.py
+COPY deploy/app.py /opt/holoscan/app/app.py
 
 # Verify models and checksum integrity during build
 RUN python3 -c "import hashlib, sys; from pathlib import Path; \

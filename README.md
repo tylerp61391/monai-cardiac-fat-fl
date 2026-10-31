@@ -593,7 +593,7 @@ flowchart LR
    Launch the complete clinical testbed (Orthanc PACS + MONAI Deploy Informatics Gateway + MAP worker) in one command:
 
    ```bash
-   docker compose -f monai_deploy_roadmap/docker-compose.monai-deploy.yml up
+   docker compose -f deploy/docker-compose.monai-deploy.yml up
    ```
 
 ---
@@ -646,12 +646,11 @@ monai-cardiac-fat-fl/
 │   ├── deepheartseg_loc.onnx
 │   └── wholeBody_ct_segmentation/ # 104-class 1.5mm SegResNet (NVIDIA NGC / MONAI Model Zoo)
 ├── example_source_dir/            # Official MGH CardiacFatQuant 3-case benchmark CT cohort (0506, 0909, 0987)
-├── monai_deploy_roadmap/          # MONAI Deploy Application Package (MAP) container & PACS testbed
+├── deploy/                        # MONAI Deploy Application Package (MAP) container & PACS testbed
 │   ├── app.py                     # MAP application entrypoint executing 3-operator DAG
 │   ├── app.yaml                   # MONAI Deploy App SDK v0.6+ declarative manifest
 │   ├── Dockerfile                 # Production OCI container image for Kubernetes deployment
-│   ├── docker-compose.monai-deploy.yml # Clinical testbed (Orthanc PACS + optional MIG + MAP worker)
-│   └── MONAI_DEPLOY_SCOPING.md    # Engineering scoping & hospital deployment roadmap
+│   └── docker-compose.monai-deploy.yml # Clinical testbed (Orthanc PACS + optional MIG + MAP worker)
 ├── src/
 │   └── cardiac_fat_fl/
 │       ├── __init__.py            # Package root exports

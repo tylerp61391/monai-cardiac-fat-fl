@@ -50,7 +50,7 @@ flowchart TD
    - The central FLARE aggregator converges on a validated global 3D SegResNet checkpoint (`best_model.pt`).
 3. **Packaging into MONAI Application Package (MAP)**:
    - The validated model weights are cryptographically verified against official SHA-256 digests in [`models/checksums.sha256`](../models/checksums.sha256).
-   - Weights are baked into the immutable container under `/opt/holoscan/models/` ([`monai_deploy_roadmap/app.yaml`](../monai_deploy_roadmap/app.yaml)).
+   - Weights are baked into the immutable container under `/opt/holoscan/models/` ([`deploy/app.yaml`](../deploy/app.yaml)).
 4. **Clinical Deployment**:
    - The updated MAP image (`ghcr.io/tylerp61391/monai-cardiac-fat-map:1.0.0`) is pushed to institutional container registries and updated across hospital Kubernetes clusters with zero application code changes.
 
@@ -134,7 +134,7 @@ cardiac-fat-fl map-run -i "example_source_dir/0506" -o "scratch/map_output"
 Spin up an enterprise PACS ([Orthanc](https://www.orthanc-server.com/)), the MONAI Deploy Informatics Gateway (MIG), and the MAP container worker:
 
 ```bash
-docker compose -f monai_deploy_roadmap/docker-compose.monai-deploy.yml up -d
+docker compose -f deploy/docker-compose.monai-deploy.yml up -d
 ```
 
 - **Orthanc PACS Web UI**: `http://localhost:8042` (DICOMweb REST API)

@@ -212,3 +212,4 @@ Across the Stanford COCA 1,000-case cohort, the pipeline achieved a **99.6% auto
 | **`763`** | Segmentation failure | Directory contained 40 axial CT slices and 1 stray scout slice. | **Resolved** by multi-series max-slice selection. |
 | **`nongated_195`** | DICOM I/O error | Corrupt DICOM metadata: tag `(0018, 0088) SpacingBetweenSlices` is explicitly hardcoded to `0.000000` and `SeriesInstanceUID` is `None` in the raw vendor file, causing SimpleITK C++ exception. | Quarantine / vendor re-export. |
 | **`nongated_210`** | Anatomical localization failure | Severely truncated acquisition: scan contains only 6 slices ($3.0\text{ cm}$ total $Z$-coverage), failing anatomical chamber localization. | Excluded for insufficient $Z$-axis field of view. |
+

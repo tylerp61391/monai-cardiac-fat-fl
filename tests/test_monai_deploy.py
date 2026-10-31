@@ -175,8 +175,8 @@ def test_kubernetes_manifest_contract() -> None:
 
 
 def test_docker_compose_manifest_contract() -> None:
-    """Test monai_deploy_roadmap/docker-compose.monai-deploy.yml services, ports, and profile isolation."""
-    compose_file = Path("monai_deploy_roadmap/docker-compose.monai-deploy.yml")
+    """Test deploy/docker-compose.monai-deploy.yml services, ports, and profile isolation."""
+    compose_file = Path("deploy/docker-compose.monai-deploy.yml")
     assert compose_file.exists(), "docker-compose file must exist"
 
     data = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
@@ -205,8 +205,8 @@ def test_docker_compose_manifest_contract() -> None:
 
 
 def test_monai_deploy_app_yaml_contract() -> None:
-    """Test monai_deploy_roadmap/app.yaml against MONAI Deploy and NVIDIA Holoscan SDK contracts."""
-    app_yaml_file = Path("monai_deploy_roadmap/app.yaml")
+    """Test deploy/app.yaml against MONAI Deploy and NVIDIA Holoscan SDK contracts."""
+    app_yaml_file = Path("deploy/app.yaml")
     assert app_yaml_file.exists(), "app.yaml manifest must exist"
 
     manifest = yaml.safe_load(app_yaml_file.read_text(encoding="utf-8"))
