@@ -30,6 +30,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `io_metatensor.py` | 576 | `discover_participants`, `read_dicom_series_as_metatensor`, `read_nrrd_as_metatensor`, `write_eat_pvat_seg_nrrd` | Header-preserving 3D I/O for NRRD, NIfTI, and DICOM series with natural sorting and multi-series max-slice collision resolution. |
 | `clinical_report.py` | 819 | `evaluate_clinical_risk`, `generate_mpr_snapshot`, `generate_clinical_report_html`, `generate_clinical_report_pdf`, `encapsulate_pdf_to_dicom`, `export_clinical_imaging_report` | SOTA Cleerly/HeartFlow-style clinical imaging report (risk stratification, 3-view orthogonal MPR snapshots with 8-compartment overlays, vector PDF, and DICOM Encapsulated PDF SOP `.104.1`). |
 | `dicom_sr.py` | 345 | `create_cardiac_fat_sr`, `export_cardiac_fat_sr` | DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`) structured report builder using SNOMED-CT / LOINC / UCUM codes. |
+| `fhir_client.py` | 714 | `build_eat_volume_observation`, `build_pvat_attenuation_observation`, `build_cardiac_fat_diagnostic_report`, `build_cardiac_fat_document_reference`, `build_cardiac_fat_fhir_bundle`, `push_to_fhir_server`, `export_fhir_bundle`, `create_bundle_for_study` | HL7 FHIR R4 interoperability client and bundle generator (Epic US Core DiagnosticReport, DocumentReference, LOINC 84245-0 discrete EAT observation, RadLex RID49533 PVAT attenuation, open.epic MCP compatibility). |
 | `pacs_client.py` | 349 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
 | `pacs_daemon.py` | 407 | `DaemonConfig`, `PACSWatchdogDaemon`, `is_study_settled`, `find_pending_studies`, `process_study` | Automated clinical PACS watchdog and auto-router daemon (zero-click processing, file settling check, dry-run mode, and fault-tolerant error quarantine). |
 | `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
@@ -38,7 +39,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `publication_figure.py` | 420 | `generate_publication_figure` | 300 DPI publication-grade multi-panel composite figure generator formatted for peer-reviewed cardiovascular imaging journals (*JACC*, *Radiology*, *Circulation*). |
 | `dashboard.py` | 2260 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard & embedded OHIF workstation server (Flask, Chart.js, KPI scorecards, interactive SVG box plots across 5 CAC tiers with ANOVA/Kruskal scorecards, bivariate regression model, 300 DPI publication figure export endpoint `/api/cohort/publication-figure`, case explorer, `/viewer/<pid>/` launcher, DICE benchmark runner). |
 | `segmentation_evaluator.py` | 480 | `SegmentationBenchmarkEngine`, `CohortBenchmarkReport`, `compute_compartment_dice`, `compute_volume_metrics`, `compute_surface_distance_metrics` | Extensible multi-compartment segmentation evaluation, DICE metrics, IoU, RVE, MASD/HD95. |
-| `cli.py` | 1423 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cli.py` | 1485 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark`; **L1425**: `fhir-export` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `fl_client_algo.py` | 409 | `CardiacFatClientAlgo` | NVFLARE client training/evaluation executor (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
@@ -57,7 +58,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests (76 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (170L), `test_dashboard.py` (135L).
+- Unit/Integration tests (87 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (250L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (170L), `test_dashboard.py` (135L).
 
 ---
 
@@ -67,7 +68,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (76 tests; run before committing):
+- **Run Full Test Suite** (87 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v
@@ -228,6 +229,28 @@ To benchmark a candidate segmentation method against ground truth or alternative
    - Absolute Volume Difference ($\text{cm}^3$) & Relative Volume Error (RVE %).
    - Mean Absolute Surface Distance (MASD) & 95th Percentile Hausdorff Distance (HD95).
    - Export to structured CSV and JSON.
+
+---
+
+### Recipe 10: Export & Transmit HL7 FHIR R4 Bundles to Hospital EHR (Epic on FHIR)
+
+To export or push clinical biomarkers and diagnostic reports directly into hospital EHR systems:
+
+1. **CLI Export to File**:
+   ```bash
+   cardiac-fat-fl fhir-export "path/to/study_dir" -o "path/to/study_dir/cardiac_fat_fhir.json"
+   ```
+2. **Push to Institutional FHIR R4 Server (Epic, Cerner, HAPI FHIR)**:
+   ```bash
+   cardiac-fat-fl push "path/to/study_dir" --fhir-url "https://fhir.hospital.org/r4" --fhir-token "$OAUTH_BEARER_TOKEN"
+   ```
+3. **Simultaneous PACS + EHR Submission**:
+   ```bash
+   cardiac-fat-fl push "path/to/study_dir" --url "http://pacs.hospital.org:8042/dicom-web/studies" --fhir-url "https://fhir.hospital.org/r4" --fhir-token "$OAUTH_TOKEN"
+   ```
+4. **Interactive Dashboard 1-Click Export**:
+   In the Research Dashboard (`:8050`), open any participant via **Deep Dive** in the Case Explorer and click **FHIR R4 Bundle** to download a standards-compliant JSON bundle on-demand, or query `http://127.0.0.1:8050/api/case/<pid>/fhir`.
+   See [`docs/EPIC_FHIR_MCP_INTEGRATION.md`](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2/cardiofat/docs/EPIC_FHIR_MCP_INTEGRATION.md) for full Epic on FHIR and open.epic Model Context Protocol documentation.
 
 ---
 

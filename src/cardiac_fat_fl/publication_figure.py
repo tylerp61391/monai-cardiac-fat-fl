@@ -494,3 +494,4 @@ def _draw_chamber_bar_chart(
         # X label
         short_lbl = ch_name.replace(" ", "\n")
         draw.text((cx - 30, plot_y1 + 15), ch_name.replace(" ", "\n"), fill=(15, 23, 42), font=font_small)
+

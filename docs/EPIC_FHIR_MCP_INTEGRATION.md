@@ -342,3 +342,4 @@ Epic uses OAuth 2.0 with asymmetric private-key JWT assertions for automated sys
    ```
 3. **Epic open.epic MCP Hook**:
    - Provides live validation against Epic's test sandbox (`https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4`).
+

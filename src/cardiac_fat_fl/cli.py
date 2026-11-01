@@ -837,6 +837,16 @@ def push_pacs(
         "--token",
         help="Bearer Authorization token for DICOMweb STOW-RS.",
     ),
+    fhir_url: Optional[str] = typer.Option(
+        None,
+        "--fhir-url",
+        help="Target HL7 FHIR R4 endpoint URL (e.g. https://fhir.hospital.org/r4 or http://localhost:8080/fhir).",
+    ),
+    fhir_token: Optional[str] = typer.Option(
+        None,
+        "--fhir-token",
+        help="Bearer Authorization token for HL7 FHIR server (defaults to --token if omitted).",
+    ),
     timeout: int = typer.Option(
         120,
         "--timeout",
@@ -855,79 +865,110 @@ def push_pacs(
         help="Disable TLS/SSL certificate verification (not recommended for production).",
     ),
 ) -> None:
-    """Store DICOM-SEG and cardiac CT volumes to a PACS archive via DICOMweb (STOW-RS) or DIMSE (C-STORE)."""
+    """Store DICOM-SEG / CT volumes to PACS (STOW-RS / C-STORE) and/or post FHIR R4 bundles to EHR."""
     from cardiac_fat_fl.pacs_client import (
         find_dicom_instances_to_push,
         push_to_dicomweb_stow,
         push_to_dimse_cstore,
     )
 
-    if not url and not host:
-        console.print("[bold red]Error:[/bold red] You must specify either a DICOMweb endpoint (--url) or a DIMSE PACS host (--host).")
+    if not url and not host and not fhir_url:
+        console.print("[bold red]Error:[/bold red] You must specify a DICOMweb endpoint (--url), DIMSE PACS host (--host), or HL7 FHIR server (--fhir-url).")
         console.print("[dim]Example DICOMweb: cardiac-fat-fl push ./0 --url http://localhost:8042/dicom-web/studies[/dim]")
         console.print("[dim]Example DIMSE:    cardiac-fat-fl push ./0 --host 192.168.1.50 --port 104 --called-aet PACSSERVER[/dim]")
+        console.print("[dim]Example FHIR:     cardiac-fat-fl push ./0 --fhir-url https://fhir.hospital.org/r4 --fhir-token $TOKEN[/dim]")
         raise typer.Exit(code=1)
 
-    try:
-        instances = find_dicom_instances_to_push(target_path, include_ct=include_ct)
-    except Exception as e:
-        console.print(f"[bold red]Discovery Error:[/bold red] {e}")
-        raise typer.Exit(code=1)
+    ca_cert: Optional[Union[Path, bool]] = None
+    if insecure:
+        if ca_bundle:
+            console.print("[yellow]Warning: Both --ca-bundle and --insecure specified; ignoring CA bundle and disabling TLS verification.[/yellow]")
+        ca_cert = False
+        console.print("[bold yellow]Security Warning: TLS certificate verification is disabled (--insecure).[/bold yellow]")
+    elif ca_bundle:
+        ca_cert = ca_bundle
+        console.print(f"[cyan]Using custom Root CA bundle:[/cyan] {ca_bundle}")
 
-    console.print(f"[bold cyan]Found {len(instances)} DICOM instance(s) to store:[/bold cyan]")
-    for inst in instances[:5]:
-        console.print(f"  • {inst.name} ({inst.stat().st_size / 1024:.1f} KB)")
-    if len(instances) > 5:
-        console.print(f"  ... and {len(instances) - 5} more files.")
+    # 1. DICOM PACS Transmission (DICOMweb STOW-RS or DIMSE C-STORE)
+    if url or host:
+        try:
+            instances = find_dicom_instances_to_push(target_path, include_ct=include_ct)
+        except Exception as e:
+            console.print(f"[bold red]Discovery Error:[/bold red] {e}")
+            raise typer.Exit(code=1)
 
-    # 1. DICOMweb STOW-RS
-    if url:
-        console.print(f"[cyan]Connecting to DICOMweb STOW-RS endpoint:[/cyan] {url}")
-        ca_cert: Optional[Union[Path, bool]] = None
-        if insecure:
-            if ca_bundle:
-                console.print("[yellow]Warning: Both --ca-bundle and --insecure specified; ignoring CA bundle and disabling TLS verification.[/yellow]")
-            ca_cert = False
-            console.print("[bold yellow]Security Warning: TLS certificate verification is disabled (--insecure).[/bold yellow]")
-        elif ca_bundle:
-            ca_cert = ca_bundle
-            console.print(f"[cyan]Using custom Root CA bundle:[/cyan] {ca_bundle}")
+        console.print(f"[bold cyan]Found {len(instances)} DICOM instance(s) to store:[/bold cyan]")
+        for inst in instances[:5]:
+            console.print(f"  • {inst.name} ({inst.stat().st_size / 1024:.1f} KB)")
+        if len(instances) > 5:
+            console.print(f"  ... and {len(instances) - 5} more files.")
 
-        auth = (username, password) if username and password else None
-        res = push_to_dicomweb_stow(
-            instances,
-            stow_url=url,
-            auth=auth,
-            token=token,
+        if url:
+            console.print(f"[cyan]Connecting to DICOMweb STOW-RS endpoint:[/cyan] {url}")
+            auth = (username, password) if username and password else None
+            res = push_to_dicomweb_stow(
+                instances,
+                stow_url=url,
+                auth=auth,
+                token=token,
+                timeout=timeout,
+                ca_cert=ca_cert,
+            )
+            
+            if res["failed_count"] == 0:
+                console.print(f"[bold green]Success: Stored {res['success_count']} instance(s) to PACS via STOW-RS.[/bold green]")
+            else:
+                console.print(f"[bold yellow]Warning: Transmitted with issues:[/bold yellow] {res['success_count']} succeeded, {res['failed_count']} failed.")
+                console.print(f"[dim]{res['details']}[/dim]")
+                raise typer.Exit(code=1)
+
+        if host:
+            console.print(f"[cyan]Initiating DICOM DIMSE C-STORE association:[/cyan] {calling_aet} -> {called_aet}@{host}:{port}")
+            res = push_to_dimse_cstore(
+                instances,
+                host=host,
+                port=port,
+                called_aet=called_aet,
+                calling_aet=calling_aet,
+                timeout=timeout,
+            )
+
+            if res["failed_count"] == 0:
+                console.print(f"[bold green]Success: Stored {res['success_count']} instance(s) to PACS via C-STORE.[/bold green]")
+            else:
+                console.print(f"[bold yellow]Warning: C-STORE issues:[/bold yellow] {res['success_count']} succeeded, {res['failed_count']} failed.")
+                console.print(f"[dim]{res['details']}[/dim]")
+                raise typer.Exit(code=1)
+
+    # 2. HL7 FHIR R4 Bundle push
+    if fhir_url:
+        from cardiac_fat_fl.fhir_client import (
+            create_bundle_for_study,
+            push_to_fhir_server,
+        )
+
+        study_dir = target_path if target_path.is_dir() else target_path.parent
+        console.print(f"[cyan]Generating HL7 FHIR R4 transaction bundle for study:[/cyan] {study_dir}")
+        try:
+            bundle = create_bundle_for_study(study_dir, bundle_type="transaction")
+        except Exception as e:
+            console.print(f"[bold red]FHIR Bundle Generation Error:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
+        console.print(f"[cyan]Transmitting FHIR bundle ({len(bundle.get('entry', []))} resources) to:[/cyan] {fhir_url}")
+        effective_token = fhir_token or token
+        fhir_res = push_to_fhir_server(
+            bundle=bundle,
+            fhir_base_url=fhir_url,
+            auth_token=effective_token,
             timeout=timeout,
             ca_cert=ca_cert,
         )
-        
-        if res["failed_count"] == 0:
-            console.print(f"[bold green]Success: Stored {res['success_count']} instance(s) to PACS via STOW-RS.[/bold green]")
+        if fhir_res["success"]:
+            console.print(f"[bold green]Success: Transmitted FHIR bundle with {fhir_res['entries_count']} resource(s) to EHR.[/bold green]")
         else:
-            console.print(f"[bold yellow]Warning: Transmitted with issues:[/bold yellow] {res['success_count']} succeeded, {res['failed_count']} failed.")
-            console.print(f"[dim]{res['details']}[/dim]")
-            raise typer.Exit(code=1)
-        return
-
-    # 2. DIMSE C-STORE
-    if host:
-        console.print(f"[cyan]Initiating DICOM DIMSE C-STORE association:[/cyan] {calling_aet} -> {called_aet}@{host}:{port}")
-        res = push_to_dimse_cstore(
-            instances,
-            host=host,
-            port=port,
-            called_aet=called_aet,
-            calling_aet=calling_aet,
-            timeout=timeout,
-        )
-
-        if res["failed_count"] == 0:
-            console.print(f"[bold green]Success: Stored {res['success_count']} instance(s) to PACS via C-STORE.[/bold green]")
-        else:
-            console.print(f"[bold yellow]Warning: C-STORE issues:[/bold yellow] {res['success_count']} succeeded, {res['failed_count']} failed.")
-            console.print(f"[dim]{res['details']}[/dim]")
+            console.print(f"[bold red]Error: FHIR transmission failed with status {fhir_res['status_code']}:[/bold red]")
+            console.print(f"[dim]{fhir_res['response']}[/dim]")
             raise typer.Exit(code=1)
 
 
@@ -1416,6 +1457,54 @@ def benchmark(
     if output_json:
         engine.export_summary_json(report, output_json)
         console.print(f"[green]Exported benchmark JSON:[/green] {output_json}")
+
+
+
+
+
+@app.command("fhir-export")
+def fhir_export_cmd(
+    target_path: Path = typer.Argument(
+        ...,
+        help="Path to study or participant directory containing cardiac measurements.",
+        exists=True,
+    ),
+    output_path: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Destination JSON file path (defaults to <study_dir>/cardiac_fat_fhir_bundle.json).",
+    ),
+    bundle_type: str = typer.Option(
+        "transaction",
+        "--bundle-type",
+        "-b",
+        help="FHIR bundle type: 'transaction' (REST bundle) or 'collection' (document/message).",
+    ),
+) -> None:
+    """Export 3D cardiac fat quantification and CRISP-CT inflammation metrics as a standard HL7 FHIR R4 Bundle JSON."""
+    from cardiac_fat_fl.fhir_client import (
+        create_bundle_for_study,
+        export_fhir_bundle,
+    )
+
+    study_dir = target_path if target_path.is_dir() else target_path.parent
+    dest_path = output_path or (study_dir / "cardiac_fat_fhir_bundle.json")
+
+    try:
+        bundle = create_bundle_for_study(study_dir, bundle_type=bundle_type)
+        saved = export_fhir_bundle(bundle, dest_path)
+        console.print(f"[bold green]Successfully exported HL7 FHIR R4 {bundle_type} bundle:[/bold green]")
+        console.print(f"  • Path: {saved}")
+        console.print(f"  • Total Resources: {len(bundle.get('entry', []))}")
+        for entry in bundle.get("entry", []):
+            res = entry.get("resource", {})
+            rtype = res.get("resourceType")
+            rid = res.get("id")
+            console.print(f"    - [cyan]{rtype}[/cyan] ({rid})")
+    except Exception as e:
+        console.print(f"[bold red]Export Error:[/bold red] {e}")
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":

@@ -182,6 +182,32 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         p = _ACTIVE_COHORT.participants[pid]
         return jsonify(sanitize_nans(p.to_dict()))
 
+    @app.route("/api/case/<pid>/fhir", methods=["GET"])
+    def get_case_fhir(pid: str):
+        if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
+            return jsonify({"error": f"Participant {pid} not found"}), 404
+        p = _ACTIVE_COHORT.participants[pid]
+        from cardiac_fat_fl.fhir_client import create_bundle_for_study
+
+        try:
+            bundle_type = request.args.get("type", "transaction")
+            bundle = create_bundle_for_study(
+                study_dir=p.study_dir,
+                bundle_type=bundle_type,
+                metrics_override=p.metrics if p.metrics else None,
+            )
+            if request.args.get("download") == "true":
+                buf = io.BytesIO(json.dumps(bundle, indent=2).encode("utf-8"))
+                return send_file(
+                    buf,
+                    mimetype="application/fhir+json",
+                    as_attachment=True,
+                    download_name=f"cardiac_fat_fhir_{pid}.json",
+                )
+            return jsonify(bundle)
+        except Exception as e:
+            return jsonify({"error": f"Failed to generate FHIR bundle: {e}"}), 500
+
     def _serve_ohif_page(pid: str):
         if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
             return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
@@ -942,6 +968,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           Case Deep Dive: <span id="modalCaseId" class="font-mono text-sky-300">--</span>
         </h3>
         <div class="flex items-center gap-2">
+          <a id="modalFhirBtn" href="#" target="_blank" download class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 shadow transition">
+            <i class="fa-solid fa-fire text-amber-300"></i> FHIR R4 Bundle
+          </a>
           <a id="modalOhifBtn" href="#" target="_blank" class="hidden px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs items-center gap-1.5 shadow transition">
             <i class="fa-solid fa-cube"></i> Open in OHIF <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
           </a>
@@ -2062,6 +2091,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         document.getElementById('modalScanType').innerText = data.scan_type;
         document.getElementById('modalCacScore').innerText = data.calcium_score !== null ? `${data.calcium_score} (${data.calcium_risk_tier})` : 'Not available';
         document.getElementById('modalCrispStatus').innerText = data.crisp_ct_status;
+
+        const fhirBtn = document.getElementById('modalFhirBtn');
+        if (fhirBtn) {
+          fhirBtn.href = `/api/case/${encodeURIComponent(pid)}/fhir?download=true`;
+        }
 
         const ohifBtn = document.getElementById('modalOhifBtn');
         if (data.has_seg) {

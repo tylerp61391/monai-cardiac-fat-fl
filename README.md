@@ -162,8 +162,23 @@ flowchart LR
 3. **FHIR `Observation` (Discrete Quantitative Biomarkers)**:
    - Extracted from the DICOM-SR TID 1500 object (`eat_pvat_sr.dcm`):
      - **EAT Volume**: Coded under LOINC `84245-0` (*Epicardial adipose tissue volume*) in $\text{cm}^3$.
-     - **PVAT Attenuation**: Vessel-specific mean HU (LAD, LCX, RCA) coded under LOINC / RadLex codes in $\text{HU}$.
+     - **PVAT Attenuation**: Vessel-specific mean HU (LAD, LCX, RCA) coded under LOINC / RadLex codes (`RID49533`) in $\text{HU}$ with SNOMED-CT arterial body sites.
    - Stored as discrete numerical observations in the patient's EHR flowsheets for longitudinal trending and automated Clinical Decision Support (CDS Hooks).
+
+#### Native CLI & Web Export for HL7 FHIR R4:
+
+```bash
+# 1. Export standard FHIR R4 transaction or collection bundle JSON to disk
+cardiac-fat-fl fhir-export "path/to/study_dir" -o "path/to/study_dir/cardiac_fat_fhir.json"
+
+# 2. Push FHIR R4 bundle directly to hospital EHR (Epic on FHIR, Cerner, HAPI FHIR)
+cardiac-fat-fl push "path/to/study_dir" --fhir-url "https://fhir.hospital.org/r4" --fhir-token "$OAUTH_BEARER_TOKEN"
+
+# 3. Simultaneous dual push: DICOM-SEG to PACS + FHIR R4 resources to EHR
+cardiac-fat-fl push "path/to/study_dir" --url "http://pacs.hospital.org:8042/dicom-web/studies" --fhir-url "https://fhir.hospital.org/r4" --fhir-token "$TOKEN"
+```
+
+*Interactive Dashboard*: Each participant in the Research Dashboard (`:8050`) features an on-demand **FHIR R4 Bundle** download button in the Case Deep Dive modal, served by REST endpoint `/api/case/<pid>/fhir`. See [docs/EPIC_FHIR_MCP_INTEGRATION.md](docs/EPIC_FHIR_MCP_INTEGRATION.md) for full architecture and Epic Model Context Protocol (MCP) details.
 
 ---
 
