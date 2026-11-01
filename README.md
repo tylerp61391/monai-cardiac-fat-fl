@@ -6,6 +6,8 @@
 [![MONAI](https://img.shields.io/badge/MONAI-1.6.1-green.svg)](https://project-monai.github.io/)
 [![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://developer.nvidia.com/flare)
 [![CI Test Suite](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml/badge.svg)](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml)
+[![Docker MAP](https://img.shields.io/badge/MONAI%20Deploy-MAP%20Package-76B900.svg?logo=nvidia&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-map)
+[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
 [![DICOM-SR](https://img.shields.io/badge/DICOM--SR-TID%201500-blueviolet.svg)](https://dicom.nema.org/)
 [![DICOM Encapsulated PDF](https://img.shields.io/badge/DICOM-Encapsulated%20PDF%20.104.1-008080.svg)](https://dicom.nema.org/)
@@ -888,19 +890,35 @@ Run all automated unit tests via `pytest`:
 pytest -v
 ```
 
-The test suite validates 89 automated unit and integration tests across all modules:
+The test suite validates **110 automated unit and integration tests** across all modules:
 
+- **CI/CD & Manifest Contracts**: Automated validation of GitHub Actions workflows (`ci.yml`, `docker-map.yml`, `docker-publish.yml`, `security.yml`), Dockerfile specs, and dependency declarations.
 - **Turnkey NVIDIA FLARE 2.5+ Simulator**: Multi-hospital federated training simulation, `CardiacFatTrainer(Executor)` weight exchange, FedProx loss, local FedBN retention, and automated cross-site validation.
-
+- **Self-Contained HL7 FHIR R4 Mock Server**: US Core CapabilityStatement metadata, atomic transaction bundle ingestion, reference rewriting, discrete CRUD/search endpoints, and sandbox resetting.
 - **Transform Correctness**: Strict $[-190.0, -30.0]\text{ HU}$ thresholding, Voronoi chamber partitioning, and radial vessel dilation.
 - **Header Coordinate Integrity**: Orientation preservation across NRRD and DICOM formats with multi-series max-slice collision resolution.
-- **Mathematical Equivalency**: .00\text{ cm}^3$ and .00\text{ HU}$ agreement against reference baseline models.
+- **Mathematical Equivalency**: $\Delta = 0.00\text{ cm}^3$ and $\Delta = 0.00\text{ HU}$ agreement against reference baseline models.
 - **DICOM-SEG Compliance**: Proper SOP Class UID 1.2.840.10008.5.1.4.1.1.66.4 and 8 segment sequence items.
 - **NVFLARE Client Lifecycle**: Initialization, training steps, evaluation, and FedBN layer isolation.
-- **Research Dashboard & OHIF Workstation**: Dynamic cohort loading, Agatston CAC linking across all 5 tiers, natural numerical sorting, /viewer/<pid>/ routes, and research correlation statistics.
+- **Research Dashboard & OHIF Workstation**: Dynamic cohort loading, Agatston CAC linking across all 5 tiers, natural numerical sorting, `/viewer/<pid>/` routes, and research correlation statistics.
 - **Publication-Grade Visualizations & 300 DPI Figure Export**: Multi-panel composite figures, omnibus ANOVA & Kruskal-Wallis hypothesis testing, post-hoc pairwise Mann-Whitney U tests with Bonferroni correction, and bivariate linear regression.
 - **Segmentation Benchmarking & DICE Engine**: Multi-compartment DSC, IoU, RVE%, and Hausdorff surface distances across candidate methods.
-- **Epic on FHIR & open.epic MCP**: Standard US Core R4 resource mappings (Observation, DiagnosticReport, DocumentReference) and agentic developer workflows detailed in [docs/EPIC_FHIR_MCP_INTEGRATION.md](docs/EPIC_FHIR_MCP_INTEGRATION.md).
+- **Epic on FHIR & open.epic MCP**: Standard US Core R4 resource mappings (Observation, DiagnosticReport, DocumentReference) and agentic developer workflows detailed in [`docs/EPIC_FHIR_MCP_INTEGRATION.md`](docs/EPIC_FHIR_MCP_INTEGRATION.md).
+
+---
+
+### Continuous Integration & Automated Quality Gates
+
+Every pull request and merge to `main` undergoes rigorous multi-stage automated validation in GitHub Actions:
+
+| Quality Gate | Workflow File | Target Environment | Scope & Responsibility |
+| :--- | :--- | :--- | :--- |
+| **Documentation & Lint Gate** | `.github/workflows/ci.yml` (`lint`) | `ubuntu-latest`, Node 20, Python 3.11 | Zero markdownlint regressions (`markdownlint-cli`) and static code analysis (`ruff check`). |
+| **Cross-Platform Test Matrix** | `.github/workflows/ci.yml` (`test`) | Ubuntu & Windows, Python 3.11 & 3.12 | All 110 unit and integration tests across operating systems with coverage reporting. |
+| **Docker Build Verification** | `.github/workflows/ci.yml` (`docker-verify`) | `ubuntu-latest`, Docker Buildx | Validates clean container builds of both root `Dockerfile` and `deploy/Dockerfile` (MAP) prior to merging. |
+| **MONAI MAP Container Registry** | `.github/workflows/docker-map.yml` | GHCR (`ghcr.io/.../monai-cardiac-fat-map`) | Automated multi-arch build and publishing of the MONAI Deploy Application Package container. |
+| **Workstation Container Registry** | `.github/workflows/docker-publish.yml` | GHCR (`ghcr.io/.../monai-cardiac-fat-fl`) | Automated publishing of the main CLI, API, and OHIF Medical Workstation container. |
+| **Security & SBOM Audit** | `.github/workflows/security.yml` | `ubuntu-latest` (Weekly + PRs) | Dependency vulnerability auditing (`pip-audit`), SAST scanning (`bandit`), Trivy CVE scanning, and FDA Section 524B CycloneDX SBOM generation. |
 
 ---
 

@@ -1,27 +1,53 @@
-name: CI Test Suite
+name: CI Test Suite & Quality Gates
 
-on:
+'on':
   push:
     branches:
       - main
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - '.github/workflows/ci.yml'
   pull_request:
     branches:
       - main
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  lint:
+    name: Lint & Documentation Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Verify Markdown Documentation (markdownlint)
+        run: |
+          npx markdownlint-cli "**/*.md" --ignore-path .markdownlintignore
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Ruff linter
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff
+
+      - name: Run Ruff static analysis
+        run: |
+          ruff check src/ tests/
+
   test:
     name: Test (${{ matrix.os }} - Python ${{ matrix.python-version }})
+    needs: [lint]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -33,17 +59,55 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Ubuntu imaging runtime libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libgomp1
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install build tools and package dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -e ".[dev]"
 
-      - name: Run test suite with pytest
+      - name: Run pytest test suite with coverage
         run: |
-          python -m pytest -v -ra --tb=short
+          python -m pytest -v -ra --tb=short --cov=cardiac_fat_fl --cov-report=xml:coverage.xml --cov-report=term
+
+      - name: Upload test coverage artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  docker-verify:
+    name: Verify Docker & MAP Containers Build
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Standard CLI / OHIF Docker Container (Dry Run)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: monai-cardiac-fat-fl:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Container CLI Help
+        run: |
+          docker run --rm monai-cardiac-fat-fl:test --help

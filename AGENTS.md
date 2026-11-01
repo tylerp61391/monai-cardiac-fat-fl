@@ -60,7 +60,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests (89 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (245L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (250L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (170L), `test_dashboard.py` (135L).
+- Unit/Integration tests (110 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (245L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (250L), `test_fhir_server.py` (175L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (170L), `test_dashboard.py` (135L), `test_ci_workflows.py` (95L).
 
 ---
 
@@ -70,10 +70,16 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (89 tests; run before committing):
+- **Run Full Test Suite** (110 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v
+  ```
+
+- **Run Documentation Linter (Zero Markdownlint Regressions)**:
+
+  ```bash
+  npx markdownlint-cli "**/*.md" --ignore-path .markdownlintignore
   ```
 
 ### Recipe 1: Process a CT Scan and Launch OHIF Viewer
