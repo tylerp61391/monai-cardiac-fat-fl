@@ -39,8 +39,9 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `publication_figure.py` | 420 | `generate_publication_figure` | 300 DPI publication-grade multi-panel composite figure generator formatted for peer-reviewed cardiovascular imaging journals (*JACC*, *Radiology*, *Circulation*). |
 | `dashboard.py` | 2260 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard & embedded OHIF workstation server (Flask, Chart.js, KPI scorecards, interactive SVG box plots across 5 CAC tiers with ANOVA/Kruskal scorecards, bivariate regression model, 300 DPI publication figure export endpoint `/api/cohort/publication-figure`, case explorer, `/viewer/<pid>/` launcher, DICE benchmark runner). |
 | `segmentation_evaluator.py` | 480 | `SegmentationBenchmarkEngine`, `CohortBenchmarkReport`, `compute_compartment_dice`, `compute_volume_metrics`, `compute_surface_distance_metrics` | Extensible multi-compartment segmentation evaluation, DICE metrics, IoU, RVE, MASD/HD95. |
-| `cli.py` | 1485 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark`; **L1425**: `fhir-export` | Typer CLI entrypoints (`cardiac-fat-fl`). |
-| `fl_client_algo.py` | 409 | `CardiacFatClientAlgo` | NVFLARE client training/evaluation executor (FedProx + FedBN). |
+| `cli.py` | 1550 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `federated-simulate`; **L480**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark`; **L1425**: `fhir-export` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `federated_simulator.py` | 185 | `run_federated_simulation`, `ensure_nvflare_windows_compatibility` | Turnkey SOTA NVIDIA FLARE 2.5+ multi-hospital simulation runner with automated Windows OS compatibility patching. |
+| `fl_client_algo.py` | 450 | `CardiacFatClientAlgo`, `CardiacFatTrainer` | NVFLARE client training/evaluation executor and Model Trainer bridging DXO weights to MONAI (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
 | `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
 | `hardware.py` | 219 | `detect_hardware`, `validate_worker_concurrency` | Host CPU/RAM/GPU profiler and OOM-safe worker concurrency throttling. |
@@ -58,7 +59,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests (87 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (180L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (250L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (170L), `test_dashboard.py` (135L).
+- Unit/Integration tests (89 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (245L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (250L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (170L), `test_dashboard.py` (135L).
 
 ---
 
@@ -68,7 +69,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (87 tests; run before committing):
+- **Run Full Test Suite** (89 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v
@@ -251,6 +252,29 @@ To export or push clinical biomarkers and diagnostic reports directly into hospi
 4. **Interactive Dashboard 1-Click Export**:
    In the Research Dashboard (`:8050`), open any participant via **Deep Dive** in the Case Explorer and click **FHIR R4 Bundle** to download a standards-compliant JSON bundle on-demand, or query `http://127.0.0.1:8050/api/case/<pid>/fhir`.
    See [`docs/EPIC_FHIR_MCP_INTEGRATION.md`](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2/cardiofat/docs/EPIC_FHIR_MCP_INTEGRATION.md) for full Epic on FHIR and open.epic Model Context Protocol documentation.
+
+---
+
+### Recipe 11: Execute Turnkey NVIDIA FLARE 2.5+ Federated Simulation
+
+To simulate multi-hospital federated learning with zero DICOM transfer (FedProx proximal loss, FedBN local batch norm retention, and CrossSiteModelEval cross-site validation):
+
+1. **CLI Execution**:
+   ```bash
+   cardiac-fat-fl federated-simulate --n-clients 2 --threads 2 --rounds 2
+   ```
+2. **Options**:
+   - `--job-dir "jobs/cardiac_fat_fl"`: Custom NVFLARE job specification folder (default: `jobs/cardiac_fat_fl`).
+   - `--n-clients 2`: Number of participating hospital client sites.
+   - `--threads 2`: Parallel client execution threads.
+   - `--rounds 2`: Aggregation round count.
+   - `--workspace "path/to/ws"`: Custom workspace directory (persists `SRV_FL_global_model.pt` consensus weights).
+   - `--gpu "0"`: GPU assignment or CPU mode.
+3. **Architecture & Deliverables**:
+   - `CardiacFatTrainer(Executor)`: DXO-based MONAI SegResNet weight unpack/pack, FedProx loss, and local norm weight filtering.
+   - `PTFileModelPersistor` & `AccumulateWeightedAggregator`: Server-side model checkpointing and weighted parameter consensus.
+   - `PTFileModelLocator` & `CrossSiteModelEval`: Automated post-training cross-site validation of global consensus model.
+   - Self-healing Windows runtime patching: Handles NTFS file-locking and POSIX `setsid` gracefully on Windows.
 
 ---
 

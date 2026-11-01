@@ -42,6 +42,13 @@
         "key_metric": "val_dice",
         "negate_key_metric": false
       }
+    },
+    {
+      "id": "model_locator",
+      "path": "nvflare.app_opt.pt.file_model_locator.PTFileModelLocator",
+      "args": {
+        "pt_persistor_id": "persistor"
+      }
     }
   ],
   "workflows": [
@@ -64,7 +71,7 @@
       "id": "cross_site_eval_ctl",
       "path": "nvflare.app_common.workflows.cross_site_model_eval.CrossSiteModelEval",
       "args": {
-        "model_locator_id": "persistor",
+        "model_locator_id": "model_locator",
         "submit_model_timeout": 600,
         "validation_timeout": 6000
       }

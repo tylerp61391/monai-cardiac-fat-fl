@@ -476,6 +476,78 @@ def federated_stats(
             console.print(f"  • {metric_name}: Mean={details['mean']:.2f}, Std={details['std']:.2f}, Range=[{details['min']:.1f}, {details['max']:.1f}]")
 
 
+@app.command("federated-simulate")
+def federated_simulate(
+    job_dir: Optional[Path] = typer.Option(
+        None,
+        "--job-dir",
+        "-j",
+        help="Path to NVIDIA FLARE job package directory (default: jobs/cardiac_fat_fl).",
+    ),
+    n_clients: int = typer.Option(
+        2,
+        "--n-clients",
+        "-n",
+        help="Number of simulated hospital client sites.",
+    ),
+    threads: int = typer.Option(
+        2,
+        "--threads",
+        "-t",
+        help="Number of concurrent simulator execution threads.",
+    ),
+    rounds: Optional[int] = typer.Option(
+        None,
+        "--rounds",
+        "-r",
+        help="Override number of federated aggregation rounds.",
+    ),
+    workspace: Optional[Path] = typer.Option(
+        None,
+        "--workspace",
+        "-w",
+        help="Directory to save simulation run logs, consensus checkpoints, and artifacts.",
+    ),
+    gpu: Optional[str] = typer.Option(
+        None,
+        "--gpu",
+        help="GPU device IDs (e.g. '0' or '0,1') or None for CPU.",
+    ),
+) -> None:
+    """Execute a turnkey NVIDIA FLARE 2.5+ multi-hospital federated simulation."""
+    from cardiac_fat_fl.federated_simulator import run_federated_simulation
+
+    console.print("[bold cyan]══════════════════════════════════════════════════════════════════[/bold cyan]")
+    console.print("[bold green]  NVIDIA FLARE 2.5+ SOTA Federated Learning Simulator[/bold green]")
+    console.print("[bold cyan]══════════════════════════════════════════════════════════════════[/bold cyan]")
+    console.print(f"  • [bold]Clients (Hospital Sites):[/bold] {n_clients}")
+    console.print(f"  • [bold]Parallel Threads:[/bold] {threads}")
+    console.print(f"  • [bold]Rounds Override:[/bold] {rounds if rounds is not None else 'Job Default'}")
+    console.print(f"  • [bold]Job Directory:[/bold] {job_dir or 'jobs/cardiac_fat_fl'}")
+    if gpu:
+        console.print(f"  • [bold]GPU Devices:[/bold] {gpu}")
+    console.print("[dim]Launching simulated multi-site distillation (FedProx + FedBN)...[/dim]\n")
+
+    res = run_federated_simulation(
+        job_dir=job_dir,
+        workspace=workspace,
+        n_clients=n_clients,
+        threads=threads,
+        num_rounds=rounds,
+        gpu=gpu,
+    )
+
+    if res.get("success"):
+        console.print(f"\n[bold green]✓ Federated Simulation Completed Successfully![/bold green]")
+        console.print(f"  • [bold]Status:[/bold] {res.get('status')}")
+        console.print(f"  • [bold]Workspace:[/bold] {res.get('workspace')}")
+        if res.get("persisted_models"):
+            console.print(f"  • [bold]Persisted Consensus Checkpoints:[/bold] {', '.join(res['persisted_models'])}")
+    else:
+        console.print(f"\n[bold red]✗ Federated Simulation Failed with Exit Code {res.get('exit_code')}[/bold red]")
+        sys.exit(res.get("exit_code", 1))
+
+
 @app.command("compare-models")
 def compare_models(
     scan_path: Path = typer.Argument(

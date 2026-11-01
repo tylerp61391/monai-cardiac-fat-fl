@@ -1,0 +1,12 @@
+{
+  "name": "cardiac_fat_fl",
+  "resource_spec": {},
+  "min_clients": 2,
+  "mandatory_clients": [],
+  "byoc": true,
+  "deploy_map": {
+    "app": [
+      "@ALL"
+    ]
+  }
+}

@@ -178,3 +178,62 @@ def test_nvflare_stats_executor_and_multi_site_aggregation(tmp_path: Path) -> No
     assert eat_vol_metric["min"] == 60.0
     assert eat_vol_metric["max"] == 80.0
 
+
+
+def test_cardiac_fat_trainer_executor() -> None:
+    """Verify CardiacFatTrainer executor handles train, submit_model, and validate tasks."""
+    from nvflare.apis.dxo import DXO, DataKind, from_shareable
+    from cardiac_fat_fl.fl_client_algo import CardiacFatTrainer
+
+    algo = CardiacFatClientAlgo(device="cpu")
+    trainer = CardiacFatTrainer(client_algo=algo)
+
+    fl_ctx = FLContext()
+    signal = Signal()
+
+    # 1. Test train task with initial weights DXO
+    init_weights = algo.get_weights().weights
+    train_dxo = DXO(data_kind=DataKind.WEIGHTS, data=init_weights)
+    train_shareable = train_dxo.to_shareable()
+
+    result_shareable = trainer.execute("train", train_shareable, fl_ctx, signal)
+    assert result_shareable.get_return_code() == ReturnCode.OK
+
+    out_dxo = from_shareable(result_shareable)
+    assert out_dxo.data_kind == DataKind.WEIGHTS
+    assert len(out_dxo.data) > 0
+
+    # 2. Test validate task
+    val_shareable = train_dxo.to_shareable()
+    val_result = trainer.execute("validate", val_shareable, fl_ctx, signal)
+    assert val_result.get_return_code() == ReturnCode.OK
+
+    val_dxo = from_shareable(val_result)
+    assert val_dxo.data_kind == DataKind.METRICS
+    assert "val_dice" in val_dxo.data
+    assert "val_loss" in val_dxo.data
+
+    # 3. Test submit_model task
+    sub_result = trainer.execute("submit_model", Shareable(), fl_ctx, signal)
+    assert sub_result.get_return_code() == ReturnCode.OK
+    sub_dxo = from_shareable(sub_result)
+    assert sub_dxo.data_kind == DataKind.WEIGHTS
+
+    # 4. Test unsupported task
+    bad_result = trainer.execute("unknown_task", Shareable(), fl_ctx, signal)
+    assert bad_result.get_return_code() == ReturnCode.TASK_UNKNOWN
+
+
+def test_federated_simulator_end_to_end() -> None:
+    """Verify turnkey NVIDIA FLARE simulation executes 1 round across 2 simulated sites."""
+    from cardiac_fat_fl.federated_simulator import ensure_nvflare_windows_compatibility, run_federated_simulation
+
+    ensure_nvflare_windows_compatibility()
+    res = run_federated_simulation(
+        n_clients=2,
+        threads=2,
+        num_rounds=1,
+    )
+    assert res["success"] is True
+    assert res["exit_code"] == 0
+    assert res["status"] == "COMPLETED"

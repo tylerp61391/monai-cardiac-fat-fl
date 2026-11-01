@@ -536,6 +536,7 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `compare-models` | `cardiac-fat-fl compare-models <scan_path>` | Side-by-side equivalency test: MONAI vs frozen DeepHeartSeg ONNX. |
 | `federated-train` | `cardiac-fat-fl federated-train --data-dir <dir>` | Runs local NVFLARE client distillation round with FedProx and FedBN. |
 | `federated-stats` | `cardiac-fat-fl federated-stats -c <csv_path>` | Extracts multi-site privacy-preserving cohort statistical moments. |
+| `federated-simulate` | `cardiac-fat-fl federated-simulate [--n-clients 2] [--rounds 2]` | Turnkey multi-hospital NVIDIA FLARE 2.5+ simulation (FedProx + FedBN + CrossSiteModelEval). |
 | `map-run` | `cardiac-fat-fl map-run -i <study_dir> -o <dest>` | Executes the MONAI Deploy Application Package (MAP) DAG emitting DICOM-SEG, DICOM-SR, and metrics. |
 | `daemon` | `cardiac-fat-fl daemon <inbox_dir> [--outbox ...] [--pacs-url ...] [--dry-run]` | Autonomous background watchdog: monitors incoming CT scans, executes MAP DAG, and auto-routes DICOM-SEG/SR to PACS. |
 | `report` | `cardiac-fat-fl report <study_dir> [-o dest]` | Generates SOTA clinical diagnostic report with 3-view orthogonal MPR montage (HTML, vector PDF, and DICOM Encapsulated PDF `.104.1`). |
@@ -836,6 +837,22 @@ $$
 $$
 
 This guarantees **100.0% mathematical equivalence** to pooling all patient CSVs in a single database, with zero transmission of individual patient identifiers.
+
+---
+
+#### Mode 3: Turnkey SOTA NVIDIA FLARE 2.5+ Multi-Hospital Simulator
+
+The framework includes a production-ready NVIDIA FLARE job package (`jobs/cardiac_fat_fl/`) and turnkey simulation CLI command (`federated-simulate`). It simulates multi-hospital federated training across arbitrary client sites without requiring physical cluster infrastructure:
+
+```bash
+# Run 2-site federated distillation across 2 rounds with consensus checkpointing
+cardiac-fat-fl federated-simulate --n-clients 2 --threads 2 --rounds 2
+```
+
+- **Client Execution Engine**: `CardiacFatTrainer(Executor)` bridges NVFLARE's task lifecycle (`train`, `validate`, `submit_model`) to MONAI `CardiacFatClientAlgo`.
+- **Server Orchestration**: Coordinates `ScatterAndGather` weight consensus, `AccumulateWeightedAggregator`, and `IntimeModelSelector` (ranked by `val_dice`).
+- **Cross-Site Model Evaluation**: `PTFileModelLocator` and `CrossSiteModelEval` automatically evaluate consensus checkpoints across participating sites.
+- **Enterprise OS Resilience**: Built-in automated patching ensures zero-friction execution on both Windows (mitigating NTFS directory locks and POSIX `setsid` crashes) and Linux/macOS.
 
 ---
 

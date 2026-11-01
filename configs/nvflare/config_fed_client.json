@@ -9,7 +9,7 @@
       ],
       "executor": {
         "id": "trainer",
-        "path": "monai.fl.client.MonaiAlgo",
+        "path": "cardiac_fat_fl.fl_client_algo.CardiacFatTrainer",
         "args": {
           "client_algo_id": "cardiac_fat_algo"
         }
@@ -50,4 +50,3 @@
     }
   ]
 }
-
