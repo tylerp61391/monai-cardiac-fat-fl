@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary & Overview
 
-The `monai-cardiac-fat-fl` platform integrates an interactive, research-grade web dashboard (`cardiac-fat-fl dashboard`) paired natively with the **Open Health Imaging Foundation (OHIF) Viewer v3.13 Next** zero-footprint medical workstation. 
+The `monai-cardiac-fat-fl` platform integrates an interactive, research-grade web dashboard (`cardiac-fat-fl dashboard`) paired natively with the **Open Health Imaging Foundation (OHIF) Viewer v3.13 Next** zero-footprint medical workstation.
 
 This environment is engineered to provide cardiovascular researchers, imaging core laboratories, and cardiologists with instant multi-cohort exploration, clinical correlation analytics, and high-fidelity 3D volume/MPR visualization without requiring external PACS servers, heavy desktop installations, or cloud data transfers.
 
@@ -69,10 +69,12 @@ $$\text{Natural Sorting}: \quad [0, 1, 2, 3, 4, \dots, 9, 10, 11, \dots, 99, 100
 ### Implementation Layers
 
 1. **Cohort Discovery (`src/cardiac_fat_fl/io_metatensor.py`)**:
+
    ```python
    def _natural_sort_key(name: str):
        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', name)]
    ```
+
 2. **Dataset Model (`src/cardiac_fat_fl/cohort_research.py`)**:
    Participants discovered across flat or nested folders are stored in natural alphanumeric order.
 3. **Backend API (`src/cardiac_fat_fl/dashboard.py`)**:
@@ -83,6 +85,7 @@ $$\text{Natural Sorting}: \quad [0, 1, 2, 3, 4, \dots, 9, 10, 11, \dots, 99, 100
 ### Multi-Column Sortable Table Headers
 
 Users can click any column header in the Case Explorer to sort ascending or descending:
+
 - **`#`**: Row counter index.
 - **`PARTICIPANT ID`**: Natural numerical sort.
 - **`SCAN TYPE`**: Gated vs. non-gated acquisition.
@@ -111,6 +114,7 @@ The dashboard embeds the complete OHIF v3.13 Medical Workstation directly within
 ### Dynamic On-The-Fly OHIF Generation
 
 If a participant's CT scan and segmentation mask (`eat_pvat.seg.nrrd`) exist but OHIF-ready DICOM files have not yet been pre-exported, navigating to `/viewer/<participant_id>/` triggers an on-the-fly export:
+
 - Slices the 3D CT volume into standard DICOM CT slices.
 - Generates standard multi-frame DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`) with 8 clinical segments.
 - Generates Comprehensive 3D DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`).
@@ -118,6 +122,7 @@ If a participant's CT scan and segmentation mask (`eat_pvat.seg.nrrd`) exist but
 - Delivers the study seamlessly to the browser with zero terminal intervention.
 
 ### Layout & Orientation
+
 - **Viewport Layout**: 2x2 multi-planar reconstruction (MPR) following 3D Slicer / radiology convention:
   - **Top-Left**: Axial MPR with smart scrollbar.
   - **Top-Right**: 3D Volume Rendering grid.
@@ -143,6 +148,7 @@ To ensure immediate visual familiarity across analytical and diagnostic modaliti
 | **PVAT RCA** | `Ch 7` | `#ec4899` | `(236, 72, 153)` | Right Coronary Artery pericoronary fat |
 
 ### Synchronized Interfaces
+
 1. **OHIF v3.13 Medical Workstation**: Segment rendering overlays and measurement list labels (`ohif_exporter.py`).
 2. **3D Slicer DICOM-SEG**: Multi-frame DICOM-SEG metadata color categories (`export_segmentation_to_dicom_seg`).
 3. **Clinical Diagnostic Report**: 3-view orthogonal MPR montage (`mpr_montage.png`), PDF vector bar charts, and HTML summary (`clinical_report.py`).
@@ -155,14 +161,17 @@ To ensure immediate visual familiarity across analytical and diagnostic modaliti
 ### The Clinical Problem
 
 In real-world institutional cohorts (such as the Stanford COCA dataset), a single patient study directory frequently contains multiple DICOM series:
+
 - The target 3D cardiac CT series (e.g., 40 to 45 axial slices).
 - A secondary single-slice scout view, localizer, or patient positioning scan (1 slice) stored in the same folder.
 
 When reading the directory via SimpleITK:
+
 ```python
 series_ids = sitk.ImageSeriesReader.GetGDCMSeriesIDs(study_path)
 # series_ids may return: ['1.2.840...scout', '1.2.840...axial_volume']
 ```
+
 Picking the first series ID non-deterministically selected the 1-slice scout view, causing downstream 3D deep learning models and MONAI transforms to throw volume shape errors (`ValueError: Expected 3D volume`).
 
 ### The Robust Resolution
@@ -188,6 +197,7 @@ This ensures 100% deterministic selection of the true 3D cardiac acquisition acr
 The research dashboard works out-of-the-box on any cardiac imaging repository. Supported directory layouts include:
 
 1. **Standard Flat Layout**:
+
    ```text
    /path/to/cohort/
      ├── PATIENT_001/
@@ -196,12 +206,15 @@ The research dashboard works out-of-the-box on any cardiac imaging repository. S
      ├── PATIENT_002/
      └── cardiac_fat_measurements.csv
    ```
+
 2. **Gated / Non-Gated Split (e.g., Stanford COCA)**:
+
    ```text
    /path/to/cohort/
      ├── 0/ ... 499/ (gated cases)
      └── nongated_0/ ... nongated_499/
    ```
+
 3. **Automated Calcium Score Linking**:
    Drop any CSV or Excel file containing participant IDs and Agatston scores (e.g., `calcium_scores.csv`, `coca_agatston.xlsx`) into the cohort root. The engine automatically indexes and matches scores to participants.
 
@@ -215,4 +228,3 @@ Across the Stanford COCA 1,000-case cohort, the pipeline achieved a **99.6% auto
 | **`763`** | Segmentation failure | Directory contained 40 axial CT slices and 1 stray scout slice. | **Resolved** by multi-series max-slice selection. |
 | **`nongated_195`** | DICOM I/O error | Corrupt DICOM metadata: tag `(0018, 0088) SpacingBetweenSlices` is explicitly hardcoded to `0.000000` and `SeriesInstanceUID` is `None` in the raw vendor file, causing SimpleITK C++ exception. | Quarantine / vendor re-export. |
 | **`nongated_210`** | Anatomical localization failure | Severely truncated acquisition: scan contains only 6 slices ($3.0\text{ cm}$ total $Z$-coverage), failing anatomical chamber localization. | Excluded for insufficient $Z$-axis field of view. |
-

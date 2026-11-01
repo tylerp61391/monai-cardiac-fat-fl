@@ -144,19 +144,26 @@ When a user provides a CT scan or participant directory and asks to process and 
 ### Recipe 5: Deploy & Test on Local / Hospital Kubernetes (`k8s/`)
 
 1. **Deploy Clinical Testbed**:
+
    ```bash
    kubectl apply -f k8s/hospital-clinical-testbed.yaml
    ```
+
 2. **Access Web UI via Port-Forward**:
+
    ```bash
    kubectl port-forward svc/orthanc-pacs -n clinical-ai 8043:8042
    ```
+
    Navigate to `http://localhost:8043` in browser.
 3. **Push Patient Study to Kubernetes PACS**:
+
    ```bash
    cardiac-fat-fl push "example_source_dir/0506" --url "http://localhost:8043/dicom-web/studies" --include-ct
    ```
+
 4. **Tear Down**:
+
    ```bash
    kubectl delete -f k8s/hospital-clinical-testbed.yaml --ignore-not-found=true
    ```
@@ -166,16 +173,19 @@ When a user provides a CT scan or participant directory and asks to process and 
 To run the autonomous daemon monitoring an incoming folder for CT scans:
 
 1. **Safe Dry-Run Mode (Testing & Validation without PACS push)**:
+
    ```bash
    cardiac-fat-fl daemon "path/to/inbox" --outbox "path/to/outbox" --dry-run
    ```
 
 2. **Continuous Auto-Routing to Institutional PACS via DICOMweb**:
+
    ```bash
    cardiac-fat-fl daemon "/var/monai/inbox" --outbox "/var/monai/outbox" --archive "/var/monai/archive" --pacs-url "https://pacs.hospital.org/dicom-web/studies"
    ```
 
 3. **Single-Pass (Batch / Cron Mode)**:
+
    ```bash
    cardiac-fat-fl daemon "staging/incoming" --single-pass --dry-run
    ```
@@ -185,9 +195,11 @@ To run the autonomous daemon monitoring an incoming folder for CT scans:
 To generate a Cleerly/HeartFlow-style clinical diagnostic report with 3-view orthogonal MPR snapshots (Axial, Coronal, Sagittal) and 8-compartment color overlays:
 
 1. **CLI Execution**:
+
    ```bash
    cardiac-fat-fl report "path/to/study_dir" --output-dir "path/to/study_dir/report"
    ```
+
 2. **Generated Deliverables**:
    - `cardiac_fat_report.html` (interactive, responsive, printable HTML with embedded base64 MPR montage)
    - `cardiac_fat_report.pdf` (vector-rendered Letter-sized PDF for EHR chart upload)
@@ -204,9 +216,11 @@ To generate a Cleerly/HeartFlow-style clinical diagnostic report with 3-view ort
 To launch the web dashboard for exploring cohorts, clinical metrics, Agatston CAC scores, and correlation analytics:
 
 1. **CLI Execution**:
+
    ```bash
    cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
    ```
+
    *(Or set environment variable `CARDIAC_COHORT_DIR=/path/to/cohort`)*.
 2. **Dashboard Features**:
    - **Embedded OHIF v3.13 Medical Workstation**: Direct routes `/viewer/<pid>/` and `/patient/<pid>/` serving full zero-footprint workstation.
@@ -224,9 +238,11 @@ To launch the web dashboard for exploring cohorts, clinical metrics, Agatston CA
 To benchmark a candidate segmentation method against ground truth or alternative algorithms across a cohort:
 
 1. **CLI Execution**:
+
    ```bash
    cardiac-fat-fl benchmark --cohort-dir "/path/to/cohort" --candidate "eat_pvat.seg.nrrd" --reference "ground_truth.seg.nrrd" -o "benchmark_results.csv"
    ```
+
 2. **Computed Multi-Compartment Metrics**:
    - Dice Similarity Coefficient (DSC) & IoU for all 8 compartments + PVAT Total.
    - Absolute Volume Difference ($\text{cm}^3$) & Relative Volume Error (RVE %).
@@ -240,26 +256,36 @@ To benchmark a candidate segmentation method against ground truth or alternative
 To export or push clinical biomarkers and diagnostic reports directly into hospital EHR systems:
 
 1. **CLI Export to File**:
+
    ```bash
    cardiac-fat-fl fhir-export "path/to/study_dir" -o "path/to/study_dir/cardiac_fat_fhir.json"
    ```
+
 2. **Push to Institutional FHIR R4 Server (Epic, Cerner, HAPI FHIR)**:
+
    ```bash
    cardiac-fat-fl push "path/to/study_dir" --fhir-url "https://fhir.hospital.org/r4" --fhir-token "$OAUTH_BEARER_TOKEN"
    ```
+
 3. **Simultaneous PACS + EHR Submission**:
+
    ```bash
    cardiac-fat-fl push "path/to/study_dir" --url "http://pacs.hospital.org:8042/dicom-web/studies" --fhir-url "https://fhir.hospital.org/r4" --fhir-token "$OAUTH_TOKEN"
    ```
+
 4. **Self-Contained Mock FHIR Server & Sandbox**:
    - Built-in on the Research Dashboard (`http://127.0.0.1:8050/r4`):
+
      ```bash
      cardiac-fat-fl push "example_source_dir/0506" --fhir-url "http://127.0.0.1:8050/r4"
      ```
+
    - Or launch standalone server on custom port:
+
      ```bash
      cardiac-fat-fl fhir-server --port 8080 --storage-dir "fhir_storage"
      ```
+
    - Query ingested observations: `http://127.0.0.1:8050/r4/Observation?patient=0506`
    - CapabilityStatement: `http://127.0.0.1:8050/r4/metadata`
    - Sandbox status summary: `http://127.0.0.1:8050/r4/_sandbox`
@@ -274,9 +300,11 @@ To export or push clinical biomarkers and diagnostic reports directly into hospi
 To simulate multi-hospital federated learning with zero DICOM transfer (FedProx proximal loss, FedBN local batch norm retention, and CrossSiteModelEval cross-site validation):
 
 1. **CLI Execution**:
+
    ```bash
    cardiac-fat-fl federated-simulate --n-clients 2 --threads 2 --rounds 2
    ```
+
 2. **Options**:
    - `--job-dir "jobs/cardiac_fat_fl"`: Custom NVFLARE job specification folder (default: `jobs/cardiac_fat_fl`).
    - `--n-clients 2`: Number of participating hospital client sites.

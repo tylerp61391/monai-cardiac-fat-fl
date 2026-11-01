@@ -42,6 +42,7 @@ kubectl port-forward svc/orthanc-pacs -n clinical-ai 8043:8042
 ```
 
 Open your browser to:
+
 - **Orthanc PACS Explorer**: [http://localhost:8043](http://localhost:8043)
 - **DICOMweb Endpoint**: `http://localhost:8043/dicom-web/studies`
 
@@ -66,4 +67,3 @@ To cleanly delete the namespace and all associated pods, services, and jobs (wit
 ```bash
 kubectl delete -f k8s/hospital-clinical-testbed.yaml --ignore-not-found=true
 ```
-

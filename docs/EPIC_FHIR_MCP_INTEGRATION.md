@@ -7,6 +7,7 @@ This guide details the architecture for integrating `monai-cardiac-fat-fl` direc
 ## 1. Executive Summary
 
 `monai-cardiac-fat-fl` bridges the gap between advanced 3D cardiovascular AI and hospital EHR systems. Through FHIR R4 interoperability:
+
 - **Discrete AI Biomarkers** (EAT volume in $\text{cm}^3$, vessel-specific PVAT attenuation in HU, and CRISP-CT inflammation status) flow directly into Epic Flowsheets, In Basket alerts, and Clinical Decision Support (CDS) rules.
 - **Diagnostic Reports & Vector PDFs** are automatically filed into Epic Chart Review (Radiology/Cardiology tabs) via `DiagnosticReport` and `DocumentReference`.
 - **open.epic MCP Server** empowers AI agents and developers to query Epic's live FHIR data dictionary, schema constraints, and OAuth 2.0 SMART on FHIR specifications dynamically.
@@ -33,6 +34,7 @@ Add the open.epic server to your client's MCP configuration:
 ```
 
 ### AI Agent Capabilities Powered by open.epic MCP
+
 1. **Dynamic Schema Validation**: AI agents inspect Epic's US Core FHIR profiles (mandatory vs. optional elements, Must Support flags, cardinality).
 2. **Coding Terminology Lookup**: Verifies LOINC, RadLex, SNOMED-CT, and UCUM units against Epic's supported terminology tables.
 3. **OAuth 2.0 Backend Services Verification**: Inspects Epic's asymmetric JWT signature requirements, JWKS endpoint formats, and token endpoints (`/oauth2/token`).
@@ -44,7 +46,7 @@ Add the open.epic server to your client's MCP configuration:
 
 `monai-cardiac-fat-fl` outputs map to standard Epic US Core R4 resources:
 
-```
+```text
                                ┌────────────────────────────────────────┐
                                │   Cardiac CT Study & AI Segmentation   │
                                │      (DICOM-SEG, DICOM-SR, PDF)        │
@@ -344,6 +346,7 @@ Epic uses OAuth 2.0 with asymmetric private-key JWT assertions for automated sys
 ### Testing & Validation with open.epic MCP
 
 AI agents running with the open.epic MCP server can connect directly to this local endpoint:
+
 ```bash
 # Push study results directly to local mock server
 cardiac-fat-fl push "example_source_dir/0506" --fhir-url "http://127.0.0.1:8050/r4"
@@ -353,4 +356,3 @@ curl "http://127.0.0.1:8050/r4/_sandbox"
 curl "http://127.0.0.1:8050/r4/Observation?patient=0506"
 curl "http://127.0.0.1:8050/r4/DiagnosticReport?patient=0506"
 ```
-

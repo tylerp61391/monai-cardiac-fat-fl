@@ -130,6 +130,7 @@ cardiac-fat-fl report /path/to/participant_dir
 ```
 
 #### Standard Clinical Deliverables Produced
+
 - `cardiac_fat_report.html`: Interactive, responsive, printable diagnostic report with embedded base64 MPR montage.
 - `cardiac_fat_report.pdf`: Vector-rendered Letter-sized diagnostic document formatted for EHR chart attachment.
 - `eat_pvat_report.dcm`: Standard **DICOM Encapsulated PDF (SOP Class `1.2.840.10008.5.1.4.1.1.104.1`)** preserving patient demographics, accession numbers, and study instance UIDs for direct PACS archiving.
@@ -165,7 +166,7 @@ flowchart LR
      - **PVAT Attenuation**: Vessel-specific mean HU (LAD, LCX, RCA) coded under LOINC / RadLex codes (`RID49533`) in $\text{HU}$ with SNOMED-CT arterial body sites.
    - Stored as discrete numerical observations in the patient's EHR flowsheets for longitudinal trending and automated Clinical Decision Support (CDS Hooks).
 
-#### Native CLI & Web Export for HL7 FHIR R4:
+#### Native CLI & Web Export for HL7 FHIR R4
 
 ```bash
 # 1. Export standard FHIR R4 transaction or collection bundle JSON to disk
@@ -180,7 +181,7 @@ cardiac-fat-fl push "path/to/study_dir" --url "http://pacs.hospital.org:8042/dic
 
 *Interactive Dashboard*: Each participant in the Research Dashboard (`:8050`) features an on-demand **FHIR R4 Bundle** download button in the Case Deep Dive modal, served by REST endpoint `/api/case/<pid>/fhir`. See [docs/EPIC_FHIR_MCP_INTEGRATION.md](docs/EPIC_FHIR_MCP_INTEGRATION.md) for full architecture and Epic Model Context Protocol (MCP) details.
 
-#### Self-Contained HL7 FHIR R4 Mock Server & Sandbox:
+#### Self-Contained HL7 FHIR R4 Mock Server & Sandbox
 
 `monai-cardiac-fat-fl` includes an in-process, zero-dependency, standards-compliant HL7 FHIR R4 mock server and clinical sandbox with full CapabilityStatement (`GET /r4/metadata`), atomic transaction bundle processing with reference resolution (`POST /r4`), discrete resource CRUD, and search APIs (`GET /r4/Observation?patient=<id>`):
 
@@ -208,10 +209,10 @@ cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
 ```
 
 - **Cohort Research Analytics**:
-  - Six clinical KPI cards: Total Cohort $N$, Segmented $N$ and % coverage, Agatston CAC scored $N$, Cohort Median EAT Volume ($	ext{cm}^3$), Mean PVAT HU, and CRISP-CT Active Vascular Inflammation prevalence.
+  - Six clinical KPI cards: Total Cohort $N$, Segmented $N$ and % coverage, Agatston CAC scored $N$, Cohort Median EAT Volume ($ ext{cm}^3$), Mean PVAT HU, and CRISP-CT Active Vascular Inflammation prevalence.
   - Interactive Chart.js visualizations:
     1. *EAT Total Volume vs. Agatston Calcium Score* (scatter plot with clinical risk stratification).
-    2. *PVAT Mean Attenuation vs. Agatston CAC Score* (scatter plot with CRISP-CT $-70.1	ext{ HU}$ threshold line).
+    2. *PVAT Mean Attenuation vs. Agatston CAC Score* (scatter plot with CRISP-CT $-70.1 ext{ HU}$ threshold line).
     3. *Adipose Volume Distribution by Compartment* (EAT LA, LV, RA, RV, PVAT LAD, LCX, RCA with canonical synchronized palette).
     4. *Agatston CAC Risk Tier Breakdown* (Zero, Minimal, Mild, Moderate, Severe).
 - **Embedded OHIF v3.13 Medical Workstation Integration**:
@@ -234,6 +235,7 @@ cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
   - Checkpoint table with 1-click download for consensus `.pt` weights (`/api/federated/download/<filename>`).
   - Monospace real-time execution audit console.
 - **Comprehensive Guide**: See [`docs/RESEARCH_DASHBOARD_AND_OHIF_WORKSTATION.md`](docs/RESEARCH_DASHBOARD_AND_OHIF_WORKSTATION.md) for full architecture and clinical cohort translation specs.
+
 ### 6. Extensible Segmentation Method Benchmarking & DICE Engine
 
 To evaluate novel architectures, distillations, or candidate methods against ground truth or foundational models over time, `monai-cardiac-fat-fl` provides an extensible 3D segmentation benchmarking framework (`cardiac-fat-fl benchmark`):
@@ -899,6 +901,7 @@ The test suite validates 89 automated unit and integration tests across all modu
 - **Publication-Grade Visualizations & 300 DPI Figure Export**: Multi-panel composite figures, omnibus ANOVA & Kruskal-Wallis hypothesis testing, post-hoc pairwise Mann-Whitney U tests with Bonferroni correction, and bivariate linear regression.
 - **Segmentation Benchmarking & DICE Engine**: Multi-compartment DSC, IoU, RVE%, and Hausdorff surface distances across candidate methods.
 - **Epic on FHIR & open.epic MCP**: Standard US Core R4 resource mappings (Observation, DiagnosticReport, DocumentReference) and agentic developer workflows detailed in [docs/EPIC_FHIR_MCP_INTEGRATION.md](docs/EPIC_FHIR_MCP_INTEGRATION.md).
+
 ---
 
 ## Security & Healthcare Compliance

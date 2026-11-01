@@ -45,8 +45,11 @@ Thumbs.db
 models/*.hdf5
 models/*.onnx
 models/*.pt
+models/**/*.pt
 models/*.pth
+models/**/*.pth
 models/wholeBody_ct_segmentation/
+models/federated/
 
 # Environment secrets & configuration
 .env

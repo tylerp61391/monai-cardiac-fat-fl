@@ -152,7 +152,6 @@ Conforming to the **MONAI Application Package (MAP)** specification and NVIDIA H
 
 ### C. Standalone CLI & Development Mode
 
-
 ```bash
 # Execute the MONAI Deploy 3-operator DAG directly on an existing CT study:
 cardiac-fat-fl map-run -i "example_source_dir/0506" -o "scratch/map_output"
@@ -239,6 +238,7 @@ jobs/cardiac_fat_fl/
 ### C. Client Execution Engine (`CardiacFatTrainer`)
 
 The `CardiacFatTrainer(Executor)` in [`fl_client_algo.py`](../src/cardiac_fat_fl/fl_client_algo.py) connects NVFLARE’s task execution lifecycle directly to MONAI:
+
 - **`train`**: Deserializes global weights from DXO (`DataKind.WEIGHTS`), executes local training with FedProx proximal loss ($\mu = 0.01$), retains local FedBN normalization layers (`BatchNorm3d`, `InstanceNorm3d`), and packages updated convolutional/linear weights back into a DXO.
 - **`validate`**: Evaluates local holdout CT volumes against incoming global weights, computing quantitative validation Dice and Loss (`DataKind.METRICS`).
 - **`submit_model`**: Extracts local site model checkpoints for central evaluation.
@@ -254,6 +254,7 @@ The `CardiacFatTrainer(Executor)` in [`fl_client_algo.py`](../src/cardiac_fat_fl
 ### E. Enterprise OS Resilience & Windows Self-Healing
 
 The [`federated_simulator.py`](../src/cardiac_fat_fl/federated_simulator.py) module includes `ensure_nvflare_windows_compatibility()` to patch platform-specific hurdles on Windows:
+
 1. **NTFS Directory Locks**: Patches `SimulatorRunner._cleanup_workspace()` to clean contents rather than attempting to delete the process's own working directory (`PermissionError: [WinError 32]`).
 2. **POSIX `setsid` Incompatibility**: Replaces Linux-specific `os.setsid` in subprocess creation with `CREATE_NEW_PROCESS_GROUP` while preserving Windows backslash path semantics.
 3. **Safe Storage Deletion**: Enforces `ignore_errors=True` in `SimulatorDeployer.close()`.
@@ -289,4 +290,3 @@ The interactive Research Dashboard (`cardiac-fat-fl dashboard --port 8050`) prov
    - Model weights mounted at runtime (`/opt/holoscan/models/`) are verified against pinned SHA-256 digests in memory before execution, preventing supply-chain poisoning.
 3. **FDA SaMD Design History**:
    - Conforms to IEC 62304 software safety standards and ISO 14971 medical device risk management documented in [`docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md`](regulatory/FDA_SAMD_REGULATORY_DOSSIER.md).
-
