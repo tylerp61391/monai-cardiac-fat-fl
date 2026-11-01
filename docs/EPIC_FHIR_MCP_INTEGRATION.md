@@ -434,4 +434,3 @@ Add the server to your client's configuration (e.g., `claude_desktop_config.json
 | `cardiac_quantify_study` | `study_path`, `save_seg`, `push_pacs_url`, `push_fhir_url` | Triggers automated 3D SegResNet segmentation and adipose quantification with optional PACS and EHR filing. |
 | `cardiac_get_cohort_summary` | `cohort_dir` (optional) | Returns cohort-wide Agatston CAC tier distributions, mean EAT burden, and CRISP-CT inflammation rates. |
 | `open_epic_lookup_code` | `concept` ('eat', 'pvat', 'diagnostic_report', 'all') | Inspects open.epic terminology standards, LOINC/RadLex codes, and US Core profiles. |
-
