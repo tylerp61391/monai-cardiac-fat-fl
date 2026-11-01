@@ -24,7 +24,7 @@ This document provides the foundational **Design History File (DHF)** architectu
 
 ## 2. IEC 62304 Requirements & Verification Traceability Matrix
 
-Every clinical, mathematical, and cybersecurity requirement is traced directly to its source module and automated verification test in the 34-test `pytest` suite:
+Every clinical, mathematical, and cybersecurity requirement is traced directly to its source module and automated verification test in the 89-test `pytest` suite:
 
 | Req ID | Requirement Description | Source Implementation | Automated Verification Test (`pytest`) | Risk ID |
 | :--- | :--- | :--- | :--- | :--- |
@@ -39,6 +39,8 @@ Every clinical, mathematical, and cybersecurity requirement is traced directly t
 | **REQ-009** | **Secure PACS Transmission**: Enterprise TLS 1.3 with custom hospital Root CA bundle verification for DICOMweb STOW-RS. | `pacs_client.py` (`push_to_dicomweb_stow`), `cli.py` | `test_pacs_client.py::test_push_to_dicomweb_stow_custom_ca_bundle` | `HAZ-007` |
 | **REQ-010** | **Privacy-Preserving Federated Learning**: Zero patient image transfer; local `FedBN` isolation; exact Welford moment aggregation. | `fl_client_algo.py`, `fl_stats_executor.py`, `model.py` | `test_fl_client.py::test_nvflare_stats_executor_and_multi_site_aggregation` | `HAZ-008` |
 | **REQ-011** | **Host Resource & OOM Protection**: Automatic hardware profiling and worker concurrency clamping to prevent workstation crashes. | `hardware.py` (`detect_hardware`, `validate_worker_concurrency`) | `test_hardware.py::test_validate_worker_concurrency_clamps_unsafe_requests` | `HAZ-009` |
+| **REQ-012** | **Multi-Center Federated Distillation & Cross-Site Eval**: Turnkey SOTA NVIDIA FLARE 2.5+ simulation, `CardiacFatTrainer` executor, and consensus model evaluation. | `fl_client_algo.py` (`CardiacFatTrainer`), `federated_simulator.py` | `test_fl_client.py::test_cardiac_fat_trainer_executor`, `test_federated_simulator_end_to_end` | `HAZ-008` |
+| **REQ-013** | **Clinical Interoperability (PACS & EHR)**: DICOMweb STOW-RS, DIMSE C-STORE, HL7 FHIR R4 Bundle generator, and automated autonomous PACS watchdog daemon. | `pacs_client.py`, `fhir_client.py`, `pacs_daemon.py` | `test_fhir_client.py`, `test_pacs_client.py`, `test_pacs_daemon.py` | `HAZ-007` |
 
 ---
 
@@ -69,7 +71,7 @@ In accordance with the FDA's finalized guidance on *Marketing Submission Recomme
    - Model training is orchestrated via `CardiacFatClientAlgo` (`src/cardiac_fat_fl/fl_client_algo.py`) using `FedProx` ($\mu > 0$ proximal regularization to prevent catastrophic forgetting) and `FedBN` (local normalization layer isolation).
    - Cohort drift and subgroup coverage are monitored via `CardiacFatStatsExecutor` (`src/cardiac_fat_fl/fl_stats_executor.py`) using exact parallel Welford moments across scanner manufacturers and gating protocols.
 3. **Automated Acceptance & Rollback Gates**:
-   - Candidate global checkpoints must pass all 34 automated regression tests (`pytest`) and achieve:
+   - Candidate global checkpoints must pass all 89 automated regression tests (`pytest`) and achieve:
      - Volumetric Dice similarity coefficient $\ge 0.90$ across all 8 compartments on locked multi-vendor reference cohorts (MGH benchmark + Stanford AIMI COCA).
      - Pearson correlation $r \ge 0.98$ and mean bias within $\pm 2.0\,\text{cm}^3$ / $\pm 1.5\,\text{HU}$ against the frozen reference ONNX baseline (`cardiac-fat-fl compare-models`).
    - Approved checkpoints are assigned a new cryptographic SHA-256 digest in `KNOWN_MODEL_SHA256` and recorded in `models/checksums.sha256`.

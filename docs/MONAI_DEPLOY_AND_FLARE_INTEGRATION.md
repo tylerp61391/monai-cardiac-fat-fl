@@ -207,7 +207,60 @@ spec:
 
 ---
 
-## 5. Security, Privacy & Regulatory Traceability
+## 5. Turnkey SOTA NVIDIA FLARE 2.5+ Simulator & Multi-Hospital Execution
+
+To validate multi-center continuous learning without requiring physical multi-hospital cluster infrastructure, the framework includes a turnkey NVIDIA FLARE simulation engine and production-ready job package (`jobs/cardiac_fat_fl/`):
+
+### A. Turnkey Simulation CLI Command
+
+```bash
+# Execute 2-client federated distillation across 2 rounds with consensus checkpointing
+cardiac-fat-fl federated-simulate --n-clients 2 --threads 2 --rounds 2
+```
+
+- `--job-dir`: Path to the job folder (default: `jobs/cardiac_fat_fl`).
+- `--n-clients`: Number of simulated hospital client sites (default: 2).
+- `--threads`: Number of concurrent simulator client execution threads.
+- `--rounds`: Dynamic aggregation round count override.
+- `--workspace`: Workspace directory for logs, metrics, and consensus checkpoints.
+- `--gpu`: Optional comma-separated GPU device IDs (e.g. `0` or `0,1`) or CPU mode.
+
+### B. Standard Job Package Layout (`jobs/cardiac_fat_fl/`)
+
+```text
+jobs/cardiac_fat_fl/
+├── meta.json                         # Job metadata (min_clients: 2, byoc: true, deploy_map: @ALL)
+└── app/
+    └── config/
+        ├── config_fed_server.json    # Server workflows: ScatterAndGather, Persistor, Aggregator, ModelLocator
+        └── config_fed_client.json    # Client executors: CardiacFatTrainer, CardiacFatStatsExecutor
+```
+
+### C. Client Execution Engine (`CardiacFatTrainer`)
+
+The `CardiacFatTrainer(Executor)` in [`fl_client_algo.py`](../src/cardiac_fat_fl/fl_client_algo.py) connects NVFLARE’s task execution lifecycle directly to MONAI:
+- **`train`**: Deserializes global weights from DXO (`DataKind.WEIGHTS`), executes local training with FedProx proximal loss ($\mu = 0.01$), retains local FedBN normalization layers (`BatchNorm3d`, `InstanceNorm3d`), and packages updated convolutional/linear weights back into a DXO.
+- **`validate`**: Evaluates local holdout CT volumes against incoming global weights, computing quantitative validation Dice and Loss (`DataKind.METRICS`).
+- **`submit_model`**: Extracts local site model checkpoints for central evaluation.
+
+### D. Server Orchestration & Cross-Site Evaluation
+
+- **`ScatterAndGather` Workflow**: Coordinates round-by-round weight distribution and collection.
+- **`PTFileModelPersistor`**: Checkpoints global consensus model weights (`SRV_FL_global_model.pt`).
+- **`AccumulateWeightedAggregator`**: Aggregates site parameter updates.
+- **`IntimeModelSelector`**: Selects best checkpoint based on `val_dice`.
+- **`PTFileModelLocator` & `CrossSiteModelEval`**: Coordinates automated post-training cross-site validation of the consensus model across all client datasets.
+
+### E. Enterprise OS Resilience & Windows Self-Healing
+
+The [`federated_simulator.py`](../src/cardiac_fat_fl/federated_simulator.py) module includes `ensure_nvflare_windows_compatibility()` to patch platform-specific hurdles on Windows:
+1. **NTFS Directory Locks**: Patches `SimulatorRunner._cleanup_workspace()` to clean contents rather than attempting to delete the process's own working directory (`PermissionError: [WinError 32]`).
+2. **POSIX `setsid` Incompatibility**: Replaces Linux-specific `os.setsid` in subprocess creation with `CREATE_NEW_PROCESS_GROUP` while preserving Windows backslash path semantics.
+3. **Safe Storage Deletion**: Enforces `ignore_errors=True` in `SimulatorDeployer.close()`.
+
+---
+
+## 6. Security, Privacy & Regulatory Traceability
 
 1. **HIPAA & GDPR Physical Data Isolation**:
    - Patient Health Information (PHI) and raw high-resolution CT volumes remain strictly locked inside institutional boundaries.

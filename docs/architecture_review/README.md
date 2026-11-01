@@ -16,7 +16,7 @@ Next-generation modernization of the foundational Harvard / MGH `CardiacFatQuant
 ![Slide 1 - Platform Overview](page_01_opt.jpg)
 
 - **3 Core Pillars**: 8 Adipose Compartments ($[-190, -30]\,\text{HU}$ with 10 mm radial dilation), Zero-DICOM Federated Learning (FedProx + FedBN + Welford), and Embedded OHIF v3.13 Workstation with PACS Archive Push.
-- **Benchmark Highlights**: $\sim 10.1\,\text{s}$ / scan on RTX 4090 ($15\times$ speedup vs. foundational CPU), $\Delta = 0.00\,\text{cm}^3 / \text{HU}$ parity, $996/1,000$ Stanford COCA cohort scale, and 34/34 automated CI tests passing.
+- **Benchmark Highlights**: $\sim 10.1\,\text{s}$ / scan on RTX 4090 ($15\times$ speedup vs. foundational CPU), $\Delta = 0.00\,\text{cm}^3 / \text{HU}$ parity, $998/1,000$ Stanford COCA cohort scale, and 89/89 automated pytest tests passing.
 
 ---
 
@@ -160,12 +160,12 @@ Training unified 3D models and computing exact multi-center population moments w
 
 ## Slide 14: Clinical Benchmarks: Reference Cohort & Stanford AIMI COCA
 
-Validation across the Harvard/MGH reference scans and the full Stanford AIMI COCA multi-vendor cohort ($N = 996$).
+Validation across the Harvard/MGH reference scans and the full Stanford AIMI COCA multi-vendor cohort ($N = 998$).
 
 ![Slide 14 - Clinical Benchmarks](page_14_opt.jpg)
 
 - **Harvard/MGH Benchmark**: Case 0506 ($53.32\,\text{cm}^3$, $-66.3\,\text{HU}$), Case 0909 ($77.13\,\text{cm}^3$, $-78.6\,\text{HU}$), Case 0987 ($51.65\,\text{cm}^3$, $-72.9\,\text{HU}$).
-- **Stanford AIMI COCA**: 996/1,000 quantified (785 ECG-gated + 211 non-gated across Siemens, GE, Philips, and Toshiba); EAT-PVAT volume correlation $r = 0.948$ ($p < 10^{-15}$).
+- **Stanford AIMI COCA**: 998/1,000 quantified (786 ECG-gated + 212 non-gated across Siemens, GE, Philips, and Toshiba); EAT-PVAT volume correlation $r = 0.948$ ($p < 10^{-15}$).
 
 ---
 
