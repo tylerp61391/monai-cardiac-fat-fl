@@ -180,6 +180,22 @@ cardiac-fat-fl push "path/to/study_dir" --url "http://pacs.hospital.org:8042/dic
 
 *Interactive Dashboard*: Each participant in the Research Dashboard (`:8050`) features an on-demand **FHIR R4 Bundle** download button in the Case Deep Dive modal, served by REST endpoint `/api/case/<pid>/fhir`. See [docs/EPIC_FHIR_MCP_INTEGRATION.md](docs/EPIC_FHIR_MCP_INTEGRATION.md) for full architecture and Epic Model Context Protocol (MCP) details.
 
+#### Self-Contained HL7 FHIR R4 Mock Server & Sandbox:
+
+`monai-cardiac-fat-fl` includes an in-process, zero-dependency, standards-compliant HL7 FHIR R4 mock server and clinical sandbox with full CapabilityStatement (`GET /r4/metadata`), atomic transaction bundle processing with reference resolution (`POST /r4`), discrete resource CRUD, and search APIs (`GET /r4/Observation?patient=<id>`):
+
+```bash
+# 1. Push study directly into the embedded FHIR mock server running on the research dashboard (:8050)
+cardiac-fat-fl push "example_source_dir/0506" --fhir-url "http://127.0.0.1:8050/r4"
+
+# 2. Or launch a standalone FHIR R4 mock server on a custom port
+cardiac-fat-fl fhir-server --port 8080 --storage-dir "fhir_storage"
+
+# 3. Query ingested observations or inspect sandbox:
+curl "http://127.0.0.1:8050/r4/Observation?patient=0506"
+curl "http://127.0.0.1:8050/r4/_sandbox"
+```
+
 ---
 
 ### 5. Interactive Cardiac Research Dashboard & Embedded OHIF Workstation

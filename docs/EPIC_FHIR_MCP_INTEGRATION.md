@@ -327,19 +327,30 @@ Epic uses OAuth 2.0 with asymmetric private-key JWT assertions for automated sys
 
 ---
 
-## 5. Next Implementation Recipe (Option 3 Roadmap)
+## 5. Self-Contained HL7 FHIR R4 Mock Server & Sandbox (`fhir_server.py`)
 
-1. **`fhir_client.py` Source Module**:
-   - `export_case_to_fhir_bundle(study_dir, metrics, patient_id)`: Assembles FHIR R4 JSON bundle (`Observation`, `DiagnosticReport`, `DocumentReference`).
-   - `push_to_fhir_server(bundle, fhir_url, token)`: Transmits transaction bundle via HTTP POST to institutional FHIR endpoint.
-2. **CLI Integration**:
-   ```bash
-   # Export FHIR R4 JSON bundle to disk
-   cardiac-fat-fl fhir-export "path/to/study" -o "path/to/study/fhir_bundle.json"
+`monai-cardiac-fat-fl` provides an in-process, zero-dependency, standards-compliant HL7 FHIR R4 mock server and sandbox (`src/cardiac_fat_fl/fhir_server.py`) allowing offline validation of all FHIR transactions and open.epic MCP tools without requiring external network connectivity or live Epic test environment credentials:
 
-   # Push study results directly to hospital FHIR server
-   cardiac-fat-fl push "path/to/study" --fhir-url "https://fhir.hospital.org/r4" --bearer-token "<JWT>"
-   ```
-3. **Epic open.epic MCP Hook**:
-   - Provides live validation against Epic's test sandbox (`https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4`).
+### Features & Capabilities
+
+- **CapabilityStatement (`GET /r4/metadata`)**: Formatted for US Core 3.1.1 and SMART-on-FHIR conformance.
+- **Transaction & Batch Ingestion (`POST /r4` / `POST /r4/Bundle`)**: Atomically processes transaction bundles, resolves internal `urn:uuid:` references, and returns standard `transaction-response` bundles (`201 Created`).
+- **Discrete Resource CRUD & Search**: Full search support for `Observation` (by patient, LOINC `84245-0`, RadLex `RID49533`), `DiagnosticReport`, `DocumentReference`, and `Patient`.
+- **Reference Resolution**: Automatically translates temporary bundle UUIDs (`urn:uuid:<uuid>`) into canonical REST references (`Observation/<id>`) in diagnostic report results.
+- **Dual Deployment Modes**:
+  1. **Embedded in Research Dashboard**: Automatically active at `http://127.0.0.1:8050/r4`.
+  2. **Standalone Server**: `cardiac-fat-fl fhir-server --port 8080 --storage-dir "fhir_storage"`.
+
+### Testing & Validation with open.epic MCP
+
+AI agents running with the open.epic MCP server can connect directly to this local endpoint:
+```bash
+# Push study results directly to local mock server
+cardiac-fat-fl push "example_source_dir/0506" --fhir-url "http://127.0.0.1:8050/r4"
+
+# Query sandbox state
+curl "http://127.0.0.1:8050/r4/_sandbox"
+curl "http://127.0.0.1:8050/r4/Observation?patient=0506"
+curl "http://127.0.0.1:8050/r4/DiagnosticReport?patient=0506"
+```
 

@@ -31,6 +31,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `clinical_report.py` | 819 | `evaluate_clinical_risk`, `generate_mpr_snapshot`, `generate_clinical_report_html`, `generate_clinical_report_pdf`, `encapsulate_pdf_to_dicom`, `export_clinical_imaging_report` | SOTA Cleerly/HeartFlow-style clinical imaging report (risk stratification, 3-view orthogonal MPR snapshots with 8-compartment overlays, vector PDF, and DICOM Encapsulated PDF SOP `.104.1`). |
 | `dicom_sr.py` | 345 | `create_cardiac_fat_sr`, `export_cardiac_fat_sr` | DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`) structured report builder using SNOMED-CT / LOINC / UCUM codes. |
 | `fhir_client.py` | 714 | `build_eat_volume_observation`, `build_pvat_attenuation_observation`, `build_cardiac_fat_diagnostic_report`, `build_cardiac_fat_document_reference`, `build_cardiac_fat_fhir_bundle`, `push_to_fhir_server`, `export_fhir_bundle`, `create_bundle_for_study` | HL7 FHIR R4 interoperability client and bundle generator (Epic US Core DiagnosticReport, DocumentReference, LOINC 84245-0 discrete EAT observation, RadLex RID49533 PVAT attenuation, open.epic MCP compatibility). |
+| `fhir_server.py` | 650 | `FHIRStore`, `create_fhir_blueprint`, `create_fhir_app`, `launch_fhir_server`, `process_transaction_bundle` | Self-contained HL7 FHIR R4 mock server & sandbox (US Core / Epic CapabilityStatement, atomic transaction bundle ingestion, reference rewriting, discrete CRUD/search, and dashboard :8050/r4 embedding). |
 | `pacs_client.py` | 349 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
 | `pacs_daemon.py` | 407 | `DaemonConfig`, `PACSWatchdogDaemon`, `is_study_settled`, `find_pending_studies`, `process_study` | Automated clinical PACS watchdog and auto-router daemon (zero-click processing, file settling check, dry-run mode, and fault-tolerant error quarantine). |
 | `ohif_exporter.py` | 2299 | **L1–603**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L604–2021**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2022–2299**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
@@ -250,9 +251,21 @@ To export or push clinical biomarkers and diagnostic reports directly into hospi
    ```bash
    cardiac-fat-fl push "path/to/study_dir" --url "http://pacs.hospital.org:8042/dicom-web/studies" --fhir-url "https://fhir.hospital.org/r4" --fhir-token "$OAUTH_TOKEN"
    ```
-4. **Interactive Dashboard 1-Click Export**:
+4. **Self-Contained Mock FHIR Server & Sandbox**:
+   - Built-in on the Research Dashboard (`http://127.0.0.1:8050/r4`):
+     ```bash
+     cardiac-fat-fl push "example_source_dir/0506" --fhir-url "http://127.0.0.1:8050/r4"
+     ```
+   - Or launch standalone server on custom port:
+     ```bash
+     cardiac-fat-fl fhir-server --port 8080 --storage-dir "fhir_storage"
+     ```
+   - Query ingested observations: `http://127.0.0.1:8050/r4/Observation?patient=0506`
+   - CapabilityStatement: `http://127.0.0.1:8050/r4/metadata`
+   - Sandbox status summary: `http://127.0.0.1:8050/r4/_sandbox`
+5. **Interactive Dashboard 1-Click Export**:
    In the Research Dashboard (`:8050`), open any participant via **Deep Dive** in the Case Explorer and click **FHIR R4 Bundle** to download a standards-compliant JSON bundle on-demand, or query `http://127.0.0.1:8050/api/case/<pid>/fhir`.
-   See [`docs/EPIC_FHIR_MCP_INTEGRATION.md`](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2/cardiofat/docs/EPIC_FHIR_MCP_INTEGRATION.md) for full Epic on FHIR and open.epic Model Context Protocol documentation.
+   See [`docs/EPIC_FHIR_MCP_INTEGRATION.md`](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2\cardiofat\docs\EPIC_FHIR_MCP_INTEGRATION.md) for full Epic on FHIR and open.epic Model Context Protocol documentation.
 
 ---
 

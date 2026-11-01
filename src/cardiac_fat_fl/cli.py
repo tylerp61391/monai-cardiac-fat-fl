@@ -1579,6 +1579,43 @@ def fhir_export_cmd(
         raise typer.Exit(code=1)
 
 
+@app.command("fhir-server")
+def fhir_server(
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        "-h",
+        help="Host interface to bind the FHIR mock server.",
+    ),
+    port: int = typer.Option(
+        8080,
+        "--port",
+        "-p",
+        help="Port to serve the HL7 FHIR R4 Mock Server.",
+    ),
+    storage_dir: Optional[Path] = typer.Option(
+        None,
+        "--storage-dir",
+        "-s",
+        help="Optional directory to persist ingested FHIR resources as JSON files.",
+    ),
+    no_browser: bool = typer.Option(
+        False,
+        "--no-browser",
+        help="Do not automatically launch web browser to CapabilityStatement.",
+    ),
+) -> None:
+    """Launch the self-contained HL7 FHIR R4 Mock Server & Epic on FHIR Sandbox."""
+    from cardiac_fat_fl.fhir_server import launch_fhir_server
+
+    launch_fhir_server(
+        host=host,
+        port=port,
+        storage_dir=storage_dir,
+        auto_open=not no_browser,
+    )
+
+
 if __name__ == "__main__":
     app()
 

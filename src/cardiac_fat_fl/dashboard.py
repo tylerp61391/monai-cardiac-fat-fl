@@ -303,6 +303,11 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
     global _ACTIVE_COHORT
 
     app = Flask(__name__)
+
+    # Mount HL7 FHIR R4 Mock Server & Sandbox Blueprint
+    from cardiac_fat_fl.fhir_server import create_fhir_blueprint, get_default_fhir_store
+    app.register_blueprint(create_fhir_blueprint(), url_prefix="/r4")
+
     target_dir = Path(cohort_dir).resolve() if cohort_dir else get_default_cohort_dir()
 
     try:
@@ -435,6 +440,22 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             return jsonify(bundle)
         except Exception as e:
             return jsonify({"error": f"Failed to generate FHIR bundle: {e}"}), 500
+
+    @app.route("/api/case/<pid>/fhir_sandbox", methods=["GET"])
+    def get_case_fhir_sandbox(pid: str):
+        """Retrieve ingested FHIR sandbox resources for a given participant."""
+        from cardiac_fat_fl.fhir_server import get_default_fhir_store
+        store = get_default_fhir_store()
+        observations = store.search("Observation", {"patient": pid})
+        diagnostic_reports = store.search("DiagnosticReport", {"patient": pid})
+        doc_refs = store.search("DocumentReference", {"patient": pid})
+        return jsonify({
+            "participant_id": pid,
+            "observations": observations,
+            "diagnostic_reports": diagnostic_reports,
+            "document_references": doc_refs,
+            "total_ingested": len(observations) + len(diagnostic_reports) + len(doc_refs),
+        })
 
     def _serve_ohif_page(pid: str):
         if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
@@ -1449,6 +1470,9 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="flex items-center gap-2">
           <a id="modalFhirBtn" href="#" target="_blank" download class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 shadow transition">
             <i class="fa-solid fa-fire text-amber-300"></i> FHIR R4 Bundle
+          </a>
+          <a id="modalFhirSandboxLink" href="#" target="_blank" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sky-300 font-medium text-xs flex items-center gap-1.5 shadow transition">
+            <i class="fa-solid fa-server text-sky-400"></i> FHIR Sandbox (/r4)
           </a>
           <a id="modalOhifBtn" href="#" target="_blank" class="hidden px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs items-center gap-1.5 shadow transition">
             <i class="fa-solid fa-cube"></i> Open in OHIF <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
