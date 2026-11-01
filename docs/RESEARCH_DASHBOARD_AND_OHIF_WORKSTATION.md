@@ -11,10 +11,10 @@ This environment is engineered to provide cardiovascular researchers, imaging co
 │                       CARDIAC FAT RESEARCH DASHBOARD (Port 8050)                       │
 ├───────────────────────────────┬───────────────────────────────┬────────────────────────┤
 │     COHORT RESEARCH KPIS      │      INTERACTIVE PLOTS        │     CASE EXPLORER      │
-│  - Total Cohort N: 1,000      │  - EAT Volume vs. CAC Score   │  - Natural Human Sort  │
-│  - Quantified N: 996 (99.6%)  │  - PVAT HU vs. CAC (CRISP-CT) │  - Multi-Column Sort   │
-│  - CAC Scored N: 449 (44.9%)  │  - Adipose Volume by Region   │  - Filter & Deep Dive  │
-│  - Vascular Inflam: 520 (52%) │  - Plaque Burden Breakdown    │  - 1-Click OHIF Launch │
+│  - Total Cohort N: 1,000      │  - 5-Tier CAC SVG Box Plots   │  - Natural Human Sort  │
+│  - Quantified N: 998 (99.8%)  │  - Bivariate Linear Fit (R²)  │  - Multi-Column Sort   │
+│  - CAC Scored N: 661 (66.1%)  │  - ANOVA & Kruskal Testing    │  - Filter & Deep Dive  │
+│  - Vascular Inflam: 521 (52%) │  - 300 DPI Publication Export │  - 1-Click OHIF & FHIR │
 └───────────────────────────────┴───────────────────────────────┴────────────────────────┘
                                                │
                          Click [Segmented] / [View OHIF]
@@ -47,6 +47,9 @@ The research dashboard is powered by a multi-threaded Python/Flask server (`src/
 | `/viewer/<participant_id>/` | `GET` | HTML/Assets | Serves the standalone OHIF v3.13 Medical Workstation directly for the specified participant. Triggers dynamic on-the-fly export if DICOM-SEG / OHIF assets are not yet cached on disk. |
 | `/patient/<participant_id>/` | `GET` | HTML/Assets | Alias for OHIF viewer route ensuring full backward compatibility with `ohif_viewer.py`. |
 | `/api/cohort/switch` | `POST` | JSON | Dynamically switches the active cohort directory on-the-fly without requiring server restart. Expects `{"cohort_dir": "/new/path"}`. |
+| `/api/cohort/statistics` | `GET` | JSON | Returns omnibus One-Way ANOVA and Kruskal-Wallis test results, pairwise post-hoc tests with Bonferroni correction across all 5 Agatston CAC tiers, and bivariate linear regression parameters ($r, \rho, R^2$, slope, intercept, $p$). |
+| `/api/cohort/publication-figure` | `GET` | PNG | Generates and streams a 300 DPI publication-grade multi-panel composite figure ($3600 \times 2700\text{ px}$) formatted for cardiovascular journals (*JACC*, *Radiology*, *Circulation*). |
+| `/api/case/<participant_id>/fhir` | `GET` | JSON | Generates a standard HL7 FHIR R4 Bundle (LOINC 84245-0 EAT volume, RadLex RID49533 PVAT HU, US Core DiagnosticReport, DocumentReference). Add `?download=true` for direct browser file download. |
 | `/api/benchmark/run` | `POST` | JSON | Executes the multi-compartment DICE, IoU, RVE%, and Hausdorff surface distance benchmark engine across the cohort. |
 
 ---
