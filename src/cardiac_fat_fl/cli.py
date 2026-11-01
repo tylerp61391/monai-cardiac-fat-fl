@@ -1616,6 +1616,37 @@ def fhir_server(
     )
 
 
+@app.command("mcp-server")
+def mcp_server(
+    fhir_url: str = typer.Option(
+        "http://127.0.0.1:8050/r4",
+        "--fhir-url",
+        "-u",
+        help="Base URL of the HL7 FHIR R4 server (local sandbox or hospital EHR).",
+    ),
+    token: Optional[str] = typer.Option(
+        None,
+        "--token",
+        "-t",
+        help="Optional Bearer token for Epic SMART on FHIR OAuth 2.0 authorization.",
+    ),
+    cohort_dir: Optional[Path] = typer.Option(
+        None,
+        "--cohort-dir",
+        "-c",
+        help="Optional default cohort directory for research queries.",
+    ),
+) -> None:
+    """Launch the Model Context Protocol (MCP) Server for AI assistants (stdio JSON-RPC)."""
+    from cardiac_fat_fl.epic_mcp_server import launch_mcp_server
+
+    launch_mcp_server(
+        fhir_base_url=fhir_url,
+        bearer_token=token,
+        default_cohort_dir=cohort_dir,
+    )
+
+
 if __name__ == "__main__":
     app()
 

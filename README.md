@@ -890,9 +890,10 @@ Run all automated unit tests via `pytest`:
 pytest -v
 ```
 
-The test suite validates **110 automated unit and integration tests** across all modules:
+The test suite validates **118 automated unit and integration tests** across all modules:
 
 - **CI/CD & Manifest Contracts**: Automated validation of GitHub Actions workflows (`ci.yml`, `docker-map.yml`, `docker-publish.yml`, `security.yml`), Dockerfile specs, and dependency declarations.
+- **Native open.epic & Cardiac AI MCP Server**: Standard Model Context Protocol (MCP 2024-11-05) JSON-RPC 2.0 handshake, 7 clinical AI tools, discrete observation fetching, diagnostic report filing, document references, and cohort statistics.
 - **Turnkey NVIDIA FLARE 2.5+ Simulator**: Multi-hospital federated training simulation, `CardiacFatTrainer(Executor)` weight exchange, FedProx loss, local FedBN retention, and automated cross-site validation.
 - **Self-Contained HL7 FHIR R4 Mock Server**: US Core CapabilityStatement metadata, atomic transaction bundle ingestion, reference rewriting, discrete CRUD/search endpoints, and sandbox resetting.
 - **Transform Correctness**: Strict $[-190.0, -30.0]\text{ HU}$ thresholding, Voronoi chamber partitioning, and radial vessel dilation.
@@ -914,7 +915,7 @@ Every pull request and merge to `main` undergoes rigorous multi-stage automated 
 | Quality Gate | Workflow File | Target Environment | Scope & Responsibility |
 | :--- | :--- | :--- | :--- |
 | **Documentation & Lint Gate** | `.github/workflows/ci.yml` (`lint`) | `ubuntu-latest`, Node 20, Python 3.11 | Zero markdownlint regressions (`markdownlint-cli`) and static code analysis (`ruff check`). |
-| **Cross-Platform Test Matrix** | `.github/workflows/ci.yml` (`test`) | Ubuntu & Windows, Python 3.11 & 3.12 | All 110 unit and integration tests across operating systems with coverage reporting. |
+| **Cross-Platform Test Matrix** | `.github/workflows/ci.yml` (`test`) | Ubuntu & Windows, Python 3.11 & 3.12 | All 118 unit and integration tests across operating systems with coverage reporting. |
 | **Docker Build Verification** | `.github/workflows/ci.yml` (`docker-verify`) | `ubuntu-latest`, Docker Buildx | Validates clean container builds of both root `Dockerfile` and `deploy/Dockerfile` (MAP) prior to merging. |
 | **MONAI MAP Container Registry** | `.github/workflows/docker-map.yml` | GHCR (`ghcr.io/.../monai-cardiac-fat-map`) | Automated multi-arch build and publishing of the MONAI Deploy Application Package container. |
 | **Workstation Container Registry** | `.github/workflows/docker-publish.yml` | GHCR (`ghcr.io/.../monai-cardiac-fat-fl`) | Automated publishing of the main CLI, API, and OHIF Medical Workstation container. |
