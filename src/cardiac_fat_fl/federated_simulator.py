@@ -112,6 +112,8 @@ def run_federated_simulation(
     threads: int = 2,
     num_rounds: Optional[int] = None,
     gpu: Optional[str] = None,
+    fedprox_mu: Optional[float] = None,
+    fed_bn: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Execute a turnkey NVIDIA FLARE simulation for cardiac fat quantification.
 
@@ -123,6 +125,8 @@ def run_federated_simulation(
         threads: Number of parallel simulator client threads. Default: 2.
         num_rounds: Optional override for number of federated aggregation rounds.
         gpu: Optional comma-separated GPU device IDs (e.g. "0" or "0,1"). Default: None (CPU/Auto).
+        fedprox_mu: Optional FedProx proximal loss regularizer coefficient (mu).
+        fed_bn: Optional boolean flag whether FedBN local normalization is retained.
 
     Returns:
         Dict containing simulation results, exit code, workspace path, and status.
@@ -148,22 +152,41 @@ def run_federated_simulation(
         ws_dir = Path(workspace).resolve()
         ws_dir.mkdir(parents=True, exist_ok=True)
 
-    # If num_rounds is overridden, create a job staging directory with updated config
+    # If num_rounds, fedprox_mu, or fed_bn is overridden, create a job staging directory
     actual_job_dir = job_dir
     temp_job_stage: Optional[Path] = None
-    if num_rounds is not None and num_rounds > 0:
+    needs_staging = (num_rounds is not None and num_rounds > 0) or (fedprox_mu is not None) or (fed_bn is not None)
+
+    if needs_staging:
         temp_job_stage = Path(tempfile.mkdtemp(prefix="cardiac_job_stage_")).resolve()
         shutil.copytree(job_dir, temp_job_stage, dirs_exist_ok=True)
-        server_cfg_file = temp_job_stage / "app" / "config" / "config_fed_server.json"
-        if server_cfg_file.is_file():
-            with open(server_cfg_file, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-            cfg["num_rounds"] = int(num_rounds)
-            for wf in cfg.get("workflows", []):
-                if wf.get("id") == "scatter_gather_ctl" and "args" in wf:
-                    wf["args"]["num_rounds"] = int(num_rounds)
-            with open(server_cfg_file, "w", encoding="utf-8") as f:
-                json.dump(cfg, f, indent=2)
+
+        if num_rounds is not None and num_rounds > 0:
+            server_cfg_file = temp_job_stage / "app" / "config" / "config_fed_server.json"
+            if server_cfg_file.is_file():
+                with open(server_cfg_file, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                cfg["num_rounds"] = int(num_rounds)
+                for wf in cfg.get("workflows", []):
+                    if wf.get("id") == "scatter_gather_ctl" and "args" in wf:
+                        wf["args"]["num_rounds"] = int(num_rounds)
+                with open(server_cfg_file, "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, indent=2)
+
+        if fedprox_mu is not None or fed_bn is not None:
+            client_cfg_file = temp_job_stage / "app" / "config" / "config_fed_client.json"
+            if client_cfg_file.is_file():
+                with open(client_cfg_file, "r", encoding="utf-8") as f:
+                    ccfg = json.load(f)
+                for comp in ccfg.get("components", []):
+                    if comp.get("id") == "cardiac_fat_algo" and "args" in comp:
+                        if fedprox_mu is not None:
+                            comp["args"]["fedprox_mu"] = float(fedprox_mu)
+                        if fed_bn is not None:
+                            comp["args"]["fed_bn"] = bool(fed_bn)
+                with open(client_cfg_file, "w", encoding="utf-8") as f:
+                    json.dump(ccfg, f, indent=2)
+
         actual_job_dir = temp_job_stage
 
     try:
@@ -197,12 +220,21 @@ def run_federated_simulation(
             "status": "COMPLETED" if success else f"FAILED (code {exit_code})",
         }
 
-        # Inspect persisted models
+        # Inspect and persist models
         models_dir = ws_dir / "server" / "simulate_job" / "app_server"
         persisted_models = []
+        target_models_dir = repo_root / "models" / "federated"
+        target_models_dir.mkdir(parents=True, exist_ok=True)
+
         if models_dir.is_dir():
             for p in models_dir.glob("*.pt"):
                 persisted_models.append(p.name)
+                try:
+                    dest = target_models_dir / p.name
+                    shutil.copy2(p, dest)
+                except Exception as exc:
+                    logger.warning("Could not preserve consensus model %s: %s", p.name, exc)
+
         result["persisted_models"] = persisted_models
 
         return result

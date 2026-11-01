@@ -11,8 +11,11 @@ Supports:
 from __future__ import annotations
 
 import copy
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+
+logger = logging.getLogger(__name__)
 
 import numpy as np
 import pandas as pd
@@ -160,6 +163,7 @@ class CardiacFatClientAlgo(ClientAlgo):
         self.criterion: Optional[nn.Module] = None
         self.global_weights: Optional[Dict[str, torch.Tensor]] = None
         self.train_loader: Optional[DataLoader] = None
+        self.site_name: str = "client"
         self.initialized: bool = False
 
     def initialize(self, extra: Optional[Dict[str, Any]] = None) -> None:
@@ -169,6 +173,10 @@ class CardiacFatClientAlgo(ClientAlgo):
             extra: Optional configuration dictionary.
         """
         if extra:
+            if "client_name" in extra:
+                self.site_name = str(extra["client_name"])
+            elif "site_name" in extra:
+                self.site_name = str(extra["site_name"])
             if "lr" in extra:
                 self.lr = float(extra["lr"])
             if "fedprox_mu" in extra:
@@ -338,6 +346,12 @@ class CardiacFatClientAlgo(ClientAlgo):
 
         val_loss = total_loss / max(batches, 1)
         val_dice = float(np.clip(1.0 - val_loss, 0.0, 1.0))
+        logger.info(
+            "Client %s validation metrics: val_dice=%.4f, val_loss=%.4f",
+            self.site_name,
+            val_dice,
+            val_loss,
+        )
 
         metrics = {
             "val_loss": val_loss,

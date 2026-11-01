@@ -134,3 +134,112 @@ def test_dashboard_api_publication_figure(test_app):
     # Check PNG magic bytes: \x89PNG\r\n\x1a\n
     assert res.data[:8] == b"\x89PNG\r\n\x1a\n"
 
+
+def test_dashboard_federated_html_elements(test_app):
+    """Verify federated learning UI tab, section, and controls are rendered in HTML."""
+    client = test_app.test_client()
+    res = client.get("/")
+    assert res.status_code == 200
+    html = res.data.decode("utf-8")
+    assert 'id="tab-federated"' in html
+    assert 'id="section-federated"' in html
+    assert 'id="flConvergenceChart"' in html
+    assert 'id="flSitesGrid"' in html
+    assert 'id="flModelsTableBody"' in html
+    assert 'id="flConsoleLog"' in html
+
+
+def test_dashboard_federated_status_api(test_app):
+    """Verify /api/federated/status endpoint returns valid state schema."""
+    client = test_app.test_client()
+    res = client.get("/api/federated/status")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "status" in data
+    assert "config" in data
+    assert "client_states" in data
+    assert "metrics" in data
+    assert "persisted_models" in data
+    assert "logs" in data
+    assert data["status"] in ("idle", "running", "completed", "failed")
+
+
+def test_dashboard_federated_models_api(test_app):
+    """Verify /api/federated/models endpoint returns list of models."""
+    client = test_app.test_client()
+    res = client.get("/api/federated/models")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "models" in data
+    assert isinstance(data["models"], list)
+
+
+def test_dashboard_federated_reset_api(test_app):
+    """Verify /api/federated/reset endpoint resets status to idle."""
+    client = test_app.test_client()
+    res = client.post("/api/federated/reset")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["status"] == "idle"
+
+
+def test_dashboard_federated_download_security(test_app):
+    """Verify security controls on /api/federated/download/<filename>."""
+    client = test_app.test_client()
+    # Bad extension
+    res_bad_ext = client.get("/api/federated/download/exploit.exe")
+    assert res_bad_ext.status_code == 400
+
+    # Path traversal attempt
+    res_traversal = client.get("/api/federated/download/..%2F..%2Fsecret.pt")
+    assert res_traversal.status_code in (400, 404)
+
+    # Non-existent valid file
+    res_404 = client.get("/api/federated/download/nonexistent_model.pt")
+    assert res_404.status_code == 404
+
+
+def test_dashboard_federated_download_success(test_app):
+    """Verify downloading a valid federated model checkpoint."""
+    models_dir = Path("models/federated")
+    models_dir.mkdir(parents=True, exist_ok=True)
+    test_pt = models_dir / "test_checkpoint.pt"
+    test_pt.write_bytes(b"dummy_pt_weights")
+    try:
+        client = test_app.test_client()
+        res = client.get("/api/federated/download/test_checkpoint.pt")
+        assert res.status_code == 200
+        assert res.data == b"dummy_pt_weights"
+        assert "test_checkpoint.pt" in res.headers.get("Content-Disposition", "")
+        res.close()
+    finally:
+        if test_pt.exists():
+            test_pt.unlink()
+
+
+def test_dashboard_federated_run_trigger(test_app, monkeypatch):
+    """Verify /api/federated/run triggers background simulation."""
+    import cardiac_fat_fl.dashboard as dash_mod
+
+    called = {}
+
+    def mock_execute(config):
+        called["config"] = config
+
+    monkeypatch.setattr(dash_mod, "_execute_fl_simulation", mock_execute)
+
+    client = test_app.test_client()
+
+    # Post simulation launch
+    res = client.post(
+        "/api/federated/run",
+        json={"n_clients": 2, "num_rounds": 1, "threads": 2, "fedprox_mu": 0.01},
+    )
+    assert res.status_code == 202
+    data = res.get_json()
+    assert data["status"] == "started"
+    assert "config" in data
+    assert data["config"]["n_clients"] == 2
+    assert called["config"]["n_clients"] == 2
+
+

@@ -216,6 +216,7 @@ To launch the web dashboard for exploring cohorts, clinical metrics, Agatston CA
    - **Canonical 4-Way Color Palette**: Identical colors across OHIF, 3D Slicer, Clinical Report, and Research Dashboard.
    - **Multi-Series DICOM Collision Resilience**: Automatic selection of primary 3D volume (`max(series_ids, key=len)`), preventing 1-slice scout collisions.
    - **Dynamic Cohort Switcher**: Change active cohort directory on-the-fly without server restart.
+   - **Federated Learning Control & Monitoring Panel (`#tab-federated`)**: Turnkey in-browser launcher and real-time dashboard for NVIDIA FLARE 2.5+ multi-hospital simulation. Features live convergence curves (Chart.js dual-axis validation DICE & loss), participating hospital site cards (`site-1`, `site-2`), checkpoint weights table with 1-click `.pt` downloads, and live streaming monospace audit log.
 
 ### Recipe 9: Run Extensible Multi-Compartment Segmentation DICE Benchmark
 

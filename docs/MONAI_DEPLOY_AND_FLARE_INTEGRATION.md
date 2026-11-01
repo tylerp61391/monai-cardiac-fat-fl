@@ -258,6 +258,26 @@ The [`federated_simulator.py`](../src/cardiac_fat_fl/federated_simulator.py) mod
 2. **POSIX `setsid` Incompatibility**: Replaces Linux-specific `os.setsid` in subprocess creation with `CREATE_NEW_PROCESS_GROUP` while preserving Windows backslash path semantics.
 3. **Safe Storage Deletion**: Enforces `ignore_errors=True` in `SimulatorDeployer.close()`.
 
+### F. Interactive Research Dashboard: Federated Learning Control & Monitoring Panel
+
+The interactive Research Dashboard (`cardiac-fat-fl dashboard --port 8050`) provides a zero-code web interface for launching and monitoring federated simulations in real-time under `#tab-federated`:
+
+- **Job Configuration & Hyperparameters**: Customize participating hospital count ($N$), aggregation rounds ($R$), worker concurrency, FedProx $\mu$, and FedBN local normalization retention.
+- **Round-by-Round Convergence Graph**: Real-time Chart.js visualization plotting global validation DICE ($\text{val\_dice} \in [0, 1.0]$) and cross-entropy loss over aggregation rounds.
+- **Participating Hospital Site Scorecards**: Visual cards for each simulated hospital site (`site-1`, `site-2`, ...) tracking local status (`ready`, `training`, `validating`), current MONAI SegResNet activity, FedBN status, and latest site DICE score.
+- **Model Checkpoints & 1-Click Weights Download**: Table listing all consensus checkpoints (`FL_global_model.pt`, etc.) with file sizes and timestamps, backed by `GET /api/federated/download/<filename>`.
+- **Live Monospace Audit & Execution Console**: Auto-scrolling terminal window displaying real-time NVFLARE scatter/gather lifecycle events and client training logs.
+
+#### REST API Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/federated/status` | Returns live simulation status, current round, progress %, client site states, metrics, and console logs. |
+| `POST` | `/api/federated/run` | Triggers background simulation thread with user hyperparameters (`n_clients`, `num_rounds`, `threads`, `fedprox_mu`, `fed_bn`). |
+| `POST` | `/api/federated/reset` | Resets simulation state and clears convergence metrics and console buffer. |
+| `GET` | `/api/federated/models` | Scans `models/federated/` and returns available consensus checkpoint metadata. |
+| `GET` | `/api/federated/download/<filename>` | Secure download endpoint serving PyTorch `.pt` model checkpoint binaries. |
+
 ---
 
 ## 6. Security, Privacy & Regulatory Traceability

@@ -211,6 +211,12 @@ cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
 - **Multi-Series DICOM Collision Resilience**:
   - Auto-selects the primary 3D cardiac CT series (`max(series_ids, key=len)`), preventing 1-slice scout/localizer collisions from failing volume segmentation.
 - **Dynamic Cohort Switcher**: Change active cohort directory on-the-fly without restarting the web server.
+- **Federated Learning Control & Monitoring Panel (`#tab-federated`)**:
+  - Direct web UI for launching, controlling, and observing NVIDIA FLARE 2.5+ multi-hospital federated simulations with zero patient DICOM transfer.
+  - Round-by-round convergence curves (Chart.js dual-axis validation DICE and loss).
+  - Dynamic client hospital status cards (`site-1`, `site-2`, local FedBN normalization status, real-time training/eval states).
+  - Checkpoint table with 1-click download for consensus `.pt` weights (`/api/federated/download/<filename>`).
+  - Monospace real-time execution audit console.
 - **Comprehensive Guide**: See [`docs/RESEARCH_DASHBOARD_AND_OHIF_WORKSTATION.md`](docs/RESEARCH_DASHBOARD_AND_OHIF_WORKSTATION.md) for full architecture and clinical cohort translation specs.
 ### 6. Extensible Segmentation Method Benchmarking & DICE Engine
 
