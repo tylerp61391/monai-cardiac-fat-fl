@@ -70,6 +70,28 @@ def test_cli_quantify_end_to_end(synthetic_cohort_dir: Path) -> None:
                 assert math.isnan(hu)
 
 
+def test_cli_quantify_chamber_backend(synthetic_cohort_dir: Path) -> None:
+    """Test CLI quantify with --chamber-backend monai."""
+    csv_out = synthetic_cohort_dir / "test_cb_measurements.csv"
+    res = runner.invoke(
+        app,
+        [
+            "quantify",
+            str(synthetic_cohort_dir),
+            "-o",
+            str(synthetic_cohort_dir),
+            "-c",
+            "test_cb_measurements.csv",
+            "--chamber-backend",
+            "monai",
+            "--limit",
+            "1",
+        ],
+    )
+    assert res.exit_code == 0
+    assert csv_out.is_file()
+
+
 def test_cli_federated_stats(synthetic_cohort_dir: Path) -> None:
     """Test CLI federated-stats command."""
     csv_path = synthetic_cohort_dir / "cardiac_fat_measurements.csv"

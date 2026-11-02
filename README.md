@@ -89,13 +89,14 @@ participant_001/
 Running batch quantification across a cohort directory:
 
 ```bash
-cardiac-fat-fl quantify /path/to/cohort --output-dir /path/to/cohort --save-seg
+cardiac-fat-fl quantify /path/to/cohort --output-dir /path/to/cohort --save-seg --chamber-backend monai
 ```
 
 Outputs:
 
 1. **Per-Participant Masks**: Written to each participant subfolder (`/path/to/cohort/<participant_id>/eat_pvat.seg.nrrd`).
 2. **Cohort Summary Table**: Written to the `--output-dir` (defaults to cohort root) as `cardiac_fat_measurements.csv` conforming to the exact 19-column clinical schema.
+3. **Chamber Backend Option**: `--chamber-backend monai|totalsegmentator` (default: `monai`). Allows toggling between the 1.5mm NGC `monai_wholebody_ct_segmentation` SegResNet and `TotalSegmentator` (`heartchambers_highres` nnU-Net) for 4-chamber cardiac derivation.
 
 ### 3. Institutional PACS Archive Integration (DICOMweb STOW-RS & DIMSE C-STORE)
 

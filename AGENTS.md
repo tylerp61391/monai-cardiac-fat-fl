@@ -103,11 +103,13 @@ When a user provides a CT scan or participant directory and asks to process and 
 
 4. **Respond to User**: Provide `http://127.0.0.1:8000/patient/<patient_id>/` and summarize computed EAT/PVAT volumes ($\text{cm}^3$) and mean attenuation (HU).
 
-### Recipe 2: Anatomy Segmentation Provenance (`monai_wholebody_ct_segmentation`)
+### Recipe 2: Anatomy Segmentation Provenance & Chamber Backend
 
-- Neural network chamber/vessel labels from NGC `monai_wholebody_ct_segmentation` (1.5 mm isotropic SegResNet):
-  - Aorta (`7`), Myocardium (`44`), Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Pulmonary Artery (`49`).
-- Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights (`heart.seg.nrrd`).
+- Chamber backends selectable via `--chamber-backend monai|totalsegmentator` (default: `monai`):
+  - **`monai`**: NGC `monai_wholebody_ct_segmentation` (1.5 mm isotropic SegResNet).
+  - **`totalsegmentator`**: TotalSegmentator (`heartchambers_highres` nnU-Net).
+  - Both backends map to standard anatomical labels: Aorta (`7`), Myocardium (`44`), Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Pulmonary Artery (`49`).
+- Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights with physical millimeter spacing curation (`heart.seg.nrrd`).
 - Coronary sulci centerlines (LAD `1`, LCX `2`, RCA `3`) are derived geometrically from chamber boundary grooves and exported separately as `coronary_sulci.seg.nrrd`.
 
 ### Recipe 3: Push Study Results to a PACS Archive

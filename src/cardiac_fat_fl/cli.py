@@ -51,16 +51,17 @@ console = Console()
 _WORKER_CACHE: dict = {}
 
 
-def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[Path], Path], preloaded_ct=None) -> dict:
+def _process_one_participant(task: Tuple[Any, ...], preloaded_ct=None) -> dict:
     """Worker function to process a single participant scan."""
-    pid, scan_path, save_seg, save_intermediate, pvat_radius, model_path, source_dir = task
+    pid, scan_path, save_seg, save_intermediate, pvat_radius, model_path, source_dir, *extra = task
+    chamber_backend = str(extra[0]) if extra else "monai"
     try:
         meta_ct = preloaded_ct if preloaded_ct is not None else read_nrrd_as_metatensor(scan_path)
         data_dict = {
             "image": meta_ct,
             "participant_id": pid,
         }
-        cache_key = (float(pvat_radius), str(model_path) if model_path is not None else "")
+        cache_key = (float(pvat_radius), str(model_path) if model_path is not None else "", chamber_backend)
         if cache_key not in _WORKER_CACHE:
             mask_tx = ComputeEatPvatMasksd(
                 keys=["image"],
@@ -70,6 +71,7 @@ def _process_one_participant(task: Tuple[str, Path, bool, bool, float, Optional[
                 mask_tx._segmenter = UnifiedAnatomySegmenter(
                     model_path=model_path,
                     backend="onnx" if str(model_path).endswith(".onnx") else "heuristic",
+                    chamber_backend=chamber_backend,
                 )
             quant_tx = QuantifyAdiposeMetricsd(keys=["image"])
             _WORKER_CACHE[cache_key] = (mask_tx, quant_tx)
@@ -224,6 +226,12 @@ def quantify(
         "-m",
         help="Optional path to PyTorch or ONNX model weights for anatomy segmentation.",
     ),
+    chamber_backend: str = typer.Option(
+        "monai",
+        "--chamber-backend",
+        "-cb",
+        help="Cardiac chamber segmentation engine: 'monai' (SegResNet 1.5mm) or 'totalsegmentator' (nnU-Net).",
+    ),
     limit: Optional[int] = typer.Option(
         None,
         "--limit",
@@ -314,7 +322,7 @@ def quantify(
         return
 
     tasks = [
-        (pid, scan_path, save_seg, save_intermediate, pvat_radius, model_path, source_dir)
+        (pid, scan_path, save_seg, save_intermediate, pvat_radius, model_path, source_dir, chamber_backend)
         for pid, scan_path in remaining_participants
     ]
 
@@ -341,13 +349,14 @@ def quantify(
             f"[bold cyan]Launching GPU pipeline with {actual_workers} asynchronous DICOM I/O pre-fetch threads...[/bold cyan]"
         )
         # Pre-warm GPU models once in main process before streaming
-        _warm_key = (float(pvat_radius), str(model_path) if model_path is not None else "")
+        _warm_key = (float(pvat_radius), str(model_path) if model_path is not None else "", chamber_backend)
         if _warm_key not in _WORKER_CACHE:
             mask_tx = ComputeEatPvatMasksd(keys=["image"], pvat_radial_distance_mm=pvat_radius)
             if model_path is not None:
                 mask_tx._segmenter = UnifiedAnatomySegmenter(
                     model_path=model_path,
                     backend="onnx" if str(model_path).endswith(".onnx") else "heuristic",
+                    chamber_backend=chamber_backend,
                 )
             _WORKER_CACHE[_warm_key] = (mask_tx, QuantifyAdiposeMetricsd(keys=["image"]))
 

@@ -101,6 +101,7 @@ class UnifiedAnatomySegmenter:
         device: Optional[Union[str, torch.device]] = None,
         onnx_heart_path: Optional[Union[str, Path]] = None,
         onnx_loc_path: Optional[Union[str, Path]] = None,
+        chamber_backend: str = "monai",
     ) -> None:
         """Initialize the segmenter.
 
@@ -111,6 +112,7 @@ class UnifiedAnatomySegmenter:
             device: Compute device ('cuda', 'cpu', or torch.device).
             onnx_heart_path: Backward-compatible alias for model_path.
             onnx_loc_path: Backward-compatible alias for loc_model_path.
+            chamber_backend: Cardiac chamber segmentation engine: 'monai' (SegResNet 1.5mm) or 'totalsegmentator' (nnU-Net).
         """
         if model_path is None and onnx_heart_path is not None:
             model_path = onnx_heart_path
@@ -125,6 +127,7 @@ class UnifiedAnatomySegmenter:
         self.model_path = Path(model_path).resolve() if model_path is not None else None
         self.loc_model_path = Path(loc_model_path).resolve() if loc_model_path is not None else None
         self.backend = backend.lower()
+        self.chamber_backend = chamber_backend.lower()
         self.torch_model: Optional[torch.nn.Module] = None
         self.onnx_session: Optional[Any] = None
         self.onnx_loc_session: Optional[Any] = None
@@ -340,7 +343,7 @@ class UnifiedAnatomySegmenter:
                         return_checkpoints=False,
                     )
                     if isinstance(curated_peri, np.ndarray) and np.any(curated_peri):
-                        multilabel_map = self._run_wholebody_segmentation(arr, spacing)
+                        multilabel_map = self._run_chamber_segmentation(arr, spacing)
                         return self._derive_chambers_and_vessels(curated_peri, arr, multilabel_map=multilabel_map)
                 except Exception:
                     pass
@@ -408,9 +411,9 @@ class UnifiedAnatomySegmenter:
             else:
                 pericardium = pericardium_zyx
 
-            # Run MONAI wholeBody_ct_segmentation (1.5mm SegResNet) first to obtain multi-label cardiac anatomy
-            multilabel_map = self._run_wholebody_segmentation(arr, spacing)
-            # Combine MONAI WholeBody chambers/vessels with DeepHeartSeg pericardium envelope
+            # Run cardiac chamber segmentation (MONAI wholeBody_ct_segmentation or TotalSegmentator)
+            multilabel_map = self._run_chamber_segmentation(arr, spacing)
+            # Combine chamber/vessel labels with DeepHeartSeg pericardium envelope
             return self._derive_chambers_and_vessels(pericardium, arr, multilabel_map=multilabel_map)
 
         # Standard 8-channel ONNX model
@@ -432,6 +435,64 @@ class UnifiedAnatomySegmenter:
             lcx=(probs[6] > 0.5).astype(bool),
             rca=(probs[7] > 0.5).astype(bool),
         )
+
+    def _run_chamber_segmentation(
+        self,
+        arr: np.ndarray,
+        spacing: Union[Tuple[float, float, float], Sequence[float]],
+    ) -> Optional[np.ndarray]:
+        """Dispatch cardiac chamber segmentation to MONAI WholeBody or TotalSegmentator."""
+        if getattr(self, "chamber_backend", "monai") == "totalsegmentator":
+            totalseg_res = self._run_totalsegmentator(arr, spacing)
+            if totalseg_res is not None:
+                return totalseg_res
+        return self._run_wholebody_segmentation(arr, spacing)
+
+    def _run_totalsegmentator(
+        self,
+        arr: np.ndarray,
+        spacing: Union[Tuple[float, float, float], Sequence[float]],
+    ) -> Optional[np.ndarray]:
+        """Run TotalSegmentator heartchambers_highres / total task and remap labels."""
+        try:
+            import tempfile
+            import nibabel as nib
+            from totalsegmentator.python_api import totalsegmentator
+
+            is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256
+            arr_zyx = arr.transpose(2, 1, 0) if is_xyz else arr
+            sx, sy, sz = float(spacing[0]), float(spacing[1]), float(spacing[2])
+            affine = np.diag([sx, sy, sz, 1.0])
+            nii = nib.Nifti1Image(arr_zyx.transpose(2, 1, 0), affine)
+
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                tmp_in = Path(tmp_dir) / "ct.nii.gz"
+                tmp_out = Path(tmp_dir) / "totalseg.nii.gz"
+                nib.save(nii, str(tmp_in))
+
+                totalsegmentator(
+                    input=str(tmp_in),
+                    output=str(tmp_out),
+                    task="heartchambers_highres",
+                    device="gpu" if "cuda" in str(self.device) else "cpu",
+                    quiet=True,
+                )
+
+                if tmp_out.is_file():
+                    res_nii = nib.load(str(tmp_out))
+                    res_arr = np.asarray(res_nii.dataobj, dtype=np.int32)
+                    mapped = np.zeros_like(res_arr, dtype=np.uint16)
+                    # Remap TotalSegmentator heartchambers_highres to canonical labels:
+                    # 1: Myocardium (44), 2: Left Atrium (45), 3: Left Ventricle (46),
+                    # 4: Right Atrium (47), 5: Right Ventricle (48), 6: Aorta (7), 7: Pulmonary Artery (49)
+                    ch_map = {1: 44, 2: 45, 3: 46, 4: 47, 5: 48, 6: 7, 7: 49}
+                    for src_id, dst_id in ch_map.items():
+                        mapped[res_arr == src_id] = dst_id
+                    return mapped.transpose(2, 1, 0) if not is_xyz else mapped
+        except Exception as exc:
+            logger.warning("TotalSegmentator execution failed (%s); falling back to MONAI WholeBody.", exc)
+            return None
+        return None
 
     def _run_wholebody_segmentation(
         self,
