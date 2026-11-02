@@ -71,6 +71,7 @@ ohif_export/
 cardiac_fat_report.*
 eat_pvat_report.dcm
 mpr_montage.png
+.parity_audit_cache_*.json
 
 # Whitelist example clinical report deliverables
 !example_source_dir/**/cardiac_fat_report.*

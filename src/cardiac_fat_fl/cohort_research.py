@@ -128,10 +128,23 @@ class CohortDataset:
         self.participants: Dict[str, CohortParticipant] = {}
         self._load_cohort()
 
+    def _bounded_glob(self, pattern: str, max_depth: int = 4) -> List[Path]:
+        """Glob up to `max_depth` directory levels without descending into deep DICOM slice folders."""
+        results: List[Path] = []
+        seen: set[Path] = set()
+        for depth in range(max_depth + 1):
+            prefix = "/".join(["*"] * depth)
+            full_pat = f"{prefix}/{pattern}" if prefix else pattern
+            for p in self.root_dir.glob(full_pat):
+                if p not in seen:
+                    seen.add(p)
+                    results.append(p)
+        return results
+
     def _discover_calcium_scores(self) -> None:
         """Discover and load CAC scores from scores CSVs or XML files in the cohort."""
         # 1. Search for scores_gated.csv, scores_nongated.csv, scores.csv
-        score_candidates = list(self.root_dir.glob("**/scores*.csv")) + list(self.root_dir.glob("scores*.csv"))
+        score_candidates = self._bounded_glob("scores*.csv", max_depth=3)
         for sc in score_candidates:
             try:
                 df = pd.read_csv(sc)
@@ -171,7 +184,7 @@ class CohortDataset:
                 pass
 
         # 2. Check for XML score files (e.g. Stanford COCA calcium_xml/<pid>.xml)
-        xml_files = list(self.root_dir.glob("**/calcium_xml/*.xml"))
+        xml_files = self._bounded_glob("calcium_xml/*.xml", max_depth=3)
         for xf in xml_files:
             pid = xf.stem
             if pid not in self.calcium_scores:
@@ -220,7 +233,7 @@ class CohortDataset:
 
         # If empty, check subfolders like cocacoronarycalciumandchestcts-2/Gated_release_final/patient
         if not discovered_scans:
-            sub_patient_dirs = list(self.root_dir.glob("**/patient"))
+            sub_patient_dirs = self._bounded_glob("patient", max_depth=3)
             for sp in sub_patient_dirs:
                 if sp.is_dir():
                     try:
@@ -241,7 +254,7 @@ class CohortDataset:
                 patient_dirs[pid] = scan_p.parent
 
         # Also discover participant folders containing eat_pvat segmentation masks
-        for seg_candidate in self.root_dir.glob("**/eat_pvat.seg.*"):
+        for seg_candidate in self._bounded_glob("eat_pvat.seg.*", max_depth=4):
             p_folder = seg_candidate.parent
             pid = p_folder.name
             if pid not in patient_dirs:
@@ -250,7 +263,7 @@ class CohortDataset:
         # Also check participant IDs from measurement CSVs
         for pid in root_metrics_by_pid:
             if pid not in patient_dirs:
-                matching = [d for d in self.root_dir.glob(f"**/{pid}") if d.is_dir()]
+                matching = [d for d in self._bounded_glob(pid, max_depth=3) if d.is_dir()]
                 if matching:
                     patient_dirs[pid] = matching[0]
 

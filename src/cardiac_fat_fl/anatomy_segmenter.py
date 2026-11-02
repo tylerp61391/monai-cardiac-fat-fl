@@ -328,6 +328,23 @@ class UnifiedAnatomySegmenter:
         is_single_channel = len(out_shape) == 5 and out_shape[1] == 1
 
         if is_single_channel:
+            if max(arr.shape) >= 256:
+                try:
+                    from cardiac_fat_fl.coca_parity import run_deepheartseg_curated_onnx
+
+                    curated_peri = run_deepheartseg_curated_onnx(
+                        ct_arr=arr,
+                        spacing=spacing,
+                        loc_session=self.onnx_loc_session,
+                        seg_session=self.onnx_session,
+                        return_checkpoints=False,
+                    )
+                    if isinstance(curated_peri, np.ndarray) and np.any(curated_peri):
+                        multilabel_map = self._run_wholebody_segmentation(arr, spacing)
+                        return self._derive_chambers_and_vessels(curated_peri, arr, multilabel_map=multilabel_map)
+                except Exception:
+                    pass
+
             # Check axis ordering: NRRD volumes typically arrive as (X, Y, Z) where Z (slices) < X (in-plane)
             is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256
             if is_xyz:

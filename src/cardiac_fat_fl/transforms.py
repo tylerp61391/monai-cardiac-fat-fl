@@ -52,6 +52,7 @@ class ComputeEatPvatMasksd(MapTransform):
         segmenter: Optional[UnifiedAnatomySegmenter] = None,
         allow_missing_keys: bool = False,
         pvat_radial_dilation_mm: Optional[float] = None,
+        morphology_mode: str = "auto",
     ) -> None:
         """Initialize transform.
 
@@ -67,6 +68,8 @@ class ComputeEatPvatMasksd(MapTransform):
             segmenter: Optional custom UnifiedAnatomySegmenter instance.
             allow_missing_keys: If False, raises KeyError when key is missing.
             pvat_radial_dilation_mm: Backward-compatible alias for pvat_radial_distance_mm.
+            morphology_mode: "cardiacfatquant" (exact MGH 7-rule groove morphology),
+                "voronoi" (EDT Voronoi + radial sulcus envelope), or "auto".
         """
         super().__init__(keys, allow_missing_keys)
         self.ct_key = ct_key
@@ -78,6 +81,7 @@ class ComputeEatPvatMasksd(MapTransform):
             pvat_radial_distance_mm = pvat_radial_dilation_mm
         self.pvat_radial_distance_mm = pvat_radial_distance_mm
         self.restrict_pvat_to_pericardium = restrict_pvat_to_pericardium
+        self.morphology_mode = morphology_mode.lower()
         self._segmenter = segmenter if segmenter is not None else UnifiedAnatomySegmenter(backend="auto")
 
     def _extract_array_and_spacing(self, img_obj: Any) -> Tuple[np.ndarray, Tuple[float, float, float]]:
@@ -238,51 +242,74 @@ class ComputeEatPvatMasksd(MapTransform):
         if anatomy is None:
             anatomy = self._segmenter.segment(ct_arr, spacing=spacing)
 
-        # 1. Adipose attenuation thresholding: strictly [-190.0, -30.0] HU
-        adipose_voxels = (ct_arr >= self.hu_min) & (ct_arr <= self.hu_max)
-
-        # 2. Total Epicardial Adipose Tissue (EAT_Total)
-        # All adipose tissue inside the pericardial/heart mask
-        eat_total = adipose_voxels & anatomy.pericardium
-
-        # 3. Chamber-specific EAT (EAT_LA, EAT_LV, EAT_RA, EAT_RV)
-        zone_la, zone_lv, zone_ra, zone_rv = self._compute_chamber_voronoi(
-            anatomy.la, anatomy.lv, anatomy.ra, anatomy.rv, spacing=spacing, pericardium=anatomy.pericardium
+        use_cfq_morphology = self.morphology_mode == "cardiacfatquant" or (
+            self.morphology_mode == "auto"
+            and max(ct_arr.shape) >= 256
+            and getattr(anatomy, "myocardium", None) is not None
         )
-        eat_la = eat_total & zone_la
-        eat_lv = eat_total & zone_lv
-        eat_ra = eat_total & zone_ra
-        eat_rv = eat_total & zone_rv
 
-        # 4. Pericoronary Adipose Tissue (PVAT_LAD, PVAT_LCX, PVAT_RCA)
-        # Radial Euclidean distance dilation around vessel centerline/mask
-        envelope_lad = self._compute_pvat_envelope(anatomy.lad, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
-        envelope_lcx = self._compute_pvat_envelope(anatomy.lcx, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
-        envelope_rca = self._compute_pvat_envelope(anatomy.rca, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
+        if use_cfq_morphology:
+            from cardiac_fat_fl.coca_parity import compute_cardiacfatquant_eat_pvat_masks
 
-        pvat_lad = adipose_voxels & envelope_lad
-        pvat_lcx = adipose_voxels & envelope_lcx
-        pvat_rca = adipose_voxels & envelope_rca
+            masks_8ch = compute_cardiacfatquant_eat_pvat_masks(
+                ct_arr=ct_arr,
+                spacing=spacing,
+                pericardium=anatomy.pericardium,
+                la=anatomy.la,
+                lv=anatomy.lv,
+                ra=anatomy.ra,
+                rv=anatomy.rv,
+                myocardium=getattr(anatomy, "myocardium", None),
+                aorta=getattr(anatomy, "aorta", None),
+                hu_min=self.hu_min,
+                hu_max=self.hu_max,
+            )
+        else:
+            # 1. Adipose attenuation thresholding: strictly [-190.0, -30.0] HU
+            adipose_voxels = (ct_arr >= self.hu_min) & (ct_arr <= self.hu_max)
 
-        if self.restrict_pvat_to_pericardium:
-            pvat_lad = pvat_lad & anatomy.pericardium
-            pvat_lcx = pvat_lcx & anatomy.pericardium
-            pvat_rca = pvat_rca & anatomy.pericardium
+            # 2. Total Epicardial Adipose Tissue (EAT_Total)
+            # All adipose tissue inside the pericardial/heart mask
+            eat_total = adipose_voxels & anatomy.pericardium
 
-        # Stack into 8-channel boolean tensor (8, D, H, W)
-        masks_8ch = np.stack(
-            [
-                eat_total,  # Channel 0: EAT_Total
-                eat_la,     # Channel 1: EAT_LA
-                eat_lv,     # Channel 2: EAT_LV
-                eat_ra,     # Channel 3: EAT_RA
-                eat_rv,     # Channel 4: EAT_RV
-                pvat_lad,   # Channel 5: PVAT_LAD
-                pvat_lcx,   # Channel 6: PVAT_LCX
-                pvat_rca,   # Channel 7: PVAT_RCA
-            ],
-            axis=0,
-        ).astype(np.float32)
+            # 3. Chamber-specific EAT (EAT_LA, EAT_LV, EAT_RA, EAT_RV)
+            zone_la, zone_lv, zone_ra, zone_rv = self._compute_chamber_voronoi(
+                anatomy.la, anatomy.lv, anatomy.ra, anatomy.rv, spacing=spacing, pericardium=anatomy.pericardium
+            )
+            eat_la = eat_total & zone_la
+            eat_lv = eat_total & zone_lv
+            eat_ra = eat_total & zone_ra
+            eat_rv = eat_total & zone_rv
+
+            # 4. Pericoronary Adipose Tissue (PVAT_LAD, PVAT_LCX, PVAT_RCA)
+            # Radial Euclidean distance dilation around vessel centerline/mask
+            envelope_lad = self._compute_pvat_envelope(anatomy.lad, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
+            envelope_lcx = self._compute_pvat_envelope(anatomy.lcx, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
+            envelope_rca = self._compute_pvat_envelope(anatomy.rca, spacing, self.pvat_radial_distance_mm, pericardium=anatomy.pericardium)
+
+            pvat_lad = adipose_voxels & envelope_lad
+            pvat_lcx = adipose_voxels & envelope_lcx
+            pvat_rca = adipose_voxels & envelope_rca
+
+            if self.restrict_pvat_to_pericardium:
+                pvat_lad = pvat_lad & anatomy.pericardium
+                pvat_lcx = pvat_lcx & anatomy.pericardium
+                pvat_rca = pvat_rca & anatomy.pericardium
+
+            # Stack into 8-channel boolean tensor (8, D, H, W)
+            masks_8ch = np.stack(
+                [
+                    eat_total,  # Channel 0: EAT_Total
+                    eat_la,     # Channel 1: EAT_LA
+                    eat_lv,     # Channel 2: EAT_LV
+                    eat_ra,     # Channel 3: EAT_RA
+                    eat_rv,     # Channel 4: EAT_RV
+                    pvat_lad,   # Channel 5: PVAT_LAD
+                    pvat_lcx,   # Channel 6: PVAT_LCX
+                    pvat_rca,   # Channel 7: PVAT_RCA
+                ],
+                axis=0,
+            ).astype(np.float32)
 
         # Wrap in MetaTensor if input was MetaTensor
         if isinstance(ct_obj, MetaTensor):

@@ -1647,6 +1647,68 @@ def mcp_server(
     )
 
 
+@app.command("parity-audit")
+def parity_audit(
+    cohort_dir: Path = typer.Argument(
+        ...,
+        help="Path to the cohort or Stanford COCA directory.",
+    ),
+    mode: str = typer.Option(
+        "controlled_stage3",
+        "--mode",
+        "-m",
+        help="Audit mode: 'controlled_stage3' (1:1 7-rule morphology parity) or 'curated_vs_legacy' (Curated DeepHeartSeg + 7-rule vs Legacy).",
+    ),
+    num_cases: int = typer.Option(
+        10,
+        "--num-cases",
+        "-n",
+        help="Maximum number of segmented cases to evaluate.",
+    ),
+    seed: int = typer.Option(
+        42,
+        "--seed",
+        help="Random seed for deterministic case sampling.",
+    ),
+    output_json: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Optional output JSON path for the 4-checkpoint parity report.",
+    ),
+) -> None:
+    """Run the 4-Checkpoint End-to-End Architectural Parity Audit (monai-cardiac-fat-fl vs. CardiacFatQuant)."""
+    import json
+    from cardiac_fat_fl.coca_parity import run_architectural_parity_audit
+
+    if not cohort_dir.exists():
+        console.print(f"[red]Error: Cohort directory not found: {cohort_dir}[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(
+        f"[cyan]Running 4-Checkpoint Architectural Parity Audit ({mode}) on {cohort_dir}...[/cyan]"
+    )
+    report = run_architectural_parity_audit(
+        cohort_dir=cohort_dir,
+        mode=mode,
+        limit=num_cases,
+        seed=seed,
+    )
+
+    if output_json is not None:
+        output_json.parent.mkdir(parents=True, exist_ok=True)
+        output_json.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        console.print(f"[green]Saved parity audit report to {output_json}[/green]")
+
+    cp_d = report.get("checkpoint_d", {})
+    console.print(
+        f"[bold green]Evaluated {report.get('participant_count', 0)} case(s)[/bold green] | "
+        f"Overall Mean Dice: {report.get('mean_overall_dice', 0.0):.6f} | "
+        f"EAT Vol MAE: {cp_d.get('eat_volume_mae_cm3', 0.0):.3f} cm3"
+    )
+
+
 if __name__ == "__main__":
     app()
+
 

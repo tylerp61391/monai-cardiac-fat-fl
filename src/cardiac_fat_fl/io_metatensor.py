@@ -254,6 +254,10 @@ def read_medical_image_as_metatensor(path_or_dir: Union[str, Path]) -> MetaTenso
     # Case 2: File (.nrrd, .nii, .nii.gz, .mha)
     if p.name.lower().endswith(".nrrd"):
         data_np, header, spacing = read_nrrd_ct(p)
+        if data_np.ndim == 4 and (data_np.shape[0] == 8 or data_np.shape[-1] == 8):
+            from cardiac_fat_fl.coca_parity import align_eat_pvat_channels
+
+            data_np = align_eat_pvat_channels(data_np, header)
         affine = np.eye(4, dtype=np.float64)
         if "space directions" in header and header["space directions"] is not None:
             dirs = np.array(header["space directions"], dtype=np.float64)
