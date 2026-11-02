@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This document defines the code-verified architectural audit, stage-by-stage algorithmic comparison, and implementation roadmap for proving end-to-end parity between [`monai-cardiac-fat-fl`](../src/cardiac_fat_fl/) and the foundational Harvard / MGH [`circ-ml/CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) pipeline across the reference NRRD cohort (`example_source_dir/0506`, `0909`, `0987`) and the **Stanford AIMI COCA (Coronary Calcium and Chest CTs)** dataset (`E:\CT\Stanford_COCA`).
+This document defines the code-verified architectural audit, stage-by-stage algorithmic comparison, and implementation roadmap for proving end-to-end parity between [`monai-cardiac-fat-fl`](../src/cardiac_fat_fl/) and the foundational Harvard / MGH [`circ-ml/CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) pipeline across the reference NRRD cohort (`example_source_dir/0506`, `0909`, `0987`) and the **Stanford AIMI COCA (Coronary Calcium and Chest CTs)** dataset (Stanford AIMI COCA cohort).
 
 By cloning and auditing the complete `circ-ml/CardiacFatQuant` source tree (including `DeepHeartSeg_wrapper/DeepHeartSeg/src/step1_heartloc/`, `step2_heartseg/`, `generate_totalsegmentator_masks.py`, `generate_eat_pvat_masks.py`, and `measurement_schema.py`), we identified **four concrete architectural layers** where differences currently arise—even when the underlying neural network weights (`deepheartseg_step1.hdf5` / `deepheartseg_loc.onnx` and `deepheartseg_step2.hdf5` / `deepheartseg_heart.onnx`) are identical:
 
@@ -131,7 +131,7 @@ Comparing `CardiacFatQuant/measurement_schema.py` against `src/cardiac_fat_fl/me
      - Adds **Mean Attenuation Delta ($\Delta\text{HU}$)**, **95th Percentile Hausdorff Distance (HD95)**, **Intraclass Correlation Coefficient ($\text{ICC}$)**, and **Bland-Altman Bias / Limits of Agreement (LoA)** alongside DICE and Volume Error.
      - Displays an **Interactive Per-Case Benchmark Explorer Table** below the summary scorecard so you can click any patient row to inspect their individual 8-compartment DICE and launch **1-Click OHIF 2D MPR / 3D Slicer** directly on that patient!
    - **Panel 2: Architectural Parity Runner (`monai-cardiac-fat-fl` vs. `circ-ml/CardiacFatQuant`)**:
-     - Lets you run or inspect the **4-Checkpoint Parity Audit** directly from the browser on either the reference NRRD cohort (`example_source_dir`: `0506`, `0909`, `0987`) or a deterministic subset of `E:\CT\Stanford_COCA` (`--num-cases N`, `--seed 42`):
+     - Lets you run or inspect the **4-Checkpoint Parity Audit** directly from the browser on either the reference NRRD cohort (`example_source_dir`: `0506`, `0909`, `0987`) or a deterministic subset of `/path/to/Stanford_COCA` (`--num-cases N`, `--seed 42`):
        - **Checkpoint A (Pre-Processing & ROI Crop)**: Verifies intensity normalization, curated spacing, and bounding-box alignment.
        - **Checkpoint B (Raw Model Probabilities)**: Verifies `DeepHeartSeg` Step 1 & Step 2 ONNX vs. Keras HDF5 probability equivalence (`MAE < 1e-5`, `Cosine Similarity > 0.9999`).
        - **Checkpoint C (Native-Space Binary Masks)**: Evaluates 3D Dice, IoU, and HD95 for `Pericardium (heart.seg.nrrd)`, `Chambers (LA/LV/RA/RV/Aorta)`, and `8-Channel EAT/PVAT (eat_pvat.seg.nrrd)`.
@@ -167,7 +167,7 @@ Comparing `CardiacFatQuant/measurement_schema.py` against `src/cardiac_fat_fl/me
 ### Phase 3: 4-Checkpoint Parity Runner & Reference Cohort Verification (`benchmarks/run_coca_parity.py`)
 
 1. **Checkpoints A $\rightarrow$ B $\rightarrow$ C $\rightarrow$ D Instrumentation**:
-   - Verify on `example_source_dir` (`0506`, `0909`, `0987`) and `E:\CT\Stanford_COCA`.
+   - Verify on `example_source_dir` (`0506`, `0909`, `0987`) and `/path/to/Stanford_COCA`.
    - Measure:
      - **Controlled Input Mode** (identical chamber masks $\rightarrow$ Stage 3 EAT/PVAT engine): Target **`Dice = 1.000`** across all 8 compartments.
      - **Step 1 + Step 2 Pericardium Mode** (`DeepHeartSeg` ONNX curated vs. `CardiacFatQuant` reference): Target **`Dice >= 0.995`**.
@@ -186,24 +186,24 @@ Comparing `CardiacFatQuant/measurement_schema.py` against `src/cardiac_fat_fl/me
 
 ---
 
-## 5. Verification Results Across 100 Stanford COCA Cases (`E:\CT\Stanford_COCA`)
+## 5. Verification Results Across 100 Stanford COCA Cases
 
-Execution of the full 100-case repo-to-repo parity suite (`task-5178` and `task-5187`) demonstrated complete mathematical equivalence between the upgraded `monai-cardiac-fat-fl` codebase and the cloned Harvard `circ-ml/CardiacFatQuant` repository (`GPU_1.hdf5` + `generate_eat_pvat_masks.py` + `generate_measurements.py`):
+Execution of the full 100-case repo-to-repo parity suite (`task-5178` and `task-5187`) demonstrated complete mathematical equivalence in controlled morphological and quantitative stages (Stage 3–4) between the upgraded `monai-cardiac-fat-fl` codebase and the cloned Harvard `circ-ml/CardiacFatQuant` repository (`GPU_1.hdf5` + `generate_eat_pvat_masks.py` + `generate_measurements.py`):
 
 | Parity Audit Mode | Cohort Size | Mean Dice (All 8 Compartments + PVAT Total) | EAT Volume MAE | PVAT Volume MAE | PVAT HU Attenuation MAE | CRISP-CT Agreement |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **`controlled_stage3`** (`monai-cardiac-fat-fl` vs. cloned Harvard `CardiacFatQuant`) | **100 Cases** | **`1.0000` (`100.00%`)** | **`0.000 cm³`** (`ICC = 1.0000`) | **`0.000 cm³`** (`ICC = 1.0000`) | **`0.000 HU`** (`ICC = 1.0000`) | **`100.0%` (100 / 100 concordant)** |
 | **`curated_vs_legacy`** (Harvard `CardiacFatQuant` vs. Pre-Upgrade Voronoi Masks on Disk) | **100 Cases** | **`0.2965` (`29.65%`)** | **`54.71 cm³`** (`93.97` vs. `39.26 cm³`) | **`8.55 cm³`** (`22.21` vs. `26.09 cm³`) | **`4.82 HU`** | **`86.0%` (14 / 100 discordant)** |
 
-### Verified Deliverables on `E:\CT\Stanford_COCA`
+### Verified Deliverables on `/path/to/Stanford_COCA`
 
-- **100-Patient Verification Suite (`E:\CT\Stanford_COCA\parity_verification_100\`)**:
+- **100-Patient Verification Suite (`parity_verification_100/`)**:
   - `repo_to_repo_parity_controlled_stage3.csv`: Case-by-case proof of identical volumes, HU values, and `1.0000` Dice across 100 patients.
   - `repo_to_repo_parity_curated_vs_legacy.csv`: Detailed case-by-case tracking of historical volume and compartment shifts versus legacy Voronoi masks.
   - `monai_cardiac_fat_measurements.csv` & `harvard_cardiacfatquant_measurements.csv`: Exact 19-column clinical metrics files for all 100 patients.
   - `parity_audit_controlled_stage3.json` & `parity_audit_curated_vs_legacy.json`: Full 4-checkpoint telemetry caches.
-- **Master Cohort File**: `E:\CT\Stanford_COCA\cardiac_fat_measurements.csv` updated with 100 verified parity cases.
-- **Per-Patient NRRDs Saved on Disk (`E:\CT\Stanford_COCA\...\patient\<id>\`)**:
+- **Master Cohort File**: `cohort cardiac_fat_measurements.csv` updated with 100 verified parity cases.
+- **Per-Patient NRRDs Saved on Disk (`patient/<id>/`)**:
   - `eat_pvat.seg.nrrd` & `cardiac_fat_measurements.csv` (active Harvard-parity segmentation and metrics)
   - `eat_pvat_harvard_cfq.seg.nrrd` & `harvard_cfq_measurements.csv` (direct outputs of cloned Harvard repo)
   - `eat_pvat_legacy_voronoi.seg.nrrd` (preserved historical Voronoi backup)

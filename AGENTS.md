@@ -299,7 +299,7 @@ To export or push clinical biomarkers and diagnostic reports directly into hospi
    - Sandbox status summary: `http://127.0.0.1:8050/r4/_sandbox`
 5. **Interactive Dashboard 1-Click Export**:
    In the Research Dashboard (`:8050`), open any participant via **Deep Dive** in the Case Explorer and click **FHIR R4 Bundle** to download a standards-compliant JSON bundle on-demand, or query `http://127.0.0.1:8050/api/case/<pid>/fhir`.
-   See [`docs/EPIC_FHIR_MCP_INTEGRATION.md`](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2\cardiofat\docs\EPIC_FHIR_MCP_INTEGRATION.md) for full Epic on FHIR and open.epic Model Context Protocol documentation.
+   See [`docs/EPIC_FHIR_MCP_INTEGRATION.md`](docs/EPIC_FHIR_MCP_INTEGRATION.md) for full Epic on FHIR and open.epic Model Context Protocol documentation.
 
 ---
 
@@ -362,7 +362,7 @@ To verify 100.0% end-to-end mathematical and anatomical parity between `monai-ca
 1. **CLI Execution**:
 
    ```bash
-   cardiac-fat-fl parity-audit "E:\CT\Stanford_COCA" --mode controlled_stage3 --output parity_report.json
+   cardiac-fat-fl parity-audit "/path/to/cohort" --mode controlled_stage3 --output parity_report.json
    ```
 
 2. **Audit Modes**:
@@ -371,7 +371,7 @@ To verify 100.0% end-to-end mathematical and anatomical parity between `monai-ca
 3. **Automated Verification Deliverables** (`parity_verification_100/`):
    - `repo_to_repo_parity_controlled_stage3.csv`: Per-patient 8-compartment DICE scores, absolute volume differences, and mean attenuation differences.
    - `monai_cardiac_fat_measurements.csv` vs `harvard_cardiacfatquant_measurements.csv`: Exact 19-column clinical metrics verification.
-   - Complete technical roadmap and derivation in [`docs/PARITY_BENCHMARK_ROADMAP.md`](file:///c:/Users/Brad/OneDrive/Documents/Projects_Antigravity_2/cardiofat/docs/PARITY_BENCHMARK_ROADMAP.md).
+   - Complete technical roadmap and derivation in [`docs/PARITY_BENCHMARK_ROADMAP.md`](docs/PARITY_BENCHMARK_ROADMAP.md).
 
 ---
 

@@ -18,7 +18,7 @@
 
 **PyTorch / MONAI Bundle** and [**NVIDIA FLARE (NVFLARE)**](https://developer.nvidia.com/flare) federated learning framework for 3D cardiac CT epicardial and pericoronary adipose tissue (EAT / PVAT) quantification and multi-site analytics.
 
-This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) research pipeline, transitioning it into a high-throughput Python 3.11+ and GPU-accelerated ecosystem. It enhances execution speed and scalability through modern PyTorch and ONNX Runtime backends, preserves **100.0% clinical and numerical equivalence** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer v3.13+](https://ohif.org/release-notes/3p13) via standard DICOM-SEG objects.
+This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) research pipeline, transitioning it into a high-throughput Python 3.11+ and GPU-accelerated ecosystem. It enhances execution speed and scalability through modern PyTorch and ONNX Runtime backends, preserves **100.0% mathematical and clinical equivalence on identical anatomical inputs** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$ in controlled Stage 3–4 validation), supports multi-modal clinical ingestion (DICOM, NIfTI, NRRD), and natively integrates with the [OHIF Medical Imaging Viewer v3.13+](https://ohif.org/release-notes/3p13) via standard DICOM-SEG objects.
 
 ![Interactive OHIF v3.13 Medical Workstation: 3D Slicer Four-Up 2x2 Layout](docs/figures/ohif_viewer_snapshot.png)
 
@@ -39,7 +39,7 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 | **Language & Runtime** | Python 2.7 / TensorFlow 1.14 (Frozen Keras `.pb`/`.hdf5`) | Python 3.11+ / PyTorch 2.x & ONNX Runtime GPU |
 | **Image Ingestion** | Folder structure (`scan.nrrd`) | Universal: DICOM Series (with slope/intercept), NIfTI, NRRD, MHA |
 | **Segmentation Engine** | Multi-step external tools: subprocess `TotalSegmentator` (nnUNet 1.5 mm isotropic) + 2-stage `DeepHeartSeg` (TF 1.14 `.pb`) | **Native MONAI & GPU Stack**: NVIDIA NGC / MONAI Model Zoo [`monai_wholebody_ct_segmentation`](https://catalog.ngc.nvidia.com/orgs/nvidia/monaitoolkit/models/monai_wholebody_ct_segmentation) (1.5 mm isotropic SegResNet, 104 labels: LA, LV, RA, RV, Aorta) + 2-stage `DeepHeartSeg` ONNX (`loc` + `heart`) + distilled 8-ch SegResNet |
-| **Clinical Equivalency** | Baseline MGH manuscript values | **100.0% Exact Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$, $r = 1.000$) |
+| **Clinical Equivalency** | Baseline MGH manuscript values | **Controlled Stage 3–4 Match** ($\Delta = 0.00\text{ cm}^3$, $\Delta = 0.00\text{ HU}$ on identical inputs; $r > 0.99$) |
 | **Spatial Transforms** | SciPy / SimpleITK CPU routines | GPU-accelerated MONAI `MapTransforms` (Voronoi & radial dilation) |
 | **Clinical Edge & Deployment** | Manual CLI execution on host Python; no containerization or automated hospital staging | **Turnkey MONAI Deploy (MAP)** 3-operator DAG (`monai_deploy.py`), autonomous **PACS Watchdog & Auto-Router Daemon** (`cardiac-fat-fl daemon`), and containerized Kubernetes batch Jobs (`k8s/hospital-clinical-testbed.yaml`) |
 | **Distributed Orchestration** | Single-site workstation deployment | Multi-site **NVIDIA FLARE 2.5+** (FedBN + FedProx + SOTA Multi-Hospital Simulator) |
@@ -257,11 +257,11 @@ cardiac-fat-fl benchmark --cohort-dir "/path/to/cohort" --candidate "eat_pvat.se
 
 To mathematically validate and verify end-to-end architectural parity against the reference Harvard/MGH [`circ-ml/CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) pipeline, `monai-cardiac-fat-fl` incorporates a dedicated 4-checkpoint verification audit (`cardiac-fat-fl parity-audit`).
 
-This audit directly imports and executes the cloned reference repository's Python routines (`generate_eat_pvat_masks.py` and `generate_measurements.py`) alongside `monai-cardiac-fat-fl`, validating identical execution across **100 consecutive clinical cardiac CT cases** from the Stanford AIMI Coronary Calcium (COCA) cohort (`E:\CT\Stanford_COCA`):
+This audit directly imports and executes the cloned reference repository's Python routines (`generate_eat_pvat_masks.py` and `generate_measurements.py`) alongside `monai-cardiac-fat-fl`, validating identical execution across **100 consecutive clinical cardiac CT cases** from the Stanford AIMI Coronary Calcium (COCA) cohort:
 
 ```bash
 # Run 100-case controlled morphological parity audit vs. Harvard circ-ml/CardiacFatQuant
-cardiac-fat-fl parity-audit "E:\CT\Stanford_COCA" --mode controlled_stage3 --output parity_report.json
+cardiac-fat-fl parity-audit "/path/to/coca_cohort" --mode controlled_stage3 --output parity_report.json
 ```
 
 #### 100-Case Controlled Morphology Parity Results
@@ -275,7 +275,6 @@ Across all 100 Stanford COCA clinical cases, `monai-cardiac-fat-fl` achieved **1
 | **PVAT Total Dice** | **1.0000 (100.00%)** | Exact 10 mm radial dilation & sulcal groove clipping |
 | **Volume Mean Absolute Error (MAE)** | **$0.000\text{ cm}^3$** | Identical physical voxel scaling ($\\Delta V = 0.000$) |
 | **Mean Attenuation MAE** | **$0.000\text{ HU}$** | Identical HU histogram summation ($\\Delta \\text{HU} = 0.000$) |
-| **Intraclass Correlation (ICC)** | **1.0000** | Perfect inter-pipeline agreement ($p < 10^{-15}$) |
 | **CRISP-CT Risk Agreement** | **100.0%** | Zero categorical discordance across all 100 patients |
 
 > [!NOTE]
@@ -287,7 +286,7 @@ Modernizing the legacy Python 2.7 / TensorFlow 1.14 CPU pipeline into Python 3.1
 
 | Processing Stage | Foundational Harvard (`circ-ml/CardiacFatQuant`) | Modernized Pipeline (`monai-cardiac-fat-fl`) | Measured Speedup |
 | :--- | :---: | :---: | :---: |
-| **Stage 2: DeepHeartSeg Pericardium** | $3,975.7\text{ ms}$ (CPU / TF 1.14) | **$48.4\text{ ms}$** (RTX 4090 GPU / PyTorch ONNX) | **$82.1\times$ faster** |
+| **Stage 2: DeepHeartSeg Pericardium** | $3,975.7\text{ ms}$ (Reference CPU / TF 1.14) | **$48.4\text{ ms}$** (Modernized GPU / PyTorch ONNX) | **$82.1\times$ faster** (Hardware + Stack) |
 | **Stage 3: 8-Compartment Morphology** | $4,590.0\text{ ms}$ (SciPy CPU) | **$3,940.0\text{ ms}$** (Optimized EDT) | **$1.16\times$ faster** |
 | **Stage 4: 19-Column Quantification** | $506.0\text{ ms}$ (Single-threaded) | **$128.0\text{ ms}$** (Vectorized NumPy) | **$3.97\times$ faster** |
 | **Cohort Indexing (1,000 cases)** | $\sim 300\text{ s}$ (Recursive glob) | **$2.93\text{ s}$** (Fast `os.scandir` + cache) | **$102.4\times$ faster** |
@@ -727,7 +726,6 @@ monai-cardiac-fat-fl/
 │   ├── ARCHITECTURE_CODE_REVIEW.md
 │   ├── architecture_infographic.html
 │   ├── presentation_deck.html
-│   ├── coca_cohort_abstract.md    # Stanford AIMI COCA cohort validation report (N=998 scans, 99.8%)
 │   └── PARITY_BENCHMARK_ROADMAP.md # 100-case Stanford COCA architectural parity audit & benchmark roadmap
 ├── k8s/                           # Institutional hospital Kubernetes cluster manifests
 │   ├── README.md                  # Kubernetes architecture overview & quickstart guide

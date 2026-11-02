@@ -1594,7 +1594,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       <p class="text-xs text-slate-400">
         Enter the absolute path to a clinical cohort root (e.g. Stanford COCA, Harvard CardiacFatQuant, or institutional dataset folder).
       </p>
-      <input type="text" id="inputCohortPath" placeholder="C:/path/to/cohort or E:/CT/..."
+      <input type="text" id="inputCohortPath" placeholder="/path/to/cohort or C:/path/to/cohort..."
              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-sky-500">
       <div id="cohortSwitchError" class="text-xs text-rose-400 hidden"></div>
       <div class="flex items-center justify-end gap-3 pt-3">
