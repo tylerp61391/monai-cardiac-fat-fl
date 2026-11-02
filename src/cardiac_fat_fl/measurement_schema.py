@@ -8,7 +8,7 @@ CardiacFatQuant pipeline.
 from __future__ import annotations
 
 from enum import IntEnum, StrEnum
-from typing import Final, List, Tuple
+from typing import Final, List, Sequence, Tuple, Union
 import pandas as pd
 
 # -----------------------------------------------------------------------------
@@ -131,7 +131,7 @@ def validate_measurement_dataframe(df: pd.DataFrame) -> bool:
     return True
 
 
-def calculate_volume_cm3(voxel_count: int, voxel_spacing_mm: Tuple[float, float, float]) -> float:
+def calculate_volume_cm3(voxel_count: int, voxel_spacing_mm: Union[Tuple[float, float, float], Sequence[float]]) -> float:
     """Calculate volume in cubic centimeters (cm3) from voxel count and spacing in mm.
 
     Formula:

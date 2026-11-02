@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import scipy.ndimage as ndi
@@ -242,7 +242,7 @@ class UnifiedAnatomySegmenter:
     def segment(
         self,
         image_hu: Union[np.ndarray, torch.Tensor],
-        spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0),
+        spacing: Union[Tuple[float, float, float], Sequence[float]] = (1.0, 1.0, 1.0),
     ) -> AnatomyMasks:
         """Run anatomy segmentation on a 3D cardiac CT scan.
 
@@ -275,7 +275,7 @@ class UnifiedAnatomySegmenter:
     def _segment_monai(
         self,
         arr: np.ndarray,
-        spacing: Tuple[float, float, float],
+        spacing: Union[Tuple[float, float, float], Sequence[float]],
     ) -> AnatomyMasks:
         """Run PyTorch/MONAI deep learning inference with sliding window support."""
         assert self.torch_model is not None
@@ -317,7 +317,7 @@ class UnifiedAnatomySegmenter:
     def _segment_onnx(
         self,
         arr: np.ndarray,
-        spacing: Tuple[float, float, float],
+        spacing: Union[Tuple[float, float, float], Sequence[float]],
     ) -> AnatomyMasks:
         """Run ONNX runtime model inference supporting DeepHeartSeg and multi-channel models."""
         assert self.onnx_session is not None
@@ -436,7 +436,7 @@ class UnifiedAnatomySegmenter:
     def _run_wholebody_segmentation(
         self,
         arr: np.ndarray,
-        spacing: Tuple[float, float, float],
+        spacing: Union[Tuple[float, float, float], Sequence[float]],
     ) -> Optional[np.ndarray]:
         """Run NGC monai_wholebody_ct_segmentation (1.5mm SegResNet) to extract 104-class labels."""
         if self.wholebody_bundle is None or getattr(self, "wholebody_inferer", None) is None:
@@ -699,7 +699,7 @@ class UnifiedAnatomySegmenter:
     def _segment_heuristic(
         self,
         arr: np.ndarray,
-        spacing: Tuple[float, float, float],
+        spacing: Union[Tuple[float, float, float], Sequence[float]],
     ) -> AnatomyMasks:
         """Heuristic anatomical segmenter based on CT Hounsfield Units and cardiac morphology.
 

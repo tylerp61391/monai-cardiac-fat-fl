@@ -31,6 +31,7 @@ import SimpleITK as sitk
 from cardiac_fat_fl.measurement_schema import (
     ADIPOSE_HU_MAX,
     ADIPOSE_HU_MIN,
+    MEASUREMENT_CSV_COLUMNS,
     REPORTED_REGIONS,
     SEGMENTATION_COMPARTMENTS,
     ReportedRegion,
@@ -165,9 +166,9 @@ def _keep_largest_cc_3d(
 
 def _arr_to_sitk_xyz(
     arr: np.ndarray,
-    spacing: Tuple[float, float, float],
-    origin: Optional[Tuple[float, float, float]] = None,
-    direction: Optional[Tuple[float, ...]] = None,
+    spacing: Union[Tuple[float, float, float], Sequence[float]],
+    origin: Optional[Union[Tuple[float, float, float], Sequence[float]]] = None,
+    direction: Optional[Sequence[float]] = None,
     is_xyz: Optional[bool] = None,
 ) -> Tuple[sitk.Image, bool]:
     """Convert a 3D NumPy array to a SimpleITK Image with physical spacing (sx, sy, sz).
@@ -195,11 +196,11 @@ def _sitk_to_arr(img: sitk.Image, is_xyz: bool) -> np.ndarray:
 
 def run_deepheartseg_curated_onnx(
     ct_arr: np.ndarray,
-    spacing: Tuple[float, float, float],
+    spacing: Union[Tuple[float, float, float], Sequence[float]],
     loc_session: Any,
     seg_session: Any,
-    origin: Optional[Tuple[float, float, float]] = None,
-    direction: Optional[Tuple[float, ...]] = None,
+    origin: Optional[Union[Tuple[float, float, float], Sequence[float]]] = None,
+    direction: Optional[Sequence[float]] = None,
     return_checkpoints: bool = False,
 ) -> Union[np.ndarray, Tuple[np.ndarray, Dict[str, Any]]]:
     """Run exact MGH `CardiacFatQuant/DeepHeartSeg_wrapper` Step 1 + Step 2 in-memory with ONNX.
@@ -496,7 +497,7 @@ def run_deepheartseg_curated_onnx(
 
 def compute_cardiacfatquant_eat_pvat_masks(
     ct_arr: np.ndarray,
-    spacing: Tuple[float, float, float],
+    spacing: Union[Tuple[float, float, float], Sequence[float]],
     pericardium: np.ndarray,
     la: np.ndarray,
     lv: np.ndarray,
@@ -717,7 +718,7 @@ def _point_in_polygon_2d(
 def rasterize_coca_calcium_xml(
     xml_path: Union[str, Path],
     ct_arr: np.ndarray,
-    spacing: Tuple[float, float, float],
+    spacing: Union[Tuple[float, float, float], Sequence[float]],
 ) -> Dict[str, Any]:
     """Parse a Stanford AIMI COCA `calcium_xml` file and rasterize ROI polygons into a 3D mask.
 
@@ -876,7 +877,7 @@ def _compute_cohens_kappa(labels_a: Sequence[str], labels_b: Sequence[str]) -> f
 def _quantify_8ch_mask(
     ct_arr: np.ndarray,
     mask_8ch: np.ndarray,
-    spacing: Tuple[float, float, float],
+    spacing: Union[Tuple[float, float, float], Sequence[float]],
 ) -> Dict[str, float]:
     """Compute Volume (cm3) and Mean Attenuation (HU) for all 9 clinical regions."""
     m_bool = mask_8ch > 0.5
@@ -1007,10 +1008,13 @@ def _get_harvard_hdf5_step2_model() -> Any:
                         w = np.transpose(k, (4, 3, 0, 1, 2)).copy()
                         pad = 1 if k.shape[0] == 3 else 0
                         conv = nn.Conv3d(w.shape[1], w.shape[0], kernel_size=k.shape[0], padding=pad)
-                        if conv.weight is not None:
-                            conv.weight.data.copy_(torch.from_numpy(w))
-                        if conv.bias is not None:
-                            conv.bias.data.copy_(torch.from_numpy(b))
+                        with torch.no_grad():
+                            cw = conv.weight
+                            if cw is not None:
+                                cw.copy_(torch.from_numpy(w))
+                            cb = conv.bias
+                            if cb is not None:
+                                cb.copy_(torch.from_numpy(b))
                         self.convs[lname] = conv
 
             def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -1043,7 +1047,7 @@ def _get_harvard_hdf5_step2_model() -> Any:
 def _quantify_8ch_mask_harvard_repo(
     ct_arr: np.ndarray,
     mask_8ch: np.ndarray,
-    spacing: Tuple[float, float, float],
+    spacing: Union[Tuple[float, float, float], Sequence[float]],
 ) -> Dict[str, float]:
     """Execute Harvard circ-ml/CardiacFatQuant/generate_measurements.py get_volume_and_attenuation."""
     cfq_meas = _get_cloned_harvard_meas_module()
@@ -1095,7 +1099,7 @@ def _quantify_8ch_mask_harvard_repo(
 
 def _run_cloned_harvard_repo_stage3(
     ct_arr: np.ndarray,
-    spacing: Tuple[float, float, float],
+    spacing: Union[Tuple[float, float, float], Sequence[float]],
     pericardium: np.ndarray,
     la: np.ndarray,
     lv: np.ndarray,
@@ -1300,7 +1304,8 @@ def run_architectural_parity_audit(
     per_case_results: List[Dict[str, Any]] = []
     cand_csv_rows: List[Dict[str, Any]] = []
     ref_csv_rows: List[Dict[str, Any]] = []
-    eval_pairs: List[Tuple[str, np.ndarray, np.ndarray, Tuple[float, float, float]]] = []
+    eval_pairs: List[Tuple[str, np.ndarray, np.ndarray, Any]] = []
+    spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0)
 
     for pid in eligible_pids:
         p = cohort.participants[pid]
@@ -1322,7 +1327,7 @@ def run_architectural_parity_audit(
             while ct_arr.ndim > 3:
                 ct_arr = ct_arr[0]
             sp_raw = ct_mt.meta.get("spacing", (1.0, 1.0, 1.0))
-            spacing: Tuple[float, float, float] = (float(sp_raw[0]), float(sp_raw[1]), float(sp_raw[2]))
+            spacing = (float(sp_raw[0]), float(sp_raw[1]), float(sp_raw[2]))
             ref_header = ct_mt.meta.get("nrrd_header")
             orig_raw = ct_mt.meta.get("origin")
             origin: Optional[Tuple[float, float, float]] = (
@@ -1364,10 +1369,13 @@ def run_architectural_parity_audit(
                 with torch.no_grad():
                     dev = next(h5_model.parameters()).device
                     t_in = torch.from_numpy(inp_seg_verify).to(dev)
-                    s2_pr_verify = h5_model(t_in).cpu().numpy()[0, 0, :80]
+                    h5_pred: Any = h5_model(t_in)
+                    s2_pr_arr: np.ndarray = np.asarray(h5_pred.detach().cpu().numpy())
+                    s2_pr_verify = s2_pr_arr[0, 0, :80]
             else:
                 s2_out = seg_sess.run(None, {seg_sess.get_inputs()[0].name: inp_seg_verify})[0]
-                s2_pr_verify = np.asarray(s2_out)[0, 0, :80]
+                s2_arr: np.ndarray = np.asarray(s2_out)
+                s2_pr_verify = s2_arr[0, 0, :80]
             mae_b = float(np.mean(np.abs(s2_pr - s2_pr_verify)))
             cos_b = float(
                 np.dot(s2_pr.ravel(), s2_pr_verify.ravel())
@@ -1552,8 +1560,6 @@ def run_architectural_parity_audit(
         ref_csv_rows.append(ref_row)
 
         if save_parity_outputs_to_disk and mode == "controlled_stage3":
-            from cardiac_fat_fl.measurement_schema import MEASUREMENT_CSV_COLUMNS
-
             try:
                 if not was_already_saved:
                     orig_ep = p_dir / "eat_pvat.seg.nrrd"

@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import nrrd
 import numpy as np
@@ -383,8 +383,8 @@ def write_eat_pvat_seg_nrrd(
     seg_data: Union[np.ndarray, torch.Tensor],
     output_path: Union[str, Path],
     reference_header: Optional[Dict[str, Any]] = None,
-    spacing: Optional[Tuple[float, float, float]] = None,
-    origin: Optional[Tuple[float, float, float]] = None,
+    spacing: Optional[Union[Tuple[float, float, float], Sequence[float]]] = None,
+    origin: Optional[Union[Tuple[float, float, float], Sequence[float]]] = None,
     space_directions: Optional[Any] = None,
     is_totalseg: bool = False,
     labels_def: Optional[List[Dict[str, Any]]] = None,
@@ -540,8 +540,8 @@ def write_monai_wholebody_ct_segmentation_seg_nrrd(
     seg_data: Union[np.ndarray, torch.Tensor],
     output_path: Union[str, Path],
     reference_header: Optional[Dict[str, Any]] = None,
-    spacing: Optional[Tuple[float, float, float]] = None,
-    origin: Optional[Tuple[float, float, float]] = None,
+    spacing: Optional[Union[Tuple[float, float, float], Sequence[float]]] = None,
+    origin: Optional[Union[Tuple[float, float, float], Sequence[float]]] = None,
     space_directions: Optional[Any] = None,
 ) -> Path:
     """Convenience alias to write multi-label TotalSegmentator masks to `.seg.nrrd`."""
@@ -563,8 +563,8 @@ def write_coronary_sulci_seg_nrrd(
     seg_data: Union[np.ndarray, torch.Tensor],
     output_path: Union[str, Path],
     reference_header: Optional[Dict[str, Any]] = None,
-    spacing: Optional[Tuple[float, float, float]] = None,
-    origin: Optional[Tuple[float, float, float]] = None,
+    spacing: Optional[Union[Tuple[float, float, float], Sequence[float]]] = None,
+    origin: Optional[Union[Tuple[float, float, float], Sequence[float]]] = None,
     space_directions: Optional[Any] = None,
 ) -> Path:
     """Write derived coronary sulci/centerlines to .seg.nrrd for 3D Slicer."""
