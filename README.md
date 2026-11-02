@@ -699,6 +699,7 @@ monai-cardiac-fat-fl/
 ├── .github/
 │   └── workflows/                 # Automated CI/CD, packaging, and security analysis
 │       ├── ci.yml                 # Matrix test suite across Ubuntu + Windows on Python 3.11 & 3.12
+│       ├── docker-map.yml         # MONAI Deploy Application Package (MAP) GHCR automated build & release
 │       ├── docker-publish.yml     # Automated container build & push to GitHub Container Registry (GHCR)
 │       ├── publish-pypi.yml       # Automated wheel and sdist publishing
 │       └── security.yml           # CodeQL SAST & supply chain dependency security scans
@@ -710,6 +711,11 @@ monai-cardiac-fat-fl/
 │   └── nvflare/
 │       ├── config_fed_server.json # ScatterAndGather + FedProx & FedStats workflows
 │       └── config_fed_client.json # MonaiAlgo + CardiacFatQuant local analytics executor
+├── jobs/                          # NVIDIA FLARE 2.5+ multi-hospital simulation job specifications
+│   └── cardiac_fat_fl/
+│       └── app/
+│           ├── config/            # Client and server execution configs (FedProx, FedBN)
+│           └── meta.json          # NVFLARE job metadata contract
 ├── docs/                          # Architectural specifications, slide deck, and cohort validation reports
 │   ├── regulatory/
 │   │   └── FDA_SAMD_REGULATORY_DOSSIER.md # FDA 510(k) SaMD dossier, IEC 62304 matrix, ISO 14971 FMEA & PCCP
@@ -748,6 +754,8 @@ monai-cardiac-fat-fl/
 │       ├── monai_deploy.py        # MONAI Deploy Operator DAG (Loader, Quantifier, Writer) & Application
 │       ├── dicom_sr.py            # DICOM-SR TID 1500 (SOP .88.34) structured report builder (SNOMED-CT / LOINC / UCUM)
 │       ├── fhir_client.py         # HL7 FHIR R4 interoperability client & bundle generator (Epic US Core Observation, Report, DocRef)
+│       ├── fhir_server.py         # Self-contained HL7 FHIR R4 mock server & sandbox (:8050/r4) with atomic transactions
+│       ├── epic_mcp_server.py     # Native Model Context Protocol (MCP) JSON-RPC 2.0 server for EHR & AI assistants
 │       ├── pacs_client.py         # Institutional PACS archive push via DICOMweb (STOW-RS) and DIMSE (C-STORE)
 │       ├── pacs_daemon.py         # Autonomous PACS watchdog daemon (auto-routing CT -> MAP DAG -> DICOM-SEG/SR -> PACS)
 │       ├── clinical_report.py     # SOTA Cleerly/HeartFlow-style clinical imaging report & 3-view MPR montage
@@ -756,6 +764,7 @@ monai-cardiac-fat-fl/
 │       ├── dashboard.py           # Interactive research dashboard & embedded OHIF workstation server
 │       ├── segmentation_evaluator.py # Multi-compartment DICE, IoU, RVE, and Hausdorff surface distance benchmark engine
 │       ├── model.py               # 3D SegResNet / SwinUNETR factory and FedBN layer filtering
+│       ├── federated_simulator.py # Turnkey NVIDIA FLARE 2.5+ multi-hospital simulation runner with Windows patching
 │       ├── fl_client_algo.py      # monai.fl.client.ClientAlgo subclass for distillation and local analytics
 │       ├── fl_stats_executor.py   # NVFLARE Executor for privacy-preserving federated Welford summary statistics
 │       ├── ohif_exporter.py       # DICOM series generator, DICOM-SEG (.66.4), DICOM-SR, and OHIF v3.13 workstation builder
@@ -765,13 +774,17 @@ monai-cardiac-fat-fl/
 │       └── cli.py                 # Typer CLI (quantify, map-run, daemon, report, view, export-ohif, push, fhir-export, dashboard, benchmark, hardware, parity-audit)
 └── tests/
     ├── conftest.py                # Synthetic 3D cardiac CT phantom fixtures with known HU values
+    ├── test_ci_workflows.py       # Automated validation of GitHub Actions workflows, Docker specs & dependencies
     ├── test_monai_deploy.py       # Automated unit & CLI tests for MONAI Deploy operators and pipeline
     ├── test_cli.py                # End-to-end CLI tests (quantify, federated-stats, compare-models, dashboard, benchmark)
     ├── test_dicom_sr.py           # DICOM-SR TID 1500 SOP Class, SNOMED-CT/LOINC/UCUM, and NaN empty-mask tests
     ├── test_fhir_client.py        # HL7 FHIR R4 bundle builder, Observation, DiagnosticReport, and CLI export/push tests
+    ├── test_fhir_server.py        # HL7 FHIR R4 mock server & transaction bundle tests
+    ├── test_epic_mcp.py           # Native Model Context Protocol (MCP) tool invocation tests
     ├── test_cohort_research.py    # CAC tier categorization, ANOVA/Kruskal-Wallis testing, bivariate linear regression
     ├── test_dashboard.py          # Dashboard routes, API summary, statistics, publication-figure endpoint, OHIF viewer
     ├── test_benchmark.py          # Multi-compartment DICE, IoU, RVE, surface distance metrics, and cohort benchmark report
+    ├── test_coca_parity.py        # Architectural parity audit, 7-rule morphology & XML rasterization tests
     ├── test_equivalency.py        # Numerical equivalency test between ONNX and modernized pipeline
     ├── test_fl_client.py          # Unit tests for ClientAlgo, FedProx, FedBN, and Federated Stats
     ├── test_hardware.py           # Auto-detection, safe concurrency throttling & CLI hardware checks
