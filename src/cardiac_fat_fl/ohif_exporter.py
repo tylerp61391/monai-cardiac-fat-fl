@@ -311,7 +311,6 @@ def generate_ohif_dicom_json(
 
     Conforms to the OHIF v3.13 dicomjson data source specification (https://ohif.org/release-notes/3p13).
     """
-    import json
 
     out_file = dest_dir / "studies.json"
     if not ct_files:
@@ -428,14 +427,14 @@ def render_real_slice_assets(
         # Create multi-channel RGBA overlay for this slice
         h, w = hu.shape
         rgba = np.zeros((h, w, 4), dtype=np.uint8)
-        
+
         # Priority order: EAT chambers, then PVAT vessels (LAD, LCX, RCA on top)
         draw_order = [0, 1, 2, 3, 4, 5, 6, 7]
         for comp_idx in draw_order:
             comp_name = SegmentationCompartment(comp_idx).name
             palette = COMPARTMENT_PALETTE.get(comp_name, {"rgb": [255, 255, 255]})
             rgb = palette["rgb"]
-            
+
             mask = seg_array[comp_idx, z] > 0
             if np.any(mask):
                 rgba[mask, 0] = rgb[0]
@@ -842,7 +841,7 @@ def generate_ohif_3pane_viewer_html(
     .cloud-btn:hover {{ opacity: 0.92; }}
     .badge-link {{ color: #cbd5e1; background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 3px 6px; font-size: 10px; text-decoration: none; font-family: monospace; }}
     .badge-link:hover {{ background: #1e293b; color: #38bdf8; border-color: #38bdf8; }}
-    
+
     /* Panel Toggle Buttons (Matching official OHIF circular buttons) */
     .side-toggle-btn {{ width: 28px; height: 28px; border-radius: 50%; background: #0f172a; border: 1px solid #334155; color: #94a3b8; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }}
     .side-toggle-btn:hover {{ background: #1e293b; color: #fff; border-color: #38bdf8; }}
@@ -968,7 +967,7 @@ def generate_ohif_3pane_viewer_html(
     .col-name {{ font-weight: 600; color: #ffffff; }}
     .col-vol {{ color: #38bdf8; font-family: monospace; text-align: right; }}
     .col-hu {{ color: #34d399; font-family: monospace; text-align: right; }}
-    
+
     .status-card {{ margin: 10px 12px; padding: 8px 10px; border-radius: 6px; background: #0f172a; border: 1px solid #1e293b; font-size: 10px; color: #94a3b8; display: flex; flex-direction: column; gap: 3px; }}
   </style>
 </head>

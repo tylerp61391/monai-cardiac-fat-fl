@@ -241,7 +241,7 @@ def run_deepheartseg_curated_onnx(
         max(1, int(p_size[1] * p_spacing[1] / curated_spacing[1])),
         cur_z,
     ]
-    res_filter = sitk.ResampleImageFilter()
+    sitk.ResampleImageFilter()
     img_curated = sitk.Resample(
         padded_sitk,
         res_size,

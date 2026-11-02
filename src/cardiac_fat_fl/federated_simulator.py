@@ -144,10 +144,8 @@ def run_federated_simulation(
         raise FileNotFoundError(f"NVFLARE job directory not found at: {job_dir}")
 
     # Set up workspace
-    is_temp_ws = False
     if workspace is None:
         ws_dir = Path(tempfile.mkdtemp(prefix="cardiac_fl_sim_")).resolve()
-        is_temp_ws = True
     else:
         ws_dir = Path(workspace).resolve()
         ws_dir.mkdir(parents=True, exist_ok=True)

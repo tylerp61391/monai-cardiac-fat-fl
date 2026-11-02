@@ -687,10 +687,14 @@ class CohortDataset:
                         u_stat, p_raw = stats.mannwhitneyu(tier_arrays[t1], tier_arrays[t2], alternative="two-sided")
                         p_adj = min(1.0, float(p_raw) * num_comparisons)
                         stars = "ns"
-                        if p_adj < 0.0001: stars = "****"
-                        elif p_adj < 0.001: stars = "***"
-                        elif p_adj < 0.01: stars = "**"
-                        elif p_adj < 0.05: stars = "*"
+                        if p_adj < 0.0001:
+                            stars = "****"
+                        elif p_adj < 0.001:
+                            stars = "***"
+                        elif p_adj < 0.01:
+                            stars = "**"
+                        elif p_adj < 0.05:
+                            stars = "*"
                         pairwise.append({
                             "group1": t1,
                             "group2": t2,

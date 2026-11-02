@@ -338,7 +338,7 @@ def generate_clinical_report_html(
     eat_ra_vol = metrics.get(f"{ReportedRegion.EAT_RA} Volume (cm3)", 0.0)
 
     pvat_total_vol = metrics.get(f"{ReportedRegion.PVAT_TOTAL} Volume (cm3)", 0.0)
-    pvat_total_hu = metrics.get(f"{ReportedRegion.PVAT_TOTAL} Mean Attenuation (HU)", float("nan"))
+    metrics.get(f"{ReportedRegion.PVAT_TOTAL} Mean Attenuation (HU)", float("nan"))
 
     exam_date_str = exam_date or "2026-10-29"
 
@@ -474,7 +474,7 @@ def generate_clinical_report_html(
 
   <!-- Metric Panels: 2 Columns -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-    
+
     <!-- Left Column: EAT Volumetric Breakdown -->
     <div class="bg-slate-900 border border-slate-700/80 rounded-xl p-4 shadow-lg flex flex-col justify-between">
       <div>
@@ -484,7 +484,7 @@ def generate_clinical_report_html(
           </h2>
           <span class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">[-190, -30] HU</span>
         </div>
-        
+
         <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 mb-3 flex justify-between items-center">
           <div>
             <div class="text-xs text-slate-400">Total EAT Volume</div>
@@ -613,7 +613,7 @@ def generate_clinical_report_pdf(
     page.draw_rect(fitz.Rect(46, 110, 150, 134), color=tier_color, fill=tier_color)
     page.insert_text(fitz.Point(52, 126), risk.overall_tier, fontsize=10, color=(1, 1, 1), fontname="helv")
     page.insert_text(fitz.Point(162, 122), f"CRISP-CT Vascular Inflammation & Fat Burden: {risk.eat_burden_category} (~{risk.eat_percentile}th %ile)", fontsize=9, color=(0.1, 0.15, 0.25), fontname="helv")
-    page.insert_text(fitz.Point(162, 134), f"Threshold: PVAT > -70.1 HU indicates active inflammation.", fontsize=7.5, color=(0.3, 0.35, 0.45), fontname="helv")
+    page.insert_text(fitz.Point(162, 134), "Threshold: PVAT > -70.1 HU indicates active inflammation.", fontsize=7.5, color=(0.3, 0.35, 0.45), fontname="helv")
 
     # 3. Two-Column Metric Cards
     # Left Card: EAT Total & Chambers

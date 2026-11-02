@@ -293,7 +293,7 @@ def build_cardiac_fat_diagnostic_report(
     rid = report_id or str(uuid.uuid4())
 
     eat_vol = metrics.get(f"{ReportedRegion.EAT_TOTAL.value} Volume (cm3)", 0.0)
-    pvat_total_hu = metrics.get(f"{ReportedRegion.PVAT_TOTAL.value} Mean Attenuation (HU)", float("nan"))
+    metrics.get(f"{ReportedRegion.PVAT_TOTAL.value} Mean Attenuation (HU)", float("nan"))
 
     # Determine vessel-specific inflammation
     inflamed_vessels = []

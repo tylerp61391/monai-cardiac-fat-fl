@@ -321,7 +321,7 @@ class UnifiedAnatomySegmenter:
     ) -> AnatomyMasks:
         """Run ONNX runtime model inference supporting DeepHeartSeg and multi-channel models."""
         assert self.onnx_session is not None
-        inp_shape = self.onnx_session.get_inputs()[0].shape
+        self.onnx_session.get_inputs()[0].shape
 
         # Check if model is the DeepHeartSeg 1-channel binary pericardium model
         out_shape = self.onnx_session.get_outputs()[0].shape
@@ -720,7 +720,7 @@ class UnifiedAnatomySegmenter:
         # Find largest connected component in center volume
         labeled, num_features = ndi.label(heart_core)
         if num_features > 0:
-            center_x, center_y, center_z = nx // 2, ny // 2, nz // 2
+            _center_x, _center_y, _center_z = nx // 2, ny // 2, nz // 2
             # Find label closest to center
             sizes = ndi.sum(heart_core, labeled, range(1, num_features + 1))
             largest_label = int(np.argmax(sizes)) + 1

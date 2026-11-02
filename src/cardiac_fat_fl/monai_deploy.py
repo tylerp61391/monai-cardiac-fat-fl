@@ -321,7 +321,7 @@ class DicomSegAndSrWriterOp(MonaiDeployOperator):
         # 7. Export Clinical Diagnostic Report (HTML, PDF, DICOM Encapsulated PDF, and MPR Montage)
         try:
             from cardiac_fat_fl.clinical_report import export_clinical_imaging_report
-            ct_vol_np = ct_meta.cpu().numpy() if hasattr(ct_meta, "cpu") else np.asarray(ct_meta)
+            ct_vol_np = meta_ct.detach().cpu().numpy().squeeze() if hasattr(meta_ct, "cpu") else np.asarray(meta_ct).squeeze()
             report_artifacts = export_clinical_imaging_report(
                 output_dir=out_path,
                 metrics=metrics,

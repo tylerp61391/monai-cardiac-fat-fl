@@ -203,7 +203,7 @@ def display_hardware_summary(profile: HardwareProfile, console: Optional[Console
     table.add_column("Safe Limit Recommendation", style="cyan", justify="left")
 
     gpu_desc = f"{profile.gpu_count}x {', '.join(profile.gpu_names)} ({profile.total_vram_gb:.1f} GB)" if profile.has_cuda else "None (CPU Execution)"
-    table.add_row("CPUs (Logical / Physical)", f"{profile.logical_cpus} / {profile.physical_cpus} cores", f"Reserve >= 2 cores for OS")
+    table.add_row("CPUs (Logical / Physical)", f"{profile.logical_cpus} / {profile.physical_cpus} cores", "Reserve >= 2 cores for OS")
     table.add_row("System RAM (Total / Available)", f"{profile.total_ram_gb:.1f} GB / {profile.available_ram_gb:.1f} GB", f"Max {profile.recommended_workers * 2.5:.1f} GB budget")
     table.add_row("CUDA Acceleration", gpu_desc, f"Device: '{profile.recommended_device}'")
     table.add_row("Safe Concurrency Sizing", f"{profile.recommended_workers} parallel workers", f"{profile.intra_op_threads} threads/worker (Zero Contention)")

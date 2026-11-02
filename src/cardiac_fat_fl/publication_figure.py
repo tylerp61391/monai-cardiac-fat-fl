@@ -337,7 +337,7 @@ def _draw_tier_boxplot(
             draw.ellipse([(center_x - 5, py_out - 5), (center_x + 5, py_out + 5)], fill=(225, 29, 72), outline=(15, 23, 42), width=1)
 
         # Labels
-        short_tier = t_key.replace(" ", "\n")
+        t_key.replace(" ", "\n")
         draw.text((center_x - 35, plot_y1 + 15), t_key.split()[0], fill=(15, 23, 42), font=font_tick)
         draw.text((center_x - 28, plot_y1 + 45), f"(N={n_pts})", fill=(100, 116, 139), font=font_small)
 
@@ -362,7 +362,7 @@ def _draw_bivariate_scatter_regression(
     # Stats banner
     n_pts = bivariate.get("n_paired", 0)
     r = bivariate.get("pearson_r", 0.0)
-    pr = bivariate.get("pearson_p", 1.0)
+    bivariate.get("pearson_p", 1.0)
     rho = bivariate.get("spearman_rho", 0.0)
     r2 = bivariate.get("r_squared", 0.0)
     eq = bivariate.get("equation", "")
@@ -492,6 +492,6 @@ def _draw_chamber_bar_chart(
         draw.text((cx - 25, py_bar - 32), f"{mean_v:.1f}", fill=(15, 23, 42), font=font_small)
 
         # X label
-        short_lbl = ch_name.replace(" ", "\n")
+        ch_name.replace(" ", "\n")
         draw.text((cx - 30, plot_y1 + 15), ch_name.replace(" ", "\n"), fill=(15, 23, 42), font=font_small)
 

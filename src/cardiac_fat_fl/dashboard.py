@@ -444,7 +444,6 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
     @app.route("/api/case/<pid>/fhir_sandbox", methods=["GET"])
     def get_case_fhir_sandbox(pid: str):
         """Retrieve ingested FHIR sandbox resources for a given participant."""
-        from cardiac_fat_fl.fhir_server import get_default_fhir_store
         store = get_default_fhir_store()
         observations = store.search("Observation", {"patient": pid})
         diagnostic_reports = store.search("DiagnosticReport", {"patient": pid})
@@ -753,10 +752,10 @@ def launch_dashboard(
     """Launch the interactive Cardiac Research Dashboard server."""
     app = create_dashboard_app(cohort_dir=cohort_dir)
     url = f"http://{host}:{port}/"
-    print(f"\n========================================================")
-    print(f"  Cardiac Research Dashboard (MONAI / FLARE / OHIF)")
+    print("\n========================================================")
+    print("  Cardiac Research Dashboard (MONAI / FLARE / OHIF)")
     print(f"  Server URL: {url}")
-    print(f"========================================================\n")
+    print("========================================================\n")
 
     if auto_open:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
@@ -833,7 +832,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
     <!-- ================= TAB 1: COHORT ANALYTICS ================= -->
     <section id="section-analytics" class="space-y-6">
-      
+
       <!-- KPI Scorecards Row 1: Pipeline & Coverage (4 cards) -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-3.5 shadow">
@@ -1029,7 +1028,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
       <!-- Charts Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+
         <!-- Chart 1: Agatston Calcium Score vs EAT Volume -->
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow flex flex-col">
           <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -1164,7 +1163,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
         <!-- 3-Column Explanatory Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs text-slate-300">
-          
+
           <!-- Column 1: Biological Mechanism -->
           <div class="bg-slate-900/60 border border-slate-700/70 rounded-xl p-4 space-y-2">
             <div class="font-bold text-sky-400 flex items-center gap-2 text-sm">
@@ -1217,7 +1216,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="flex items-center gap-3 flex-1 min-w-[280px]">
           <div class="relative flex-1">
             <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
-            <input type="text" id="caseSearchInput" oninput="applyCaseFilters()" placeholder="Search by participant ID..." 
+            <input type="text" id="caseSearchInput" oninput="applyCaseFilters()" placeholder="Search by participant ID..."
                    class="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-4 py-1.5 text-xs text-white w-full focus:outline-none focus:border-sky-500">
           </div>
         </div>
@@ -1334,17 +1333,17 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
           <div>
             <label class="block text-slate-300 mb-1 font-semibold">Candidate Segmentation Mask</label>
-            <input type="text" id="bmCandidateName" value="eat_pvat.seg.nrrd" 
+            <input type="text" id="bmCandidateName" value="eat_pvat.seg.nrrd"
                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-500">
           </div>
           <div>
             <label class="block text-slate-300 mb-1 font-semibold">Reference / Ground Truth Mask</label>
-            <input type="text" id="bmReferenceName" value="eat_pvat.seg.nrrd" 
+            <input type="text" id="bmReferenceName" value="eat_pvat.seg.nrrd"
                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-500">
           </div>
           <div>
             <label class="block text-slate-300 mb-1 font-semibold">Max Case Limit</label>
-            <input type="number" id="bmCaseLimit" value="50" min="1" max="1000" 
+            <input type="number" id="bmCaseLimit" value="50" min="1" max="1000"
                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-500">
           </div>
           <div class="flex items-end gap-2">
@@ -1595,7 +1594,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       <p class="text-xs text-slate-400">
         Enter the absolute path to a clinical cohort root (e.g. Stanford COCA, Harvard CardiacFatQuant, or institutional dataset folder).
       </p>
-      <input type="text" id="inputCohortPath" placeholder="C:/path/to/cohort or E:/CT/..." 
+      <input type="text" id="inputCohortPath" placeholder="C:/path/to/cohort or E:/CT/..."
              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-sky-500">
       <div id="cohortSwitchError" class="text-xs text-rose-400 hidden"></div>
       <div class="flex items-center justify-end gap-3 pt-3">
@@ -2120,12 +2119,12 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       axisSwap[metric] = !axisSwap[metric];
       const isEat = (metric === 'eat');
       const swapped = axisSwap[metric];
-      
+
       const titleEl = document.getElementById(isEat ? 'titleChartEat' : 'titleChartPvat');
       const subEl = document.getElementById(isEat ? 'subChartEat' : 'subChartPvat');
-      
+
       if (isEat) {
-        titleEl.innerHTML = swapped 
+        titleEl.innerHTML = swapped
           ? '<i class="fa-solid fa-chart-line text-sky-400"></i> Total EAT Volume vs. Agatston CAC'
           : '<i class="fa-solid fa-chart-line text-sky-400"></i> Agatston CAC vs. Total EAT Volume';
         subEl.innerText = swapped
@@ -2624,7 +2623,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       }
 
       tbody.innerHTML = cases.map((c, idx) => {
-        const segBadge = c.has_seg 
+        const segBadge = c.has_seg
           ? `<a href="/patient/${encodeURIComponent(c.participant_id)}/" target="_blank"
                 class="px-2.5 py-1 rounded bg-emerald-950/80 hover:bg-emerald-800 text-emerald-300 hover:text-white border border-emerald-500/50 text-[10px] font-semibold flex items-center gap-1.5 transition shadow-sm group cursor-pointer"
                 title="Launch OHIF 2D MPR & 3D Slicer Viewer for Patient ${c.participant_id}">

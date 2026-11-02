@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -538,7 +538,7 @@ def federated_simulate(
     )
 
     if res.get("success"):
-        console.print(f"\n[bold green]✓ Federated Simulation Completed Successfully![/bold green]")
+        console.print("\n[bold green]✓ Federated Simulation Completed Successfully![/bold green]")
         console.print(f"  • [bold]Status:[/bold] {res.get('status')}")
         console.print(f"  • [bold]Workspace:[/bold] {res.get('workspace')}")
         if res.get("persisted_models"):
@@ -826,9 +826,9 @@ def download_models_cmd(
                 )
                 if not skip_verify and wb_target.exists():
                     if _verify_model_file_sha256(wb_target, wb_hash):
-                        console.print(f"[bold green]Integrity verified:[/bold green] NGC WholeBody model.pt SHA-256 matches official release digest.")
+                        console.print("[bold green]Integrity verified:[/bold green] NGC WholeBody model.pt SHA-256 matches official release digest.")
                     else:
-                        console.print(f"[bold red]Security Error: Checksum mismatch for NGC WholeBody model.pt![/bold red]")
+                        console.print("[bold red]Security Error: Checksum mismatch for NGC WholeBody model.pt![/bold red]")
                         wb_target.unlink(missing_ok=True)
                         raise typer.Exit(code=1)
                 console.print(f"[bold green]Successfully installed NGC bundle to:[/bold green] {output_dir / 'wholeBody_ct_segmentation'}")
@@ -842,7 +842,7 @@ def download_models_cmd(
                 console.print(f"[green]NGC WholeBody model present and verified:[/green] {wb_target} [dim](SHA-256 valid)[/dim]")
             else:
                 console.print(f"[bold red]Warning: Integrity mismatch for NGC WholeBody model:[/bold red] {wb_target}.")
-            
+
             wb_low_target = output_dir / "wholeBody_ct_segmentation" / "models" / "model_lowres.pt"
             wb_low_hash = KNOWN_MODEL_SHA256.get("wholeBody_ct_segmentation/models/model_lowres.pt")
             if wb_low_target.exists() and wb_low_hash:
@@ -986,7 +986,7 @@ def push_pacs(
                 timeout=timeout,
                 ca_cert=ca_cert,
             )
-            
+
             if res["failed_count"] == 0:
                 console.print(f"[bold green]Success: Stored {res['success_count']} instance(s) to PACS via STOW-RS.[/bold green]")
             else:

@@ -17,7 +17,7 @@ from cardiac_fat_fl.ohif_exporter import (
 def test_export_sample_to_ohif_synthetic(synthetic_nrrd_scan: Path) -> None:
     """Test exporting a participant sample directory into OHIF DICOM and DICOM-SEG."""
     sample_dir = synthetic_nrrd_scan.parent
-    
+
     # Create a synthetic 8-channel eat_pvat.seg.nrrd in sample_dir
     import nrrd
     import numpy as np
