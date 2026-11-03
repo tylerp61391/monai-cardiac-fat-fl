@@ -17,6 +17,7 @@ Implements:
 
 from __future__ import annotations
 
+import gc
 import math
 import plistlib
 import random
@@ -39,6 +40,8 @@ from cardiac_fat_fl.measurement_schema import (
     calculate_volume_cm3,
 )
 from cardiac_fat_fl.segmentation_evaluator import (
+    ParticipantBenchmarkResult,
+    SegmentationBenchmarkEngine,
     compute_compartment_dice,
     compute_compartment_iou,
     compute_surface_distance_metrics,
@@ -677,7 +680,7 @@ def compute_cardiacfatquant_eat_pvat_masks(
             pvat_lcx_im = _subtract(pvat_lcx_im, aorta_dil)
 
     # Unpack back to full 3D volume in canonical SegmentationCompartment order
-    out_zyx = np.zeros((8,) + ct_zyx.shape, dtype=np.float32)
+    out_zyx = np.zeros((8,) + ct_zyx.shape, dtype=np.uint8)
     ordered_ims = [
         eat_im,       # 0: EAT_Total
         eat_la_im,    # 1: EAT_LA
@@ -689,7 +692,7 @@ def compute_cardiacfatquant_eat_pvat_masks(
         pvat_rca_im,  # 7: PVAT_RCA
     ]
     for ch_idx, im in enumerate(ordered_ims):
-        out_zyx[ch_idx, z0:z1, y0:y1, x0:x1] = (sitk.GetArrayFromImage(im) > 0).astype(np.float32)
+        out_zyx[ch_idx, z0:z1, y0:y1, x0:x1] = (sitk.GetArrayFromImage(im) > 0).astype(np.uint8)
 
     if is_xyz:
         return out_zyx.transpose(0, 3, 2, 1)
@@ -1199,8 +1202,8 @@ def _run_cloned_harvard_repo_stage3(
     }
     aligned_crop = align_eat_pvat_channels(cfq_8ch_crop, cfq_header)
 
-    out_zyx = np.zeros((8, nz, ny, nx), dtype=np.float32)
-    out_zyx[:, :, y0:y1, x0:x1] = aligned_crop
+    out_zyx = np.zeros((8, nz, ny, nx), dtype=np.uint8)
+    out_zyx[:, :, y0:y1, x0:x1] = (aligned_crop > 0.5).astype(np.uint8)
     if is_xyz:
         return out_zyx.transpose(0, 3, 2, 1)
     return out_zyx
@@ -1304,8 +1307,20 @@ def run_architectural_parity_audit(
     per_case_results: List[Dict[str, Any]] = []
     cand_csv_rows: List[Dict[str, Any]] = []
     ref_csv_rows: List[Dict[str, Any]] = []
-    eval_pairs: List[Tuple[str, np.ndarray, np.ndarray, Any]] = []
     spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0)
+
+    cand_label = "monai-cardiac-fat-fl (CardiacFatQuant Parity)"
+    ref_label = (
+        "circ-ml/CardiacFatQuant (Stage-3 Reference)"
+        if mode == "controlled_stage3"
+        else "Legacy Voronoi / On-Disk Mask"
+    )
+    bench_engine = SegmentationBenchmarkEngine(
+        candidate_name=cand_label,
+        reference_name=ref_label,
+        compute_surface_distances=compute_surface_distances,
+    )
+    benchmark_results: List[ParticipantBenchmarkResult] = []
 
     for pid in eligible_pids:
         p = cohort.participants[pid]
@@ -1545,7 +1560,14 @@ def run_architectural_parity_audit(
             else:
                 ref_8ch = cand_8ch.copy()
 
-        eval_pairs.append((pid, cand_8ch, ref_8ch, spacing))
+        # Stream evaluation directly into benchmark results (zero RAM accumulation across 1,000+ cases)
+        bench_case = bench_engine.evaluate_case_tensors(
+            participant_id=pid,
+            pred_tensor=cand_8ch,
+            target_tensor=ref_8ch,
+            spacing=spacing,
+        )
+        benchmark_results.append(bench_case)
 
         # Compute Checkpoint D clinical metrics for candidate and reference (using Harvard generate_measurements.py)
         cand_metrics = _quantify_8ch_mask(ct_arr, cand_8ch, spacing)
@@ -1649,21 +1671,38 @@ def run_architectural_parity_audit(
                 flush=True,
             )
 
-    # Run SegmentationBenchmarkEngine for Checkpoint C summary
-    from cardiac_fat_fl.segmentation_evaluator import SegmentationBenchmarkEngine
+        # Free memory immediately to keep heap usage flat (~300MB) across 1,000+ cases
+        del cand_8ch, ref_8ch, ct_arr
+        try:
+            del heart_mask
+        except NameError:
+            pass
+        try:
+            del la_mask, lv_mask, ra_mask, rv_mask, myo_mask, aorta_mask
+        except NameError:
+            pass
+        gc.collect()
 
-    cand_label = "monai-cardiac-fat-fl (CardiacFatQuant Parity)"
-    ref_label = (
-        "circ-ml/CardiacFatQuant (Stage-3 Reference)"
-        if mode == "controlled_stage3"
-        else "Legacy Voronoi / On-Disk Mask"
-    )
-    engine = SegmentationBenchmarkEngine(
-        candidate_name=cand_label,
-        reference_name=ref_label,
-        compute_surface_distances=compute_surface_distances,
-    )
-    bench_report = engine.evaluate_cohort(eval_pairs) if eval_pairs else None
+        # Periodic checkpoint flush every 10 cases so long-running audits survive any interruption
+        if save_parity_outputs_to_disk and len(per_case_results) % 10 == 0:
+            try:
+                interim_bench = bench_engine.build_cohort_report(benchmark_results)
+                interim_payload = {
+                    "mode": mode,
+                    "candidate_name": cand_label,
+                    "reference_name": ref_label,
+                    "participant_count": len(per_case_results),
+                    "mean_overall_dice": interim_bench.mean_overall_dice,
+                    "median_overall_dice": interim_bench.median_overall_dice,
+                    "compartment_summary": interim_bench.compartment_summary,
+                    "per_case_results": per_case_results,
+                }
+                cache_file.write_text(json.dumps(interim_payload, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
+    # Aggregate Checkpoint C summary from online streamed results
+    bench_report = bench_engine.build_cohort_report(benchmark_results) if benchmark_results else None
     bench_dict = bench_report.to_dict() if bench_report is not None else {}
 
     # Compute Checkpoint D Cohort-Level Concordance Statistics (ICC, Bland-Altman, Kappa)

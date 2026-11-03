@@ -138,6 +138,8 @@ def compute_surface_distance_metrics(
 
     dt_target = distance_transform_edt(~target_border, sampling=spacing)
     dt_pred = distance_transform_edt(~pred_border, sampling=spacing)
+    if dt_target is None or dt_pred is None:
+        return {"masd_mm": None, "hd95_mm": None}
 
     distances_pred_to_target = dt_target[pred_border]
     distances_target_to_pred = dt_pred[target_border]
@@ -379,25 +381,11 @@ class SegmentationBenchmarkEngine:
             pericardium_dice=peri_dice,
         )
 
-    def evaluate_cohort(
+    def build_cohort_report(
         self,
-        case_pairs: List[Tuple[str, np.ndarray, np.ndarray, Tuple[float, float, float]]],
+        results: List[ParticipantBenchmarkResult],
     ) -> CohortBenchmarkReport:
-        """Evaluate a collection of participant segmentations across the cohort.
-
-        Args:
-            case_pairs: List of tuples (participant_id, pred_tensor_8ch, target_tensor_8ch, spacing)
-        """
-        results: List[ParticipantBenchmarkResult] = []
-        for pid, pred, target, sp in case_pairs:
-            res = self.evaluate_case_tensors(
-                participant_id=pid,
-                pred_tensor=pred,
-                target_tensor=target,
-                spacing=sp,
-            )
-            results.append(res)
-
+        """Aggregate precomputed participant benchmark results into a cohort report."""
         if not results:
             return CohortBenchmarkReport(
                 candidate_name=self.candidate_name,
@@ -438,6 +426,27 @@ class SegmentationBenchmarkEngine:
             compartment_summary=summary,
             cases=results,
         )
+
+    def evaluate_cohort(
+        self,
+        case_pairs: List[Tuple[str, np.ndarray, np.ndarray, Tuple[float, float, float]]],
+    ) -> CohortBenchmarkReport:
+        """Evaluate a collection of participant segmentations across the cohort.
+
+        Args:
+            case_pairs: List of tuples (participant_id, pred_tensor_8ch, target_tensor_8ch, spacing)
+        """
+        results: List[ParticipantBenchmarkResult] = []
+        for pid, pred, target, sp in case_pairs:
+            res = self.evaluate_case_tensors(
+                participant_id=pid,
+                pred_tensor=pred,
+                target_tensor=target,
+                spacing=sp,
+            )
+            results.append(res)
+
+        return self.build_cohort_report(results)
 
     @staticmethod
     def export_summary_csv(report: CohortBenchmarkReport, output_csv: Path) -> Path:
