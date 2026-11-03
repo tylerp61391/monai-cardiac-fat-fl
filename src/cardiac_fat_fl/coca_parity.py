@@ -1214,9 +1214,9 @@ def run_architectural_parity_audit(
     mode: str = "controlled_stage3",
     limit: int = 10,
     seed: int = 42,
-    compute_surface_distances: bool = True,
+    compute_surface_distances: bool = False,
     use_cache: bool = True,
-    save_parity_outputs_to_disk: bool = False,
+    save_parity_outputs_to_disk: bool = True,
 ) -> Dict[str, Any]:
     """Execute the 4-Checkpoint Architectural Parity & Benchmark Harness.
 
@@ -1661,15 +1661,14 @@ def run_architectural_parity_audit(
                 "has_seg": p.seg_path is not None,
             }
         )
-        if save_parity_outputs_to_disk:
-            c_last = per_case_results[-1]
-            print(
-                f"[{len(per_case_results)}/{len(eligible_pids)}] Case {pid}: "
-                f"Mean Dice={c_last['mean_dice']:.4f} | "
-                f"EAT={c_last['cand_eat_vol_cm3']:.2f} vs {c_last['ref_eat_vol_cm3']:.2f} cm3 | "
-                f"PVAT={c_last['cand_pvat_vol_cm3']:.2f} vs {c_last['ref_pvat_vol_cm3']:.2f} cm3",
-                flush=True,
-            )
+        c_last = per_case_results[-1]
+        print(
+            f"[{len(per_case_results)}/{len(eligible_pids)}] Case {pid}: "
+            f"Mean Dice={c_last['mean_dice']:.4f} | "
+            f"EAT={c_last['cand_eat_vol_cm3']:.2f} vs {c_last['ref_eat_vol_cm3']:.2f} cm3 | "
+            f"PVAT={c_last['cand_pvat_vol_cm3']:.2f} vs {c_last['ref_pvat_vol_cm3']:.2f} cm3",
+            flush=True,
+        )
 
         # Free memory immediately to keep heap usage flat (~300MB) across 1,000+ cases
         del cand_8ch, ref_8ch, ct_arr

@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -310,7 +310,7 @@ def quantify(
         for col in MEASUREMENT_CSV_COLUMNS:
             if col not in df_out.columns:
                 df_out[col] = float("nan")
-        df_out = df_out[MEASUREMENT_CSV_COLUMNS]
+        df_out = cast(pd.DataFrame, df_out[MEASUREMENT_CSV_COLUMNS])
         df_out.to_csv(csv_dest, index=False)
         return df_out
 
@@ -829,7 +829,8 @@ def download_models_cmd(
             console.print("[cyan]Downloading monai_wholebody_ct_segmentation from NVIDIA NGC / MONAI Model Zoo...[/cyan]")
             try:
                 import monai.bundle
-                monai.bundle.download(
+                download_fn = getattr(monai.bundle, "download")
+                download_fn(
                     name="monai_wholebody_ct_segmentation",
                     bundle_dir=output_dir,
                 )
@@ -1679,6 +1680,16 @@ def parity_audit(
         "--seed",
         help="Random seed for deterministic case sampling.",
     ),
+    compute_surface_distances: bool = typer.Option(
+        False,
+        "--compute-surface-distances/--no-compute-surface-distances",
+        help="Compute 3D surface distance metrics (HD95, MASD).",
+    ),
+    save_parity_outputs: bool = typer.Option(
+        True,
+        "--save-parity-outputs/--no-save-parity-outputs",
+        help="Save aligned NRRD segmentations and measurements to study folders.",
+    ),
     output_json: Optional[Path] = typer.Option(
         None,
         "--output",
@@ -1702,6 +1713,8 @@ def parity_audit(
         mode=mode,
         limit=num_cases,
         seed=seed,
+        compute_surface_distances=compute_surface_distances,
+        save_parity_outputs_to_disk=save_parity_outputs,
     )
 
     if output_json is not None:
