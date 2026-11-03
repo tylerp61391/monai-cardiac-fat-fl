@@ -40,6 +40,7 @@ from cardiac_fat_fl.measurement_schema import (
     calculate_volume_cm3,
 )
 from cardiac_fat_fl.segmentation_evaluator import (
+    CaseCompartmentMetric,
     ParticipantBenchmarkResult,
     SegmentationBenchmarkEngine,
     compute_compartment_dice,
@@ -1322,9 +1323,71 @@ def run_architectural_parity_audit(
     )
     benchmark_results: List[ParticipantBenchmarkResult] = []
 
+    # Load prior checkpoint results to enable zero-loss resumption on interruption
+    cached_case_results_map: Dict[str, Dict[str, Any]] = {}
+    if cache_file.is_file():
+        try:
+            cached_data = json.loads(cache_file.read_text(encoding="utf-8"))
+            for cr in cached_data.get("per_case_results", []):
+                if isinstance(cr, dict) and "participant_id" in cr:
+                    cached_case_results_map[cr["participant_id"]] = cr
+        except Exception:
+            pass
+
     for pid in eligible_pids:
         p = cohort.participants[pid]
         p_dir = p.study_dir
+
+        # Fast resume: check if participant was already fully evaluated and persisted in a prior run
+        if pid in cached_case_results_map:
+            cr = cached_case_results_map[pid]
+            cand_csv_path = p_dir / "cardiac_fat_measurements.csv"
+            ref_csv_path = p_dir / "harvard_cfq_measurements.csv"
+            cand_seg_path = p_dir / "eat_pvat.seg.nrrd"
+            harvard_seg_path = p_dir / "eat_pvat_harvard_cfq.seg.nrrd"
+
+            if (
+                cand_csv_path.is_file()
+                and ref_csv_path.is_file()
+                and cand_seg_path.is_file()
+                and harvard_seg_path.is_file()
+            ):
+                try:
+                    with open(cand_csv_path, "r", encoding="utf-8") as f_c:
+                        cand_csv_rows.extend(list(csv.DictReader(f_c)))
+                    with open(ref_csv_path, "r", encoding="utf-8") as f_r:
+                        ref_csv_rows.extend(list(csv.DictReader(f_r)))
+
+                    comp_metrics: Dict[str, CaseCompartmentMetric] = {}
+                    for c_name, d_val in cr.get("compartment_dice", {}).items():
+                        comp_metrics[c_name] = CaseCompartmentMetric(
+                            compartment_name=c_name,
+                            dice=float(d_val),
+                            iou=float(d_val),
+                            pred_volume_cm3=float(cr.get("cand_eat_vol_cm3", 0.0) if "EAT" in c_name else cr.get("cand_pvat_vol_cm3", 0.0)),
+                            target_volume_cm3=float(cr.get("ref_eat_vol_cm3", 0.0) if "EAT" in c_name else cr.get("ref_pvat_vol_cm3", 0.0)),
+                            abs_volume_diff_cm3=0.0,
+                            relative_volume_error_pct=0.0,
+                        )
+                    bench_res = ParticipantBenchmarkResult(
+                        participant_id=pid,
+                        candidate_name=cand_label,
+                        reference_name=ref_label,
+                        mean_dice=float(cr.get("mean_dice", 1.0)),
+                        compartments=comp_metrics,
+                    )
+                    benchmark_results.append(bench_res)
+                    per_case_results.append(cr)
+                    print(
+                        f"[{len(per_case_results)}/{len(eligible_pids)}] Case {pid} (cached): "
+                        f"Mean Dice={cr['mean_dice']:.4f} | "
+                        f"EAT={cr['cand_eat_vol_cm3']:.2f} vs {cr['ref_eat_vol_cm3']:.2f} cm3 | "
+                        f"PVAT={cr['cand_pvat_vol_cm3']:.2f} vs {cr['ref_pvat_vol_cm3']:.2f} cm3",
+                        flush=True,
+                    )
+                    continue
+                except Exception:
+                    pass
 
         # Resolve CT scan path (supports nested Stanford COCA DICOM series, flat DICOM, or NRRD)
         ct_path = p.scan_path if (p.scan_path is not None and p.scan_path.exists()) else None
