@@ -1335,6 +1335,8 @@ def run_architectural_parity_audit(
             pass
 
     for pid in eligible_pids:
+        if len(per_case_results) >= limit:
+            break
         p = cohort.participants[pid]
         p_dir = p.study_dir
 
@@ -1525,16 +1527,19 @@ def run_architectural_parity_audit(
                 from cardiac_fat_fl.anatomy_segmenter import UnifiedAnatomySegmenter
 
                 gpu_segmenter = UnifiedAnatomySegmenter(backend="onnx")
-            wb_multilabel = gpu_segmenter._run_wholebody_segmentation(ct_arr, spacing)
-            anat = gpu_segmenter._derive_chambers_and_vessels(
-                heart_mask, ct_arr, multilabel_map=wb_multilabel
-            )
-            la_mask = anat.la
-            lv_mask = anat.lv
-            ra_mask = anat.ra
-            rv_mask = anat.rv
-            myo_mask = anat.myocardium if anat.myocardium is not None else np.zeros_like(heart_mask, dtype=bool)
-            aorta_mask = anat.aorta if anat.aorta is not None else np.zeros_like(heart_mask, dtype=bool)
+            try:
+                wb_multilabel = gpu_segmenter._run_wholebody_segmentation(ct_arr, spacing)
+                anat = gpu_segmenter._derive_chambers_and_vessels(
+                    heart_mask, ct_arr, multilabel_map=wb_multilabel
+                )
+                la_mask = anat.la
+                lv_mask = anat.lv
+                ra_mask = anat.ra
+                rv_mask = anat.rv
+                myo_mask = anat.myocardium if anat.myocardium is not None else np.zeros_like(heart_mask, dtype=bool)
+                aorta_mask = anat.aorta if anat.aorta is not None else np.zeros_like(heart_mask, dtype=bool)
+            except Exception:
+                continue
 
             try:
                 tot_seg = np.zeros_like(heart_mask, dtype=np.uint16)
