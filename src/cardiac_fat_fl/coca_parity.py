@@ -1243,7 +1243,17 @@ def run_architectural_parity_audit(
     )
 
     cohort_root = Path(cohort_dir).resolve()
+    cache_candidates = sorted(
+        cohort_root.glob(f".parity_audit_cache_{mode}_*.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     cache_file = cohort_root / f".parity_audit_cache_{mode}_{limit}.json"
+    if cache_candidates:
+        # Prefer the newest or largest cache checkpoint
+        best_candidate = max(cache_candidates, key=lambda p: p.stat().st_size)
+        if not cache_file.is_file() or best_candidate.stat().st_size > cache_file.stat().st_size:
+            cache_file = best_candidate
     if use_cache and not save_parity_outputs_to_disk and cache_file.is_file():
         try:
             cached = json.loads(cache_file.read_text(encoding="utf-8"))
