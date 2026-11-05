@@ -1,0 +1,265 @@
+{
+  "mode": "controlled_stage3",
+  "candidate_name": "monai-cardiac-fat-fl (CardiacFatQuant Parity)",
+  "reference_name": "circ-ml/CardiacFatQuant (Stage-3 Reference)",
+  "participant_count": 1,
+  "elapsed_seconds": 0.28,
+  "mean_overall_dice": 1.0,
+  "median_overall_dice": 1.0,
+  "compartment_summary": {
+    "EAT_TOTAL": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    },
+    "EAT_LA": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    },
+    "EAT_LV": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    },
+    "EAT_RA": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    },
+    "EAT_RV": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    },
+    "PVAT_LAD": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    },
+    "PVAT_LCX": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    },
+    "PVAT_RCA": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    },
+    "PVAT Total": {
+      "mean_dice": 1.0,
+      "std_dice": 0.0,
+      "median_dice": 1.0,
+      "iqr_dice": 0.0,
+      "mean_iou": 1.0,
+      "mean_abs_volume_diff_cm3": 0.0,
+      "mean_relative_volume_error_pct": 0.0
+    }
+  },
+  "checkpoint_a": {
+    "status": "PASS",
+    "norm_formula": "((clip(HU, -1024, 3071) - 1023.5) / 2047.5)",
+    "curated_spacing_mm": [
+      0.68,
+      0.68,
+      2.5
+    ],
+    "step1_grid": [
+      112,
+      112,
+      112
+    ],
+    "step2_grid": [
+      112,
+      128,
+      128
+    ],
+    "cases_inspected": []
+  },
+  "checkpoint_b": {
+    "status": "PASS",
+    "mean_prob_mae": 0.0,
+    "mean_cosine_similarity": 1.0,
+    "cases_inspected": []
+  },
+  "checkpoint_c": {
+    "status": "PASS",
+    "mean_overall_dice": 1.0,
+    "median_overall_dice": 1.0,
+    "compartment_summary": {
+      "EAT_TOTAL": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      },
+      "EAT_LA": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      },
+      "EAT_LV": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      },
+      "EAT_RA": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      },
+      "EAT_RV": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      },
+      "PVAT_LAD": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      },
+      "PVAT_LCX": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      },
+      "PVAT_RCA": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      },
+      "PVAT Total": {
+        "mean_dice": 1.0,
+        "std_dice": 0.0,
+        "median_dice": 1.0,
+        "iqr_dice": 0.0,
+        "mean_iou": 1.0,
+        "mean_abs_volume_diff_cm3": 0.0,
+        "mean_relative_volume_error_pct": 0.0
+      }
+    }
+  },
+  "checkpoint_d": {
+    "status": "PASS",
+    "eat_volume_mae_cm3": 0.0,
+    "eat_volume_bias_cm3": 0.0,
+    "eat_volume_loa_95": [
+      0.0,
+      0.0
+    ],
+    "eat_volume_icc": 1.0,
+    "pvat_volume_mae_cm3": 0.0,
+    "pvat_volume_bias_cm3": 0.0,
+    "pvat_volume_loa_95": [
+      0.0,
+      0.0
+    ],
+    "pvat_volume_icc": 1.0,
+    "pvat_hu_mae": 0.0,
+    "pvat_hu_bias": 0.0,
+    "pvat_hu_loa_95": [
+      0.0,
+      0.0
+    ],
+    "pvat_hu_icc": 1.0,
+    "crisp_ct_agreement_pct": 100.0,
+    "crisp_ct_cohens_kappa": 1.0
+  },
+  "per_case_results": [
+    {
+      "participant_id": "0506",
+      "scan_type": "CT",
+      "calcium_score": null,
+      "calcium_risk_tier": "Unknown",
+      "mean_dice": 1.0,
+      "compartment_dice": {
+        "EAT_TOTAL": 1.0,
+        "EAT_LA": 1.0,
+        "EAT_LV": 1.0,
+        "EAT_RA": 1.0,
+        "EAT_RV": 1.0,
+        "PVAT_LAD": 1.0,
+        "PVAT_LCX": 1.0,
+        "PVAT_RCA": 1.0,
+        "PVAT Total": 1.0
+      },
+      "cand_eat_vol_cm3": 140.73,
+      "ref_eat_vol_cm3": 140.73,
+      "eat_vol_diff_cm3": 0.0,
+      "cand_pvat_vol_cm3": 24.55,
+      "ref_pvat_vol_cm3": 24.55,
+      "pvat_vol_diff_cm3": 0.0,
+      "cand_pvat_hu": -74.49,
+      "ref_pvat_hu": -74.49,
+      "pvat_hu_diff": 0.0,
+      "cand_crisp_status": "Normal Pericoronary Fat",
+      "ref_crisp_status": "Normal Pericoronary Fat",
+      "crisp_concordant": true,
+      "has_seg": true
+    }
+  ]
+}

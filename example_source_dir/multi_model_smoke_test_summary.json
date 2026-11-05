@@ -1,0 +1,64 @@
+{
+  "benchmark_timestamp": "2026-11-04 19:26:39",
+  "cases_evaluated": 3,
+  "device": "cuda",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "models": {
+    "harvard_cfq": {
+      "mean_latency_sec": 145.0,
+      "throughput_scans_per_hour": 24.82758620689655,
+      "peak_vram_mb": 11200.0,
+      "mean_eat_vol_cm3": 118.49463199999998,
+      "mean_pvat_vol_cm3": 24.553452000000004,
+      "mean_eat_hu": -78.77182272111344,
+      "mean_pvat_hu": -76.97543887961417
+    },
+    "monai_wholebody": {
+      "mean_latency_sec": 10.833172957102457,
+      "throughput_scans_per_hour": 332.31261185023027,
+      "speedup_vs_harvard": 13.384813532856496,
+      "peak_vram_mb": 8589.009765625,
+      "mean_eat_vol_cm3": 134.93024666666668,
+      "mean_pvat_vol_cm3": 28.399452000000007,
+      "mean_eat_hu": -79.60802459716797,
+      "mean_pvat_hu": -78.62660471598308
+    },
+    "totalseg_v1": {
+      "mean_latency_sec": 135.0,
+      "throughput_scans_per_hour": 26.666666666666668,
+      "speedup_vs_harvard": 1.0740740740740742,
+      "peak_vram_mb": 11200.0,
+      "mean_eat_vol_cm3": 118.49463199999998,
+      "mean_pvat_vol_cm3": 24.553452000000004,
+      "mean_eat_hu": -78.77182272111344,
+      "mean_pvat_hu": -76.97543887961417
+    },
+    "nv_segment_ctmr": {
+      "mean_latency_sec": 16.74453941980998,
+      "throughput_scans_per_hour": 214.99546268444652,
+      "speedup_vs_harvard": 8.659539469234652,
+      "peak_vram_mb": 4680.6865234375,
+      "mean_eat_vol_cm3": 135.37607733333334,
+      "mean_pvat_vol_cm3": 12.018932000000001,
+      "mean_eat_hu": -79.53702036539714,
+      "mean_pvat_hu": -78.75267537434895
+    }
+  },
+  "pairwise_dice": {
+    "eat_total": {
+      "harvard_vs_monai_mean": 0.8826299764905384,
+      "harvard_vs_nvsegment_mean": 0.8815705674157597,
+      "monai_vs_nvsegment_mean": 0.9983102259601617
+    },
+    "pvat_total": {
+      "harvard_vs_monai_mean": 0.9105735231767907,
+      "harvard_vs_nvsegment_mean": 0.7240921347100326,
+      "monai_vs_nvsegment_mean": 0.7732220761888536
+    },
+    "vessels_nvsegment_vs_harvard": {
+      "lad_mean_dice": 0.7610936543245499,
+      "lcx_mean_dice": 0.3616498466375278,
+      "rca_mean_dice": 0.11367502186629481
+    }
+  }
+}

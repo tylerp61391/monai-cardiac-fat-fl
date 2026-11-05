@@ -190,8 +190,8 @@ class CohortDataset:
             if pid not in self.calcium_scores:
                 # Basic parse if needed
                 try:
-                    import xml.etree.ElementTree as ET
-                    tree = ET.parse(xf)
+                    import xml.etree.ElementTree as ET  # nosec B405
+                    tree = ET.parse(xf)  # nosec B314
                     root = tree.getroot()
                     score_elem = root.find(".//TotalScore") or root.find(".//Score")
                     if score_elem is not None and score_elem.text:

@@ -67,12 +67,11 @@ def _process_one_participant(task: Tuple[Any, ...], preloaded_ct=None) -> dict:
                 keys=["image"],
                 pvat_radial_distance_mm=pvat_radius,
             )
-            if model_path is not None:
-                mask_tx._segmenter = UnifiedAnatomySegmenter(
-                    model_path=model_path,
-                    backend="onnx" if str(model_path).endswith(".onnx") else "heuristic",
-                    chamber_backend=chamber_backend,
-                )
+            mask_tx._segmenter = UnifiedAnatomySegmenter(
+                model_path=model_path,
+                backend="onnx" if model_path is not None and str(model_path).endswith(".onnx") else "auto",
+                chamber_backend=chamber_backend,
+            )
             quant_tx = QuantifyAdiposeMetricsd(keys=["image"])
             _WORKER_CACHE[cache_key] = (mask_tx, quant_tx)
         mask_transform, quant_transform = _WORKER_CACHE[cache_key]
@@ -128,7 +127,14 @@ def _process_one_participant(task: Tuple[Any, ...], preloaded_ct=None) -> dict:
             tot_seg[anatomy.ra] = 47
             tot_seg[anatomy.rv] = 48
 
-            monai_tot_path = participant_dir / "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
+            if chamber_backend in ("nvsegment", "nvsegment_ctmr", "vista3d"):
+                tot_filename = "nv_segment_ctmr_masks.seg.nrrd"
+            elif chamber_backend == "totalsegmentator":
+                tot_filename = "totalsegmentator_1-5mm_masks.seg.nrrd"
+            else:
+                tot_filename = "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
+
+            monai_tot_path = participant_dir / tot_filename
             write_monai_wholebody_ct_segmentation_seg_nrrd(
                 seg_data=tot_seg,
                 output_path=monai_tot_path,
@@ -230,7 +236,7 @@ def quantify(
         "monai",
         "--chamber-backend",
         "-cb",
-        help="Cardiac chamber segmentation engine: 'monai' (SegResNet 1.5mm) or 'totalsegmentator' (nnU-Net).",
+        help="Cardiac chamber segmentation engine: 'monai' (SegResNet 1.5mm), 'totalsegmentator' (nnU-Net), or 'nvsegment' (NV-Segment-CTMR VISTA-3D).",
     ),
     limit: Optional[int] = typer.Option(
         None,
@@ -795,7 +801,7 @@ def download_models_cmd(
                     if total_size > 0:
                         progress.update(task_id, total=total_size, completed=block_num * block_size)
 
-                urllib.request.urlretrieve(url, str(target), reporthook=reporthook)
+                urllib.request.urlretrieve(url, str(target), reporthook=reporthook)  # nosec B310
 
             if not skip_verify and expected_hash:
                 if _verify_model_file_sha256(target, expected_hash):

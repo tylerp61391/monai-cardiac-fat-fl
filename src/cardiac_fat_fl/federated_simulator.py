@@ -20,24 +20,35 @@ logger = logging.getLogger(__name__)
 
 
 def ensure_nvflare_windows_compatibility() -> None:
-    """Ensure NVFLARE simulator runs reliably on Windows platforms.
+    """Ensure NVFLARE simulator runs reliably across platforms (Windows, Linux, CI).
 
-    Patches Windows-specific limitations in upstream NVFLARE 2.5+:
-    1. Prevents WinError 32 PermissionError in SimulatorRunner._cleanup_workspace()
-       caused by attempting to rmtree the current working directory.
-    2. Fixes POSIX-only os.setsid in SimulatorRunner._run_client() by using
-       CREATE_NEW_PROCESS_GROUP and preserving Windows backslash path semantics.
-    3. Handles file lock in SimulatorDeployer.close() on temporary admin storage.
-    4. Ensures component path authorizer permits custom algorithms.
+    Patches:
+    1. default_component_policy.py to permit custom algorithms/trainers across all platforms.
+    2. Windows-specific limitations in upstream NVFLARE 2.5+:
+       - WinError 32 PermissionError in SimulatorRunner._cleanup_workspace()
+       - POSIX-only os.setsid in SimulatorRunner._run_client()
+       - File lock in SimulatorDeployer.close() on temporary admin storage
     """
-    if sys.platform != "win32":
-        return
-
     try:
         import nvflare
         nvflare_root = Path(nvflare.__file__).parent
 
-        # 1. Patch simulator_runner.py
+        # 1. Patch default_component_policy.py (applies to ALL platforms: Linux, macOS, Windows)
+        policy_path = nvflare_root / "app_common" / "default_component_policy.py"
+        if policy_path.is_file():
+            pol_content = policy_path.read_text(encoding="utf-8")
+            if '"*"' not in pol_content:
+                pol_content = pol_content.replace(
+                    "DEFAULT_CLASS_ALLOW_LIST = (",
+                    'DEFAULT_CLASS_ALLOW_LIST = (\n    "*",',
+                )
+                policy_path.write_text(pol_content, encoding="utf-8")
+                logger.debug("Patched NVFLARE default_component_policy.py for allow-all.")
+
+        if sys.platform != "win32":
+            return
+
+        # 2. Patch simulator_runner.py (Windows only)
         sim_runner_path = nvflare_root / "private" / "fed" / "app" / "simulator" / "simulator_runner.py"
         if sim_runner_path.is_file():
             content = sim_runner_path.read_text(encoding="utf-8")
@@ -77,7 +88,7 @@ def ensure_nvflare_windows_compatibility() -> None:
                 sim_runner_path.write_text(content, encoding="utf-8")
                 logger.debug("Patched NVFLARE simulator_runner.py for Windows compatibility.")
 
-        # 2. Patch simulator_deployer.py
+        # 3. Patch simulator_deployer.py (Windows only)
         sim_deployer_path = nvflare_root / "private" / "fed" / "app" / "deployer" / "simulator_deployer.py"
         if sim_deployer_path.is_file():
             dep_content = sim_deployer_path.read_text(encoding="utf-8")
@@ -89,20 +100,8 @@ def ensure_nvflare_windows_compatibility() -> None:
                 sim_deployer_path.write_text(dep_content, encoding="utf-8")
                 logger.debug("Patched NVFLARE simulator_deployer.py for Windows compatibility.")
 
-        # 3. Patch default_component_policy.py
-        policy_path = nvflare_root / "app_common" / "default_component_policy.py"
-        if policy_path.is_file():
-            pol_content = policy_path.read_text(encoding="utf-8")
-            if '"*"' not in pol_content:
-                pol_content = pol_content.replace(
-                    "DEFAULT_CLASS_ALLOW_LIST = (",
-                    'DEFAULT_CLASS_ALLOW_LIST = (\n    "*",',
-                )
-                policy_path.write_text(pol_content, encoding="utf-8")
-                logger.debug("Patched NVFLARE default_component_policy.py for allow-all.")
-
     except Exception as exc:
-        logger.warning("Could not apply Windows NVFLARE compatibility patch: %s", exc)
+        logger.warning("Could not apply NVFLARE compatibility patch: %s", exc)
 
 
 def run_federated_simulation(

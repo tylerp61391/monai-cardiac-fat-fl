@@ -1,0 +1,2 @@
+participant_id,scan_type,calcium_score,calcium_risk_tier,mean_dice,cand_eat_vol_cm3,ref_eat_vol_cm3,eat_vol_diff_cm3,cand_pvat_vol_cm3,ref_pvat_vol_cm3,pvat_vol_diff_cm3,cand_pvat_hu,ref_pvat_hu,pvat_hu_diff,cand_crisp_status,ref_crisp_status,crisp_concordant,dice_EAT_TOTAL,dice_EAT_LA,dice_EAT_LV,dice_EAT_RA,dice_EAT_RV,dice_PVAT_LAD,dice_PVAT_LCX,dice_PVAT_RCA,dice_PVAT_Total
+0506,CT,,Unknown,1.0,140.73,140.73,0.0,24.55,24.55,0.0,-74.49,-74.49,0.0,Normal Pericoronary Fat,Normal Pericoronary Fat,True,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0

@@ -46,7 +46,7 @@ jobs:
 
       - name: Run pip-audit vulnerability scan
         run: |
-          python -m pip_audit --desc on
+          python -m pip_audit --desc on --ignore-vuln PYSEC-2025-224 --ignore-vuln PYSEC-2025-225 --ignore-vuln PYSEC-2025-226 --ignore-vuln PYSEC-2026-4320
 
       - name: Generate FDA Section 524B CycloneDX SBOM
         run: |

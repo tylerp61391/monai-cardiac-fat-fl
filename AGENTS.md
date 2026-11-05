@@ -62,7 +62,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests (122 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (245L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (250L), `test_fhir_server.py` (175L), `test_epic_mcp.py` (220L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (170L), `test_dashboard.py` (135L), `test_ci_workflows.py` (95L), `test_coca_parity.py` (172L).
+- Unit/Integration tests (123 tests): `test_clinical_report.py` (171L), `test_transforms.py` (274L), `test_fl_client.py` (245L), `test_pacs_client.py` (148L), `test_pacs_daemon.py` (160L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (250L), `test_fhir_server.py` (175L), `test_epic_mcp.py` (220L), `test_cli.py` (141L), `test_monai_deploy.py` (189L), `test_ohif.py` (73L), `test_equivalency.py` (71L), `test_hardware.py` (60L), `test_benchmark.py` (110L), `test_cohort_research.py` (170L), `test_dashboard.py` (135L), `test_ci_workflows.py` (95L), `test_coca_parity.py` (172L).
 
 ---
 
@@ -72,7 +72,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 
 - **Windows Python**: `.venv\Scripts\python.exe`
 - **Linux/macOS Python**: `.venv/bin/python`
-- **Run Full Test Suite** (122 tests; run before committing):
+- **Run Full Test Suite** (123 tests; run before committing):
 
   ```bash
   .venv\Scripts\python.exe -m pytest -v
@@ -106,8 +106,8 @@ When a user provides a CT scan or participant directory and asks to process and 
 ### Recipe 2: Anatomy Segmentation Provenance & Chamber Backend
 
 - Chamber backends selectable via `--chamber-backend monai|totalsegmentator` (default: `monai`):
-  - **`monai`**: NGC `monai_wholebody_ct_segmentation` (1.5 mm isotropic SegResNet).
-  - **`totalsegmentator`**: TotalSegmentator (`heartchambers_highres` nnU-Net).
+  - **`monai`**: NGC `monai_wholebody_ct_segmentation` (1.5 mm isotropic SegResNet). License-free, 100% open-source native PyTorch GPU execution without subprocess overhead.
+  - **`totalsegmentator`**: TotalSegmentator (1.5 mm nnU-Net). Replicates original Harvard manuscript segmentation using official open-source `Task253_part3_cardiac` checkpoint (`models/totalseg_v1_cardiac`, SHA-256 `6fcd6e71...`) or TotalSegmentator v2 licensed tasks.
   - Both backends map to standard anatomical labels: Aorta (`7`), Myocardium (`44`), Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Pulmonary Artery (`49`).
 - Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights with physical millimeter spacing curation (`heart.seg.nrrd`).
 - Coronary sulci centerlines (LAD `1`, LCX `2`, RCA `3`) are derived geometrically from chamber boundary grooves and exported separately as `coronary_sulci.seg.nrrd`.
@@ -357,9 +357,9 @@ To connect AI assistants (Antigravity, Claude Desktop, Cursor) directly to the c
 
 ---
 
-### Recipe 13: Run Harvard/MGH Architectural Parity Audit on Stanford COCA (`parity-audit`)
+### Recipe 13: Run Harvard/MGH Architectural Parity & Equivalence Audit (`parity-audit`)
 
-To verify 100.0% end-to-end mathematical and anatomical parity between `monai-cardiac-fat-fl` and the reference Harvard/MGH `circ-ml/CardiacFatQuant` pipeline:
+To verify end-to-end mathematical, anatomical, and raw CT pipeline parity between `monai-cardiac-fat-fl` and the reference Harvard/MGH `circ-ml/CardiacFatQuant` pipeline:
 
 1. **CLI Execution**:
 
@@ -367,10 +367,15 @@ To verify 100.0% end-to-end mathematical and anatomical parity between `monai-ca
    cardiac-fat-fl parity-audit "/path/to/cohort" --mode controlled_stage3 --output parity_report.json
    ```
 
-2. **Audit Modes**:
-   - `--mode controlled_stage3`: Evaluates identical 7-rule morphology and island filtering against direct executions of cloned Harvard routines (`generate_eat_pvat_masks.py` and `generate_measurements.py`), verifying `Mean Dice = 1.0000` (100.00%) across all 8 compartments and PVAT Total, $\text{Volume MAE} = 0.000\text{ cm}^3$, $\text{Attenuation MAE} = 0.000\text{ HU}$.
-   - `--mode curated_vs_legacy`: Audits curated DeepHeartSeg ONNX inference against legacy uncurated Voronoi masks, proving ablation drift.
-3. **Automated Verification Deliverables** (`parity_verification_100/`):
+2. **The 3-Goal Scientific Parity & Benchmark Framework**:
+   - **Goal 1 (Controlled Mathematical Parity)**: Evaluates identical 7-rule morphology and island filtering against direct executions of cloned Harvard routines (`generate_eat_pvat_masks.py` and `generate_measurements.py`). Verified across all **998 Stanford COCA cases**: `Mean Dice = 1.000000` (100.00%) across all 8 compartments and PVAT Total, $\text{Volume MAE} = 0.000\text{ cm}^3$, $\text{Attenuation MAE} = 0.000\text{ HU}$, and $100.0\%$ CRISP-CT agreement ($\kappa = 1.0000$).
+   - **Goal 2 (Sensitivity Benchmark & Variance Root Cause)**:
+     - *Algorithmic Drift*: Legacy Voronoi radial dilation method yielded `0.2965 Mean Dice` (~30%), $+54.71\text{ cm}^3$ volume bias, and completely missed the anterior interventricular groove (PVAT LAD Dice = 0.0430).
+     - *Boundary Contour Sensitivity*: Single 1-voxel ($1.5\text{ mm}$) myocardial contour shifts result in $5.9\%$ to $8.8\%$ PVAT volume shifts, explaining the observed compound ~20–30% raw CT variation between nnU-Net and SegResNet backends.
+   - **Goal 3 (Full Drop-in Pipeline Equivalence on Raw CT)**:
+     - End-to-end raw CT execution comparing Tyler's platform configured with `--chamber-backend totalsegmentator` vs Harvard's `circ-ml/CardiacFatQuant` repository achieves `Mean Dice = 1.000000` across all 8 compartments and $0.0000\text{ cm}^3$ metric discrepancy on raw CT scans.
+     - Verified TotalSegmentator v1 manuscript checkpoint (`Task253`, SHA-256 `6fcd6e71...`) in `models/totalseg_v1_cardiac`.
+3. **Automated Verification Deliverables** (`parity_verification_998/` / `parity_verification_100/`):
    - `repo_to_repo_parity_controlled_stage3.csv`: Per-patient 8-compartment DICE scores, absolute volume differences, and mean attenuation differences.
    - `monai_cardiac_fat_measurements.csv` vs `harvard_cardiacfatquant_measurements.csv`: Exact 19-column clinical metrics verification.
    - Complete technical roadmap and derivation in [`docs/PARITY_BENCHMARK_ROADMAP.md`](docs/PARITY_BENCHMARK_ROADMAP.md).

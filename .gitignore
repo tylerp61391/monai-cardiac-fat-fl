@@ -49,6 +49,8 @@ models/**/*.pt
 models/*.pth
 models/**/*.pth
 models/wholeBody_ct_segmentation/
+models/totalseg_v1_cardiac/
+models/nv_segment_ctmr/
 models/federated/
 
 # Environment secrets & configuration

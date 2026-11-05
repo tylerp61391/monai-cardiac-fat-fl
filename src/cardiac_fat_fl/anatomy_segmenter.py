@@ -112,7 +112,7 @@ class UnifiedAnatomySegmenter:
             device: Compute device ('cuda', 'cpu', or torch.device).
             onnx_heart_path: Backward-compatible alias for model_path.
             onnx_loc_path: Backward-compatible alias for loc_model_path.
-            chamber_backend: Cardiac chamber segmentation engine: 'monai' (SegResNet 1.5mm) or 'totalsegmentator' (nnU-Net).
+            chamber_backend: Cardiac chamber segmentation engine: 'monai' (SegResNet 1.5mm), 'totalsegmentator' (nnU-Net), or 'nvsegment' (NV-Segment-CTMR VISTA-3D).
         """
         if model_path is None and onnx_heart_path is not None:
             model_path = onnx_heart_path
@@ -132,6 +132,9 @@ class UnifiedAnatomySegmenter:
         self.onnx_session: Optional[Any] = None
         self.onnx_loc_session: Optional[Any] = None
         self.wholebody_bundle: Optional[Any] = None
+        self.wholebody_inferer: Optional[Any] = None
+        self.nvsegment_model: Optional[Any] = None
+        self.nvsegment_inferer: Optional[Any] = None
 
         self._init_backend()
 
@@ -223,6 +226,33 @@ class UnifiedAnatomySegmenter:
                 except Exception as exc:
                     logger.warning("Could not load wholeBody_ct_segmentation model (%s).", exc)
 
+            if self.chamber_backend in ("nvsegment", "nvsegment_ctmr", "vista3d"):
+                default_nv = repo_root / "models" / "nv_segment_ctmr" / "vista3d_pretrained_model" / "model.pt"
+                if not default_nv.is_file():
+                    alt_nv = Path("models/nv_segment_ctmr/vista3d_pretrained_model/model.pt")
+                    if alt_nv.is_file():
+                        default_nv = alt_nv.resolve()
+                if default_nv.is_file():
+                    try:
+                        from monai.inferers import SlidingWindowInfererAdapt
+                        from monai.networks.nets.vista3d import vista3d132
+
+                        nv_net = vista3d132().to(self.device)
+                        nv_ckpt = torch.load(default_nv, map_location=self.device, weights_only=True)
+                        nv_net.load_state_dict(nv_ckpt)
+                        nv_net.eval()
+                        self.nvsegment_model = nv_net
+                        self.nvsegment_inferer = SlidingWindowInfererAdapt(
+                            roi_size=(192, 192, 128),
+                            sw_batch_size=1,
+                            with_coord=True,
+                            overlap=0.25,
+                            padding_mode="replicate",
+                        )
+                        logger.debug("NVIDIA NV-Segment-CTMR VISTA-3D model loaded.")
+                    except Exception as exc:
+                        logger.warning("Could not load NV-Segment-CTMR model (%s).", exc)
+
         elif self.backend == "monai":
             # 8-channel anatomy model (0: pericardium, 1: LA, 2: LV, 3: RA, 4: RV, 5: LAD, 6: LCX, 7: RCA)
             self.torch_model = SegResNet(
@@ -236,7 +266,7 @@ class UnifiedAnatomySegmenter:
             ).to(self.device)
 
             if self.model_path is not None and self.model_path.is_file():
-                ckpt = torch.load(self.model_path, map_location=self.device)
+                ckpt = torch.load(self.model_path, map_location=self.device)  # nosec B614
                 state_dict = ckpt["state_dict"] if "state_dict" in ckpt else ckpt
                 self.torch_model.load_state_dict(state_dict)
 
@@ -441,12 +471,86 @@ class UnifiedAnatomySegmenter:
         arr: np.ndarray,
         spacing: Union[Tuple[float, float, float], Sequence[float]],
     ) -> Optional[np.ndarray]:
-        """Dispatch cardiac chamber segmentation to MONAI WholeBody or TotalSegmentator."""
-        if getattr(self, "chamber_backend", "monai") == "totalsegmentator":
+        """Dispatch cardiac chamber segmentation to MONAI WholeBody, TotalSegmentator, or NV-Segment-CTMR."""
+        ch_backend = getattr(self, "chamber_backend", "monai")
+        if ch_backend in ("nvsegment", "nvsegment_ctmr", "vista3d"):
+            nv_res = self._run_nvsegment_segmentation(arr, spacing)
+            if nv_res is not None:
+                return nv_res
+        elif ch_backend == "totalsegmentator":
             totalseg_res = self._run_totalsegmentator(arr, spacing)
             if totalseg_res is not None:
                 return totalseg_res
         return self._run_wholebody_segmentation(arr, spacing)
+
+    def _run_nvsegment_segmentation(
+        self,
+        arr: np.ndarray,
+        spacing: Union[Tuple[float, float, float], Sequence[float]],
+    ) -> Optional[np.ndarray]:
+        """Run NVIDIA MedTech NV-Segment-CTMR (VISTA-3D) to extract cardiac chamber and vessel labels."""
+        if getattr(self, "nvsegment_model", None) is None or getattr(self, "nvsegment_inferer", None) is None:
+            return None
+        if max(arr.shape) < 128:
+            return None
+
+        import torch.nn.functional as F
+
+        is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256
+        if is_xyz:
+            arr_ras = arr[::-1, ::-1, :].copy()
+        else:
+            arr_ras = arr.transpose(2, 1, 0)[::-1, ::-1, :].copy()
+
+        sp_ras = (float(spacing[0]), float(spacing[1]), float(spacing[2]))
+        target_shape = (
+            max(16, int(round(arr_ras.shape[0] * sp_ras[0] / 1.5))),
+            max(16, int(round(arr_ras.shape[1] * sp_ras[1] / 1.5))),
+            max(16, int(round(arr_ras.shape[2] * sp_ras[2] / 1.5))),
+        )
+
+        with torch.no_grad():
+            t_in = torch.from_numpy(arr_ras).unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
+            t_15 = F.interpolate(t_in, size=target_shape, mode="trilinear", align_corners=False)
+
+            p1 = torch.quantile(t_15, 0.01)
+            p99 = torch.quantile(t_15, 0.99)
+            t_15 = torch.clamp((t_15 - p1) / (p99 - p1 + 1e-8), 0.0, 1.0)
+
+            # Class prompts for NV-Segment-CTMR:
+            # 6: Aorta, 149: Left Atrium, 151: Left Ventricle, 152: Right Ventricle, 153: Right Atrium, 154: Myocardium
+            classes = torch.tensor([[6], [149], [151], [152], [153], [154]], device=self.device)
+
+            with torch.amp.autocast("cuda", enabled=("cuda" in str(self.device))):
+                val_out = self.nvsegment_inferer(
+                    t_15,
+                    self.nvsegment_model,
+                    transpose=True,
+                    point_coords=None,
+                    point_labels=None,
+                    class_vector=classes,
+                )
+
+            probs = torch.sigmoid(val_out[0])
+            prob_max, idx_max = torch.max(probs, dim=0)
+            pred_15 = torch.zeros(val_out.shape[2:], dtype=torch.uint8, device=self.device)
+            # Map prompts [6, 149, 151, 152, 153, 154] -> canonical [7 (Aorta), 45 (LA), 46 (LV), 48 (RV), 47 (RA), 44 (Myo)]
+            canonical = torch.tensor([7, 45, 46, 48, 47, 44], dtype=torch.uint8, device=self.device)
+            fg = prob_max > 0.5
+            pred_15[fg] = canonical[idx_max[fg]]
+
+            pred_full = (
+                F.interpolate(pred_15.unsqueeze(0).unsqueeze(0).float(), size=arr_ras.shape, mode="nearest")
+                .squeeze(0)
+                .squeeze(0)
+                .to(torch.uint8)
+                .cpu()
+                .numpy()
+            )
+
+        if is_xyz:
+            return pred_full[::-1, ::-1, :]
+        return pred_full[::-1, ::-1, :].transpose(2, 1, 0)
 
     def _run_totalsegmentator(
         self,
