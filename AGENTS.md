@@ -105,11 +105,13 @@ When a user provides a CT scan or participant directory and asks to process and 
 
 ### Recipe 2: Anatomy Segmentation Provenance & Chamber Backend
 
-- Chamber backends selectable via `--chamber-backend monai|totalsegmentator` (default: `monai`):
+- Chamber backends selectable via `--chamber-backend monai|totalsegmentator|nvsegment|nvsegment_ct` (default: `monai`):
   - **`monai`**: NGC `monai_wholebody_ct_segmentation` (1.5 mm isotropic SegResNet). License-free, 100% open-source native PyTorch GPU execution without subprocess overhead.
   - **`totalsegmentator`**: TotalSegmentator (1.5 mm nnU-Net). Replicates original Harvard manuscript segmentation using official open-source `Task253_part3_cardiac` checkpoint (`models/totalseg_v1_cardiac`, SHA-256 `6fcd6e71...`) or TotalSegmentator v2 licensed tasks.
-  - Both backends map to standard anatomical labels: Aorta (`7`), Myocardium (`44`), Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Pulmonary Artery (`49`).
-- Pericardium is segmented via converted zero-drift DeepHeartSeg ONNX weights with physical millimeter spacing curation (`heart.seg.nrrd`).
+  - **`nvsegment` / `nvsegment_ctmr`**: NVIDIA-MedTech `NV-Segment-CTMR` (VISTA-3D 346-class foundation model). Native 4-chamber CT+MR dual foundation model prompting classes `[6, 149, 151, 152, 153, 154]`.
+  - **`nvsegment_ct`**: NVIDIA-MedTech `NV-Segment-CT` (VISTA-3D 133-class CT-dedicated foundation model). Fast, low-VRAM CT foundation model prompting aorta `6` and whole heart envelope `115`, combined with 4-quadrant anatomical chamber partitioning.
+  - All backends map to standard anatomical labels: Aorta (`7`), Myocardium (`44`), Left Atrium (`45`), Left Ventricle (`46`), Right Atrium (`47`), Right Ventricle (`48`), Pulmonary Artery (`49`).
+- Across ALL tracks, the outer pericardium envelope is segmented via converted zero-drift DeepHeartSeg ONNX weights with physical millimeter spacing curation (`heart.seg.nrrd`), ensuring clinical envelope invariance.
 - Coronary sulci centerlines (LAD `1`, LCX `2`, RCA `3`) are derived geometrically from chamber boundary grooves and exported separately as `coronary_sulci.seg.nrrd`.
 
 ### Recipe 3: Push Study Results to a PACS Archive

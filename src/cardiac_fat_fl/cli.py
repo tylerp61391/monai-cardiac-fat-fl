@@ -129,6 +129,8 @@ def _process_one_participant(task: Tuple[Any, ...], preloaded_ct=None) -> dict:
 
             if chamber_backend in ("nvsegment", "nvsegment_ctmr", "vista3d"):
                 tot_filename = "nv_segment_ctmr_masks.seg.nrrd"
+            elif chamber_backend in ("nvsegment_ct", "nvsegment-ct"):
+                tot_filename = "nv_segment_ct_masks.seg.nrrd"
             elif chamber_backend == "totalsegmentator":
                 tot_filename = "totalsegmentator_1-5mm_masks.seg.nrrd"
             else:
@@ -236,7 +238,7 @@ def quantify(
         "monai",
         "--chamber-backend",
         "-cb",
-        help="Cardiac chamber segmentation engine: 'monai' (SegResNet 1.5mm), 'totalsegmentator' (nnU-Net), or 'nvsegment' (NV-Segment-CTMR VISTA-3D).",
+        help="Cardiac chamber segmentation engine: 'monai' (SegResNet 1.5mm), 'totalsegmentator' (nnU-Net), 'nvsegment' / 'nvsegment_ctmr' (NV-Segment-CTMR VISTA-3D), or 'nvsegment_ct' (NV-Segment-CT VISTA-3D).",
     ),
     limit: Optional[int] = typer.Option(
         None,

@@ -253,6 +253,33 @@ class UnifiedAnatomySegmenter:
                     except Exception as exc:
                         logger.warning("Could not load NV-Segment-CTMR model (%s).", exc)
 
+            elif self.chamber_backend in ("nvsegment_ct", "nvsegment-ct"):
+                default_nv = repo_root / "models" / "nv_segment_ct" / "vista3d_pretrained_model" / "model.pt"
+                if not default_nv.is_file():
+                    alt_nv = Path("models/nv_segment_ct/vista3d_pretrained_model/model.pt")
+                    if alt_nv.is_file():
+                        default_nv = alt_nv.resolve()
+                if default_nv.is_file():
+                    try:
+                        from monai.inferers import SlidingWindowInfererAdapt
+                        from monai.networks.nets.vista3d import vista3d132
+
+                        nv_net = vista3d132().to(self.device)
+                        nv_ckpt = torch.load(default_nv, map_location=self.device, weights_only=True)
+                        nv_net.load_state_dict(nv_ckpt)
+                        nv_net.eval()
+                        self.nvsegment_ct_model = nv_net
+                        self.nvsegment_ct_inferer = SlidingWindowInfererAdapt(
+                            roi_size=(192, 192, 128),
+                            sw_batch_size=1,
+                            with_coord=True,
+                            overlap=0.25,
+                            padding_mode="replicate",
+                        )
+                        logger.debug("NVIDIA NV-Segment-CT VISTA-3D model loaded.")
+                    except Exception as exc:
+                        logger.warning("Could not load NV-Segment-CT model (%s).", exc)
+
         elif self.backend == "monai":
             # 8-channel anatomy model (0: pericardium, 1: LA, 2: LV, 3: RA, 4: RV, 5: LAD, 6: LCX, 7: RCA)
             self.torch_model = SegResNet(
@@ -471,17 +498,108 @@ class UnifiedAnatomySegmenter:
         arr: np.ndarray,
         spacing: Union[Tuple[float, float, float], Sequence[float]],
     ) -> Optional[np.ndarray]:
-        """Dispatch cardiac chamber segmentation to MONAI WholeBody, TotalSegmentator, or NV-Segment-CTMR."""
+        """Dispatch cardiac chamber segmentation to MONAI WholeBody, TotalSegmentator, NV-Segment-CTMR, or NV-Segment-CT."""
         ch_backend = getattr(self, "chamber_backend", "monai")
         if ch_backend in ("nvsegment", "nvsegment_ctmr", "vista3d"):
             nv_res = self._run_nvsegment_segmentation(arr, spacing)
             if nv_res is not None:
                 return nv_res
+        elif ch_backend in ("nvsegment_ct", "nvsegment-ct"):
+            nv_ct_res = self._run_nvsegment_ct_segmentation(arr, spacing)
+            if nv_ct_res is not None:
+                return nv_ct_res
         elif ch_backend == "totalsegmentator":
             totalseg_res = self._run_totalsegmentator(arr, spacing)
             if totalseg_res is not None:
                 return totalseg_res
         return self._run_wholebody_segmentation(arr, spacing)
+
+    def _run_nvsegment_ct_segmentation(
+        self,
+        arr: np.ndarray,
+        spacing: Union[Tuple[float, float, float], Sequence[float]],
+    ) -> Optional[np.ndarray]:
+        """Run NVIDIA MedTech NV-Segment-CT (VISTA-3D) to extract cardiac chambers and aorta."""
+        if getattr(self, "nvsegment_ct_model", None) is None or getattr(self, "nvsegment_ct_inferer", None) is None:
+            return None
+        if max(arr.shape) < 128:
+            return None
+
+        import torch.nn.functional as F
+
+        is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256
+        if is_xyz:
+            arr_ras = arr[::-1, ::-1, :].copy()
+        else:
+            arr_ras = arr.transpose(2, 1, 0)[::-1, ::-1, :].copy()
+
+        sp_ras = (float(spacing[0]), float(spacing[1]), float(spacing[2]))
+        target_shape = (
+            max(16, int(round(arr_ras.shape[0] * sp_ras[0] / 1.5))),
+            max(16, int(round(arr_ras.shape[1] * sp_ras[1] / 1.5))),
+            max(16, int(round(arr_ras.shape[2] * sp_ras[2] / 1.5))),
+        )
+
+        with torch.no_grad():
+            t_in = torch.from_numpy(arr_ras).unsqueeze(0).unsqueeze(0).to(self.device, dtype=torch.float32)
+            t_15 = F.interpolate(t_in, size=target_shape, mode="trilinear", align_corners=False)
+
+            p1 = torch.quantile(t_15, 0.01)
+            p99 = torch.quantile(t_15, 0.99)
+            t_15 = torch.clamp((t_15 - p1) / (p99 - p1 + 1e-8), 0.0, 1.0)
+
+            # Class prompts for NV-Segment-CT:
+            # 6: Aorta, 115: Heart (whole organ)
+            classes = torch.tensor([[6], [115]], device=self.device)
+
+            with torch.amp.autocast("cuda", enabled=("cuda" in str(self.device))):
+                val_out = self.nvsegment_ct_inferer(
+                    t_15,
+                    self.nvsegment_ct_model,
+                    transpose=True,
+                    point_coords=None,
+                    point_labels=None,
+                    class_vector=classes,
+                )
+
+            probs = torch.sigmoid(val_out[0])
+            aorta_15 = (probs[0] > 0.5).cpu().numpy()
+            heart_15 = (probs[1] > 0.5).cpu().numpy()
+
+            pred_15 = np.zeros(val_out.shape[2:], dtype=np.uint8)
+            pred_15[aorta_15] = 7  # Canonical Aorta
+
+            # Partition heart envelope into 4 chambers using anatomical quadrant spatial layout:
+            h_idx = np.where(heart_15)
+            if len(h_idx[0]) > 0:
+                cx, cy, cz = float(np.mean(h_idx[0])), float(np.mean(h_idx[1])), float(np.mean(h_idx[2]))
+                gx, gy, gz = np.indices(heart_15.shape)
+
+                # In RAS space:
+                # X: Right -> Left (gx >= cx is Left, gx < cx is Right)
+                # Z: Inferior -> Superior (gz >= cz is Superior/Atrial, gz < cz is Inferior/Ventricular)
+                la_mask = heart_15 & (gx >= cx) & (gz >= cz)
+                lv_mask = heart_15 & (gx >= cx) & (gz < cz)
+                ra_mask = heart_15 & (gx < cx) & (gz >= cz)
+                rv_mask = heart_15 & (gx < cx) & (gz < cz)
+
+                pred_15[la_mask] = 45  # Left Atrium
+                pred_15[lv_mask] = 46  # Left Ventricle
+                pred_15[ra_mask] = 47  # Right Atrium
+                pred_15[rv_mask] = 48  # Right Ventricle
+
+            pred_full = (
+                F.interpolate(torch.from_numpy(pred_15).unsqueeze(0).unsqueeze(0).float().to(self.device), size=arr_ras.shape, mode="nearest")
+                .squeeze(0)
+                .squeeze(0)
+                .to(torch.uint8)
+                .cpu()
+                .numpy()
+            )
+
+        if is_xyz:
+            return pred_full[::-1, ::-1, :]
+        return pred_full[::-1, ::-1, :].transpose(2, 1, 0)
 
     def _run_nvsegment_segmentation(
         self,

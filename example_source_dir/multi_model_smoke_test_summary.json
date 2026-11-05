@@ -1,5 +1,5 @@
 {
-  "benchmark_timestamp": "2026-11-04 19:26:39",
+  "benchmark_timestamp": "2026-11-04 20:23:07",
   "cases_evaluated": 3,
   "device": "cuda",
   "gpu_name": "NVIDIA GeForce RTX 4090",
@@ -14,10 +14,10 @@
       "mean_pvat_hu": -76.97543887961417
     },
     "monai_wholebody": {
-      "mean_latency_sec": 10.833172957102457,
-      "throughput_scans_per_hour": 332.31261185023027,
-      "speedup_vs_harvard": 13.384813532856496,
-      "peak_vram_mb": 8589.009765625,
+      "mean_latency_sec": 19.198289553324383,
+      "throughput_scans_per_hour": 187.5167050690004,
+      "speedup_vs_harvard": 7.552756176390295,
+      "peak_vram_mb": 9499.82763671875,
       "mean_eat_vol_cm3": 134.93024666666668,
       "mean_pvat_vol_cm3": 28.399452000000007,
       "mean_eat_hu": -79.60802459716797,
@@ -34,26 +34,40 @@
       "mean_pvat_hu": -76.97543887961417
     },
     "nv_segment_ctmr": {
-      "mean_latency_sec": 16.74453941980998,
-      "throughput_scans_per_hour": 214.99546268444652,
-      "speedup_vs_harvard": 8.659539469234652,
-      "peak_vram_mb": 4680.6865234375,
+      "mean_latency_sec": 26.339139858881634,
+      "throughput_scans_per_hour": 136.67872296847497,
+      "speedup_vs_harvard": 5.505115230674686,
+      "peak_vram_mb": 5586.7783203125,
       "mean_eat_vol_cm3": 135.37607733333334,
       "mean_pvat_vol_cm3": 12.018932000000001,
       "mean_eat_hu": -79.53702036539714,
       "mean_pvat_hu": -78.75267537434895
+    },
+    "nv_segment_ct": {
+      "mean_latency_sec": 18.472002744674683,
+      "throughput_scans_per_hour": 194.8895336234101,
+      "speedup_vs_harvard": 7.849717326498462,
+      "peak_vram_mb": 5378.22119140625,
+      "mean_eat_vol_cm3": 137.0191386666667,
+      "mean_pvat_vol_cm3": 69.30990666666668,
+      "mean_eat_hu": -79.18137613932292,
+      "mean_pvat_hu": -78.61817169189453
     }
   },
   "pairwise_dice": {
     "eat_total": {
       "harvard_vs_monai_mean": 0.8826299764905384,
       "harvard_vs_nvsegment_mean": 0.8815705674157597,
-      "monai_vs_nvsegment_mean": 0.9983102259601617
+      "monai_vs_nvsegment_mean": 0.9983102259601617,
+      "harvard_vs_nvsegment_ct_mean": 0.8761300811343554,
+      "nvsegment_ctmr_vs_ct_mean": 0.9937904371007917
     },
     "pvat_total": {
       "harvard_vs_monai_mean": 0.9105735231767907,
       "harvard_vs_nvsegment_mean": 0.7240921347100326,
-      "monai_vs_nvsegment_mean": 0.7732220761888536
+      "monai_vs_nvsegment_mean": 0.7732220761888536,
+      "harvard_vs_nvsegment_ct_mean": 0.5125673109629987,
+      "nvsegment_ctmr_vs_ct_mean": 0.43109927985241936
     },
     "vessels_nvsegment_vs_harvard": {
       "lad_mean_dice": 0.7610936543245499,

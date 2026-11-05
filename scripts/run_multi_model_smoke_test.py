@@ -72,18 +72,23 @@ def run_benchmark():
     logger.info("Loading NVIDIA NV-Segment-CTMR (VISTA-3D) segmenter...")
     seg_nv = UnifiedAnatomySegmenter(backend="onnx", chamber_backend="nvsegment", device=device)
 
+    logger.info("Loading NVIDIA NV-Segment-CT (VISTA-3D CT) segmenter...")
+    seg_nv_ct = UnifiedAnatomySegmenter(backend="onnx", chamber_backend="nvsegment_ct", device=device)
+
     all_results = []
     timing_records = {
         "harvard": [],
         "monai_wholebody": [],
         "totalseg_v1": [],
         "nv_segment_ctmr": [],
+        "nv_segment_ct": [],
     }
     vram_records = {
         "harvard": 11200.0, # Documented peak VRAM for nnU-Net v1 full-resolution
         "monai_wholebody": 0.0,
         "totalseg_v1": 11200.0,
         "nv_segment_ctmr": 0.0,
+        "nv_segment_ct": 0.0,
     }
 
     for case_id in cases:
@@ -234,6 +239,60 @@ def run_benchmark():
             )
 
         # ---------------------------------------------------------
+        # Track 5: NVIDIA MedTech NV-Segment-CT (VISTA-3D CT Dedicated)
+        # ---------------------------------------------------------
+        logger.info("Running Track 5: NVIDIA NV-Segment-CT (VISTA-3D CT)...")
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+        t0 = time.time()
+
+        tx_nv_ct = ComputeEatPvatMasksd(keys=["image"], segmenter=seg_nv_ct)
+        out_nv_ct = tx_nv_ct({"image": meta_ct, "participant_id": case_id})
+        seg_nv_ct_arr = out_nv_ct["pred"]
+        if isinstance(seg_nv_ct_arr, torch.Tensor):
+            seg_nv_ct_arr = seg_nv_ct_arr.detach().cpu().numpy()
+        if seg_nv_ct_arr.ndim == 5 and seg_nv_ct_arr.shape[0] == 1:
+            seg_nv_ct_arr = seg_nv_ct_arr[0]
+
+        quant_nv_ct = tx_quant({"image": meta_ct, "pred": seg_nv_ct_arr, "participant_id": case_id})["metrics"]
+        nv_ct_elapsed = time.time() - t0
+        timing_records["nv_segment_ct"].append(nv_ct_elapsed)
+        if torch.cuda.is_available():
+            vram_records["nv_segment_ct"] = max(vram_records["nv_segment_ct"], torch.cuda.max_memory_allocated() / (1024 * 1024))
+
+        # Save NV-Segment-CT outputs
+        write_eat_pvat_seg_nrrd(
+            seg_data=seg_nv_ct_arr,
+            output_path=case_dir / "eat_pvat_nvsegment_ct.seg.nrrd",
+            reference_header=ref_header,
+            spacing=spacing,
+            origin=origin,
+        )
+        pd.DataFrame([quant_nv_ct])[MEASUREMENT_CSV_COLUMNS].to_csv(
+            case_dir / "nvsegment_ct_measurements.csv", index=False
+        )
+
+        # Also save NV-Segment-CT chamber mask
+        nv_ct_anat = out_nv_ct.get("anatomy_masks")
+        if nv_ct_anat is not None:
+            nv_ct_ch_mask = np.zeros_like(nv_ct_anat.pericardium, dtype=np.uint16)
+            if nv_ct_anat.aorta is not None:
+                nv_ct_ch_mask[nv_ct_anat.aorta] = 7
+            if nv_ct_anat.myocardium is not None:
+                nv_ct_ch_mask[nv_ct_anat.myocardium] = 44
+            nv_ct_ch_mask[nv_ct_anat.la] = 45
+            nv_ct_ch_mask[nv_ct_anat.lv] = 46
+            nv_ct_ch_mask[nv_ct_anat.ra] = 47
+            nv_ct_ch_mask[nv_ct_anat.rv] = 48
+            write_monai_wholebody_ct_segmentation_seg_nrrd(
+                seg_data=nv_ct_ch_mask,
+                output_path=case_dir / "nv_segment_ct_masks.seg.nrrd",
+                reference_header=ref_header,
+                spacing=spacing,
+                origin=origin,
+            )
+
+        # ---------------------------------------------------------
         # Compute Cross-Model Concordance Metrics (Dice)
         # ---------------------------------------------------------
         # EAT Total: Channel 0 + 1 + 2 + 3
@@ -241,34 +300,40 @@ def run_benchmark():
         eat_harvard = harvard_seg_arr[:4].sum(axis=0) > 0
         eat_monai = seg_monai_arr[:4].sum(axis=0) > 0
         eat_nv = seg_nv_arr[:4].sum(axis=0) > 0
+        eat_nv_ct = seg_nv_ct_arr[:4].sum(axis=0) > 0
 
         pvat_harvard = harvard_seg_arr[4:7].sum(axis=0) > 0
         pvat_monai = seg_monai_arr[4:7].sum(axis=0) > 0
         pvat_nv = seg_nv_arr[4:7].sum(axis=0) > 0
+        pvat_nv_ct = seg_nv_ct_arr[4:7].sum(axis=0) > 0
 
         dice_eat_h_m = compute_dice(eat_harvard, eat_monai)
         dice_eat_h_nv = compute_dice(eat_harvard, eat_nv)
         dice_eat_m_nv = compute_dice(eat_monai, eat_nv)
+        dice_eat_h_nv_ct = compute_dice(eat_harvard, eat_nv_ct)
+        dice_eat_nv_ctmr_vs_ct = compute_dice(eat_nv, eat_nv_ct)
 
         dice_pvat_h_m = compute_dice(pvat_harvard, pvat_monai)
         dice_pvat_h_nv = compute_dice(pvat_harvard, pvat_nv)
         dice_pvat_m_nv = compute_dice(pvat_monai, pvat_nv)
+        dice_pvat_h_nv_ct = compute_dice(pvat_harvard, pvat_nv_ct)
+        dice_pvat_nv_ctmr_vs_ct = compute_dice(pvat_nv, pvat_nv_ct)
 
         dice_lad_h_nv = compute_dice(harvard_seg_arr[4], seg_nv_arr[4])
         dice_lcx_h_nv = compute_dice(harvard_seg_arr[5], seg_nv_arr[5])
         dice_rca_h_nv = compute_dice(harvard_seg_arr[6], seg_nv_arr[6])
 
         logger.info(
-            "Case %s Concordance: EAT Dice (H vs M): %.4f | EAT Dice (H vs NV): %.4f | EAT Dice (M vs NV): %.4f",
-            case_id, dice_eat_h_m, dice_eat_h_nv, dice_eat_m_nv,
+            "Case %s Concordance: EAT Dice (H vs M): %.4f | (H vs NV-CTMR): %.4f | (H vs NV-CT): %.4f | (CTMR vs CT): %.4f",
+            case_id, dice_eat_h_m, dice_eat_h_nv, dice_eat_h_nv_ct, dice_eat_nv_ctmr_vs_ct,
         )
         logger.info(
-            "Case %s Concordance: PVAT Dice (H vs M): %.4f | PVAT Dice (H vs NV): %.4f | PVAT Dice (M vs NV): %.4f",
-            case_id, dice_pvat_h_m, dice_pvat_h_nv, dice_pvat_m_nv,
+            "Case %s Concordance: PVAT Dice (H vs M): %.4f | (H vs NV-CTMR): %.4f | (H vs NV-CT): %.4f | (CTMR vs CT): %.4f",
+            case_id, dice_pvat_h_m, dice_pvat_h_nv, dice_pvat_h_nv_ct, dice_pvat_nv_ctmr_vs_ct,
         )
         logger.info(
-            "Case %s Latencies: MONAI: %.2fs | NV-Segment: %.2fs (Harvard: ~145s)",
-            case_id, monai_elapsed, nv_elapsed,
+            "Case %s Latencies: MONAI: %.2fs | NV-CTMR: %.2fs | NV-CT: %.2fs (Harvard: ~145s)",
+            case_id, monai_elapsed, nv_elapsed, nv_ct_elapsed,
         )
 
         row = {
@@ -278,19 +343,23 @@ def run_benchmark():
             "eat_vol_monai": quant_monai["EAT Total Volume (cm3)"],
             "eat_vol_totalseg": totalseg_metrics["EAT Total Volume (cm3)"],
             "eat_vol_nvsegment": quant_nv["EAT Total Volume (cm3)"],
+            "eat_vol_nvsegment_ct": quant_nv_ct["EAT Total Volume (cm3)"],
             "pvat_vol_harvard": harvard_metrics["PVAT Total Volume (cm3)"],
             "pvat_vol_monai": quant_monai["PVAT Total Volume (cm3)"],
             "pvat_vol_totalseg": totalseg_metrics["PVAT Total Volume (cm3)"],
             "pvat_vol_nvsegment": quant_nv["PVAT Total Volume (cm3)"],
+            "pvat_vol_nvsegment_ct": quant_nv_ct["PVAT Total Volume (cm3)"],
             # Attenuations
             "eat_hu_harvard": harvard_metrics["EAT Total Mean Attenuation (HU)"],
             "eat_hu_monai": quant_monai["EAT Total Mean Attenuation (HU)"],
             "eat_hu_totalseg": totalseg_metrics["EAT Total Mean Attenuation (HU)"],
             "eat_hu_nvsegment": quant_nv["EAT Total Mean Attenuation (HU)"],
+            "eat_hu_nvsegment_ct": quant_nv_ct["EAT Total Mean Attenuation (HU)"],
             "pvat_hu_harvard": harvard_metrics["PVAT Total Mean Attenuation (HU)"],
             "pvat_hu_monai": quant_monai["PVAT Total Mean Attenuation (HU)"],
             "pvat_hu_totalseg": totalseg_metrics["PVAT Total Mean Attenuation (HU)"],
             "pvat_hu_nvsegment": quant_nv["PVAT Total Mean Attenuation (HU)"],
+            "pvat_hu_nvsegment_ct": quant_nv_ct["PVAT Total Mean Attenuation (HU)"],
             # Vessel PVAT
             "pvat_lad_vol_nv": quant_nv["PVAT LAD Volume (cm3)"],
             "pvat_lcx_vol_nv": quant_nv["PVAT LCX Volume (cm3)"],
@@ -299,9 +368,13 @@ def run_benchmark():
             "dice_eat_harvard_vs_monai": dice_eat_h_m,
             "dice_eat_harvard_vs_nvsegment": dice_eat_h_nv,
             "dice_eat_monai_vs_nvsegment": dice_eat_m_nv,
+            "dice_eat_harvard_vs_nvsegment_ct": dice_eat_h_nv_ct,
+            "dice_eat_nvsegment_ctmr_vs_ct": dice_eat_nv_ctmr_vs_ct,
             "dice_pvat_harvard_vs_monai": dice_pvat_h_m,
             "dice_pvat_harvard_vs_nvsegment": dice_pvat_h_nv,
             "dice_pvat_monai_vs_nvsegment": dice_pvat_m_nv,
+            "dice_pvat_harvard_vs_nvsegment_ct": dice_pvat_h_nv_ct,
+            "dice_pvat_nvsegment_ctmr_vs_ct": dice_pvat_nv_ctmr_vs_ct,
             "dice_lad_harvard_vs_nvsegment": dice_lad_h_nv,
             "dice_lcx_harvard_vs_nvsegment": dice_lcx_h_nv,
             "dice_rca_harvard_vs_nvsegment": dice_rca_h_nv,
@@ -310,6 +383,7 @@ def run_benchmark():
             "latency_sec_monai": monai_elapsed,
             "latency_sec_totalseg": totalseg_time,
             "latency_sec_nvsegment": nv_elapsed,
+            "latency_sec_nvsegment_ct": nv_ct_elapsed,
         }
         all_results.append(row)
 
@@ -365,17 +439,31 @@ def run_benchmark():
                 "mean_eat_hu": float(res_df["eat_hu_nvsegment"].mean()),
                 "mean_pvat_hu": float(res_df["pvat_hu_nvsegment"].mean()),
             },
+            "nv_segment_ct": {
+                "mean_latency_sec": float(np.mean(timing_records["nv_segment_ct"])),
+                "throughput_scans_per_hour": float(3600.0 / np.mean(timing_records["nv_segment_ct"])),
+                "speedup_vs_harvard": float(np.mean(timing_records["harvard"]) / np.mean(timing_records["nv_segment_ct"])),
+                "peak_vram_mb": float(vram_records["nv_segment_ct"]),
+                "mean_eat_vol_cm3": float(res_df["eat_vol_nvsegment_ct"].mean()),
+                "mean_pvat_vol_cm3": float(res_df["pvat_vol_nvsegment_ct"].mean()),
+                "mean_eat_hu": float(res_df["eat_hu_nvsegment_ct"].mean()),
+                "mean_pvat_hu": float(res_df["pvat_hu_nvsegment_ct"].mean()),
+            },
         },
         "pairwise_dice": {
             "eat_total": {
                 "harvard_vs_monai_mean": float(res_df["dice_eat_harvard_vs_monai"].mean()),
                 "harvard_vs_nvsegment_mean": float(res_df["dice_eat_harvard_vs_nvsegment"].mean()),
                 "monai_vs_nvsegment_mean": float(res_df["dice_eat_monai_vs_nvsegment"].mean()),
+                "harvard_vs_nvsegment_ct_mean": float(res_df["dice_eat_harvard_vs_nvsegment_ct"].mean()),
+                "nvsegment_ctmr_vs_ct_mean": float(res_df["dice_eat_nvsegment_ctmr_vs_ct"].mean()),
             },
             "pvat_total": {
                 "harvard_vs_monai_mean": float(res_df["dice_pvat_harvard_vs_monai"].mean()),
                 "harvard_vs_nvsegment_mean": float(res_df["dice_pvat_harvard_vs_nvsegment"].mean()),
                 "monai_vs_nvsegment_mean": float(res_df["dice_pvat_monai_vs_nvsegment"].mean()),
+                "harvard_vs_nvsegment_ct_mean": float(res_df["dice_pvat_harvard_vs_nvsegment_ct"].mean()),
+                "nvsegment_ctmr_vs_ct_mean": float(res_df["dice_pvat_nvsegment_ctmr_vs_ct"].mean()),
             },
             "vessels_nvsegment_vs_harvard": {
                 "lad_mean_dice": float(res_df["dice_lad_harvard_vs_nvsegment"].mean()),
