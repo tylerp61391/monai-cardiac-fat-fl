@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-11-05 07:53:29",
+  "cases_evaluated": 25,
+  "tiers_represented": [
+    "Zero (0)",
+    "Minimal (1-10)",
+    "Mild (11-100)",
+    "Moderate (101-400)",
+    "Severe (>400)"
+  ],
+  "mean_latency_nv_ctmr": 34.071174201965334,
+  "mean_latency_nv_ct": 31.296918478012085,
+  "mean_dice_eat_h_vs_m": 1.0,
+  "mean_dice_eat_h_vs_nv_ctmr": 0.9992517798705802,
+  "mean_dice_eat_nv_ctmr_vs_ct": 0.9918483401436069,
+  "mean_dice_pvat_h_vs_m": 1.0,
+  "mean_dice_pvat_h_vs_nv_ctmr": 0.8478592665428049
+}
