@@ -572,7 +572,7 @@ class UnifiedAnatomySegmenter:
             # Partition heart envelope into 4 chambers using anatomical quadrant spatial layout:
             h_idx = np.where(heart_15)
             if len(h_idx[0]) > 0:
-                cx, cy, cz = float(np.mean(h_idx[0])), float(np.mean(h_idx[1])), float(np.mean(h_idx[2]))
+                cx, _cy, cz = float(np.mean(h_idx[0])), float(np.mean(h_idx[1])), float(np.mean(h_idx[2]))
                 gx, gy, gz = np.indices(heart_15.shape)
 
                 # In RAS space:

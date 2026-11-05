@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
 from pathlib import Path
@@ -36,7 +37,6 @@ def main() -> None:
             h = hashlib.sha256(f.read_bytes()).hexdigest()
             rel_name = f.relative_to(model_dir).as_posix()
             checksum_lines.append(f"{h}  {rel_name}")
-    
     checksum_file = model_dir / "checksums.sha256"
     checksum_file.write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
     files_to_upload.append(checksum_file)
