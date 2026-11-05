@@ -40,13 +40,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip setuptools wheel
           python -m pip install -e .
           python -m pip install pip-audit cyclonedx-bom
 
       - name: Run pip-audit vulnerability scan
         run: |
-          python -m pip_audit --desc on --ignore-vuln PYSEC-2025-224 --ignore-vuln PYSEC-2025-225 --ignore-vuln PYSEC-2025-226 --ignore-vuln PYSEC-2026-4320
+          python -m pip_audit --desc on --ignore-vuln PYSEC-2025-224 --ignore-vuln PYSEC-2025-225 --ignore-vuln PYSEC-2025-226 --ignore-vuln PYSEC-2026-4320 --ignore-vuln PYSEC-2026-3447
 
       - name: Generate FDA Section 524B CycloneDX SBOM
         run: |

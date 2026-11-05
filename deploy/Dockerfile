@@ -42,14 +42,7 @@ COPY models/ /opt/holoscan/models/
 COPY deploy/app.py /opt/holoscan/app/app.py
 
 # Verify models and checksum integrity during build if present
-RUN python3 -c "import hashlib, sys; from pathlib import Path; \
-    p = Path('/opt/holoscan/models/deepheartseg_heart.onnx'); \
-    if p.exists(): \
-        h = hashlib.sha256(p.read_bytes()).hexdigest(); \
-        assert h == '4015c53fa3fcdaa8b93e9d528f2410b8d34cdba07286e69b4f09a6e3c9644553', f'Checksum mismatch: {h}'; \
-        print('Container model SHA-256 verified successfully.'); \
-    else: \
-        print('Notice: deepheartseg_heart.onnx not in build context; mount /opt/holoscan/models at runtime.')"
+RUN python3 -c "import hashlib, sys; from pathlib import Path; p = Path('/opt/holoscan/models/deepheartseg_heart.onnx'); h = hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None; assert h is None or h == '4015c53fa3fcdaa8b93e9d528f2410b8d34cdba07286e69b4f09a6e3c9644553', f'Checksum mismatch: {h}'; print('Container model SHA-256 verified successfully.' if p.exists() else 'Notice: deepheartseg_heart.onnx not in build context; mount /opt/holoscan/models at runtime.')"
 
 # Default volume mounts
 VOLUME ["/var/monai/input", "/var/monai/output"]
