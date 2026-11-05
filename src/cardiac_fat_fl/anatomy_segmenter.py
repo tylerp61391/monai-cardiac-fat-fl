@@ -21,7 +21,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import scipy.ndimage as ndi
 import torch
-from monai.networks.nets import SegResNet
+from monai.networks.nets.segresnet import SegResNet
+from monai.inferers.inferer import SlidingWindowInferer, SlidingWindowInfererAdapt
 
 logger = logging.getLogger(__name__)
 
@@ -201,14 +202,13 @@ class UnifiedAnatomySegmenter:
                     logger.debug("Could not verify NGC model checksum: %s", exc)
 
                 try:
-                    from monai.inferers import SlidingWindowInferer
                     wb_net = SegResNet(
                         spatial_dims=3,
                         in_channels=1,
                         out_channels=105,
                         init_filters=32,
-                        blocks_down=[1, 2, 2, 4],
-                        blocks_up=[1, 1, 1],
+                        blocks_down=(1, 2, 2, 4),
+                        blocks_up=(1, 1, 1),
                         dropout_prob=0.2,
                     ).to(self.device)
                     ckpt = torch.load(default_wb, map_location=self.device, weights_only=True)
@@ -234,7 +234,6 @@ class UnifiedAnatomySegmenter:
                         default_nv = alt_nv.resolve()
                 if default_nv.is_file():
                     try:
-                        from monai.inferers import SlidingWindowInfererAdapt
                         from monai.networks.nets.vista3d import vista3d132
 
                         nv_net = vista3d132().to(self.device)
@@ -261,7 +260,6 @@ class UnifiedAnatomySegmenter:
                         default_nv = alt_nv.resolve()
                 if default_nv.is_file():
                     try:
-                        from monai.inferers import SlidingWindowInfererAdapt
                         from monai.networks.nets.vista3d import vista3d132
 
                         nv_net = vista3d132().to(self.device)
@@ -287,8 +285,8 @@ class UnifiedAnatomySegmenter:
                 in_channels=1,
                 out_channels=8,
                 init_filters=16,
-                blocks_down=[1, 2, 2, 4],
-                blocks_up=[1, 1, 1],
+                blocks_down=(1, 2, 2, 4),
+                blocks_up=(1, 1, 1),
                 dropout_prob=0.0,
             ).to(self.device)
 
@@ -339,7 +337,6 @@ class UnifiedAnatomySegmenter:
     ) -> AnatomyMasks:
         """Run PyTorch/MONAI deep learning inference with sliding window support."""
         assert self.torch_model is not None
-        from monai.inferers import SlidingWindowInferer
 
         # Normalize HU input: standard cardiac window [-200, 800] -> [0, 1]
         norm = np.clip((arr - (-200.0)) / (800.0 - (-200.0)), 0.0, 1.0)
@@ -352,7 +349,8 @@ class UnifiedAnatomySegmenter:
 
         with torch.no_grad():
             pred = inferer(inp, self.torch_model)
-            probs = torch.sigmoid(pred).squeeze(0).cpu().numpy()
+            pred_tensor: torch.Tensor = pred if isinstance(pred, torch.Tensor) else pred[0]  # type: ignore[assignment]
+            probs = torch.sigmoid(pred_tensor).squeeze(0).cpu().numpy()
 
         pericardium = probs[0] > 0.5
         la = probs[1] > 0.5
@@ -418,7 +416,7 @@ class UnifiedAnatomySegmenter:
                 z_zoom = 64.0 / arr_zyx.shape[0]
                 y_zoom = 128.0 / arr_zyx.shape[1]
                 x_zoom = 128.0 / arr_zyx.shape[2]
-                down = ndi.zoom(arr_zyx, (z_zoom, y_zoom, x_zoom), order=1)
+                down = np.asarray(ndi.zoom(arr_zyx, (z_zoom, y_zoom, x_zoom), order=1), dtype=np.float32)
                 norm_loc = ((np.clip(down, -1024.0, 3071.0)) - 1023.5) / 2047.5
                 inp_loc = norm_loc[np.newaxis, np.newaxis, ...].astype(np.float32)
                 pred_loc = self.onnx_loc_session.run(None, {self.onnx_loc_session.get_inputs()[0].name: inp_loc})[0]
@@ -449,7 +447,7 @@ class UnifiedAnatomySegmenter:
             z_f = 112.0 / cz
             y_f = 128.0 / cy
             x_f = 128.0 / cx
-            crop_resampled = ndi.zoom(cropped, (z_f, y_f, x_f), order=1)
+            crop_resampled = np.asarray(ndi.zoom(cropped, (z_f, y_f, x_f), order=1), dtype=np.float32)
             norm_seg = ((np.clip(crop_resampled, -1024.0, 3071.0)) - 1023.5) / 2047.5
 
             inp_seg = norm_seg[np.newaxis, np.newaxis, ...].astype(np.float32)
@@ -457,14 +455,14 @@ class UnifiedAnatomySegmenter:
             seg_mask_small = pred_seg[0, 0] > 0.5
 
             # Upsample back to cropped dimensions
-            seg_crop_orig = ndi.zoom(seg_mask_small.astype(float), (1.0 / z_f, 1.0 / y_f, 1.0 / x_f), order=0) > 0.5
+            seg_crop_orig = np.asarray(ndi.zoom(seg_mask_small.astype(float), (1.0 / z_f, 1.0 / y_f, 1.0 / x_f), order=0), dtype=float) > 0.5
             pericardium_zyx = np.zeros_like(arr_zyx, dtype=bool)
             pericardium_zyx[z_min:z_max, y_min:y_max, x_min:x_max] = seg_crop_orig[:cz, :cy, :cx]
-            pericardium_zyx = ndi.binary_fill_holes(pericardium_zyx)
+            pericardium_zyx = np.asarray(ndi.binary_fill_holes(pericardium_zyx), dtype=bool)
 
             if is_xyz:
                 # Transpose back to (X, Y, Z) to match original volume coordinate frame
-                pericardium = pericardium_zyx.transpose(2, 1, 0)
+                pericardium = np.asarray(pericardium_zyx.transpose(2, 1, 0), dtype=bool)
             else:
                 pericardium = pericardium_zyx
 
@@ -477,6 +475,7 @@ class UnifiedAnatomySegmenter:
         norm = np.clip((arr - (-200.0)) / (800.0 - (-200.0)), 0.0, 1.0).astype(np.float32)
         inp = np.expand_dims(np.expand_dims(norm, axis=0), axis=0)  # (1, 1, D, H, W)
 
+        assert self.onnx_session is not None
         input_name = self.onnx_session.get_inputs()[0].name
         outputs = self.onnx_session.run(None, {input_name: inp})
         probs = 1.0 / (1.0 + np.exp(-outputs[0]))
@@ -552,7 +551,8 @@ class UnifiedAnatomySegmenter:
             # 6: Aorta, 115: Heart (whole organ)
             classes = torch.tensor([[6], [115]], device=self.device)
 
-            with torch.amp.autocast("cuda", enabled=("cuda" in str(self.device))):
+            assert self.nvsegment_ct_inferer is not None and self.nvsegment_ct_model is not None
+            with torch.autocast(device_type="cuda" if "cuda" in str(self.device) else "cpu", enabled=("cuda" in str(self.device))):
                 val_out = self.nvsegment_ct_inferer(
                     t_15,
                     self.nvsegment_ct_model,
@@ -562,11 +562,12 @@ class UnifiedAnatomySegmenter:
                     class_vector=classes,
                 )
 
-            probs = torch.sigmoid(val_out[0])
+            val_tensor: torch.Tensor = val_out if isinstance(val_out, torch.Tensor) else val_out[0]  # type: ignore[assignment]
+            probs = torch.sigmoid(val_tensor[0])
             aorta_15 = (probs[0] > 0.5).cpu().numpy()
             heart_15 = (probs[1] > 0.5).cpu().numpy()
 
-            pred_15 = np.zeros(val_out.shape[2:], dtype=np.uint8)
+            pred_15 = np.zeros(val_tensor.shape[2:], dtype=np.uint8)
             pred_15[aorta_15] = 7  # Canonical Aorta
 
             # Partition heart envelope into 4 chambers using anatomical quadrant spatial layout:
@@ -639,7 +640,8 @@ class UnifiedAnatomySegmenter:
             # 6: Aorta, 149: Left Atrium, 151: Left Ventricle, 152: Right Ventricle, 153: Right Atrium, 154: Myocardium
             classes = torch.tensor([[6], [149], [151], [152], [153], [154]], device=self.device)
 
-            with torch.amp.autocast("cuda", enabled=("cuda" in str(self.device))):
+            assert self.nvsegment_inferer is not None and self.nvsegment_model is not None
+            with torch.autocast(device_type="cuda" if "cuda" in str(self.device) else "cpu", enabled=("cuda" in str(self.device))):
                 val_out = self.nvsegment_inferer(
                     t_15,
                     self.nvsegment_model,
@@ -649,9 +651,10 @@ class UnifiedAnatomySegmenter:
                     class_vector=classes,
                 )
 
-            probs = torch.sigmoid(val_out[0])
+            val_tensor: torch.Tensor = val_out if isinstance(val_out, torch.Tensor) else val_out[0]  # type: ignore[assignment]
+            probs = torch.sigmoid(val_tensor[0])
             prob_max, idx_max = torch.max(probs, dim=0)
-            pred_15 = torch.zeros(val_out.shape[2:], dtype=torch.uint8, device=self.device)
+            pred_15 = torch.zeros(val_tensor.shape[2:], dtype=torch.uint8, device=self.device)
             # Map prompts [6, 149, 151, 152, 153, 154] -> canonical [7 (Aorta), 45 (LA), 46 (LV), 48 (RV), 47 (RA), 44 (Myo)]
             canonical = torch.tensor([7, 45, 46, 48, 47, 44], dtype=torch.uint8, device=self.device)
             fg = prob_max > 0.5
@@ -679,7 +682,7 @@ class UnifiedAnatomySegmenter:
         try:
             import tempfile
             import nibabel as nib
-            from totalsegmentator.python_api import totalsegmentator
+            from totalsegmentator.python_api import totalsegmentator  # pyright: ignore[reportMissingImports]
 
             is_xyz = arr.shape[0] > arr.shape[2] and arr.shape[0] >= 256
             arr_zyx = arr.transpose(2, 1, 0) if is_xyz else arr
@@ -702,7 +705,7 @@ class UnifiedAnatomySegmenter:
 
                 if tmp_out.is_file():
                     res_nii = nib.load(str(tmp_out))
-                    res_arr = np.asarray(res_nii.dataobj, dtype=np.int32)
+                    res_arr = np.asarray(res_nii.get_fdata(), dtype=np.int32)  # pyright: ignore[reportAttributeAccessIssue]
                     mapped = np.zeros_like(res_arr, dtype=np.uint16)
                     # Remap TotalSegmentator heartchambers_highres to canonical labels:
                     # 1: Myocardium (44), 2: Left Atrium (45), 3: Left Ventricle (46),
@@ -755,9 +758,11 @@ class UnifiedAnatomySegmenter:
             if vmax > vmin:
                 t_15 = (t_15 - vmin) / (vmax - vmin) * 2.0 - 1.0
 
-            with torch.amp.autocast("cuda", enabled=("cuda" in str(self.device))):
+            assert self.wholebody_inferer is not None and self.wholebody_bundle is not None
+            with torch.autocast(device_type="cuda" if "cuda" in str(self.device) else "cpu", enabled=("cuda" in str(self.device))):
                 logits = self.wholebody_inferer(t_15, self.wholebody_bundle)
-                pred_15 = torch.argmax(logits, dim=1, keepdim=True).float()
+                logits_tensor: torch.Tensor = logits if isinstance(logits, torch.Tensor) else logits[0]  # type: ignore[assignment]
+                pred_15 = torch.argmax(logits_tensor, dim=1, keepdim=True).float()
 
             cardiac_mask = (pred_15 == 7) | ((pred_15 >= 44) & (pred_15 <= 49))
             pred_15 = torch.where(cardiac_mask, pred_15, torch.zeros_like(pred_15))
@@ -901,19 +906,19 @@ class UnifiedAnatomySegmenter:
                 rv = pericardium & is_right & is_anterior
 
             lad_zone = pericardium & (np.abs(grid_x - cx) <= 12) & is_anterior
-            lad_dilated = ndi.binary_dilation(lad_zone, iterations=1)
+            lad_dilated = np.asarray(ndi.binary_dilation(lad_zone, iterations=1), dtype=bool)
             lad = lad_dilated & (arr >= -30.0)
             if not np.any(lad):
                 lad = lad_zone
 
             lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 12) & is_posterior
-            lcx_dilated = ndi.binary_dilation(lcx_zone, iterations=1)
+            lcx_dilated = np.asarray(ndi.binary_dilation(lcx_zone, iterations=1), dtype=bool)
             lcx = lcx_dilated & (arr >= -30.0)
             if not np.any(lcx):
                 lcx = lcx_zone
 
             rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 12) & is_anterior
-            rca_dilated = ndi.binary_dilation(rca_zone, iterations=1)
+            rca_dilated = np.asarray(ndi.binary_dilation(rca_zone, iterations=1), dtype=bool)
             rca = rca_dilated & (arr >= -30.0)
             if not np.any(rca):
                 rca = rca_zone
@@ -951,19 +956,19 @@ class UnifiedAnatomySegmenter:
                 rv = pericardium & is_right & is_anterior
 
             lad_zone = pericardium & (np.abs(grid_x - cx) <= 8) & is_anterior
-            lad_dilated = ndi.binary_dilation(lad_zone, iterations=1)
+            lad_dilated = np.asarray(ndi.binary_dilation(lad_zone, iterations=1), dtype=bool)
             lad = lad_dilated & (arr >= -30.0)
             if not np.any(lad):
                 lad = lad_zone
 
             lcx_zone = pericardium & is_left & (np.abs(grid_z - cz) <= 8) & is_posterior
-            lcx_dilated = ndi.binary_dilation(lcx_zone, iterations=1)
+            lcx_dilated = np.asarray(ndi.binary_dilation(lcx_zone, iterations=1), dtype=bool)
             lcx = lcx_dilated & (arr >= -30.0)
             if not np.any(lcx):
                 lcx = lcx_zone
 
             rca_zone = pericardium & is_right & (np.abs(grid_z - cz) <= 8) & is_anterior
-            rca_dilated = ndi.binary_dilation(rca_zone, iterations=1)
+            rca_dilated = np.asarray(ndi.binary_dilation(rca_zone, iterations=1), dtype=bool)
             rca = rca_dilated & (arr >= -30.0)
             if not np.any(rca):
                 rca = rca_zone
@@ -1001,11 +1006,11 @@ class UnifiedAnatomySegmenter:
         heart_core = ndi.binary_closing(heart_core, structure=struct, iterations=2)
 
         # Find largest connected component in center volume
-        labeled, num_features = ndi.label(heart_core)
+        labeled, num_features = ndi.label(heart_core)  # pyright: ignore[reportGeneralTypeIssues]
         if num_features > 0:
             _center_x, _center_y, _center_z = nx // 2, ny // 2, nz // 2
             # Find label closest to center
-            sizes = ndi.sum(heart_core, labeled, range(1, num_features + 1))
+            sizes = ndi.sum(heart_core, labeled, list(range(1, num_features + 1)))
             largest_label = int(np.argmax(sizes)) + 1
             pericardium = labeled == largest_label
         else:
@@ -1019,7 +1024,7 @@ class UnifiedAnatomySegmenter:
             ) <= 1.0
 
         # Fill holes in pericardium
-        pericardium = ndi.binary_fill_holes(pericardium)
+        pericardium = np.asarray(ndi.binary_fill_holes(pericardium), dtype=bool)
 
         # Derive chambers and coronaries using standardized spatial rules
         return self._derive_chambers_and_vessels(pericardium, arr)

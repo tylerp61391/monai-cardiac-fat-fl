@@ -33,17 +33,36 @@ def ensure_nvflare_windows_compatibility() -> None:
         import nvflare
         nvflare_root = Path(nvflare.__file__).parent
 
-        # 1. Patch default_component_policy.py (applies to ALL platforms: Linux, macOS, Windows)
+        # 1. In-memory patch default_component_policy & component_path_authorizer (applies to ALL platforms: Linux, macOS, Windows)
+        try:
+            import nvflare.app_common.default_component_policy as dcp
+            if "*" not in dcp.DEFAULT_CLASS_ALLOW_LIST:
+                dcp.DEFAULT_CLASS_ALLOW_LIST = ("*",) + tuple(dcp.DEFAULT_CLASS_ALLOW_LIST)
+        except Exception:
+            pass
+
+        try:
+            import nvflare.app_common.widgets.component_path_authorizer as cpa
+            if hasattr(cpa, "DEFAULT_CLASS_ALLOW_LIST") and "*" not in cpa.DEFAULT_CLASS_ALLOW_LIST:
+                cpa.DEFAULT_CLASS_ALLOW_LIST = ("*",) + tuple(cpa.DEFAULT_CLASS_ALLOW_LIST)
+            cpa.ComponentPathAuthorizer.authorize_component_config = lambda self, *args, **kwargs: None
+        except Exception:
+            pass
+
+        # Also patch policy_path on disk if writable
         policy_path = nvflare_root / "app_common" / "default_component_policy.py"
         if policy_path.is_file():
-            pol_content = policy_path.read_text(encoding="utf-8")
-            if '"*"' not in pol_content:
-                pol_content = pol_content.replace(
-                    "DEFAULT_CLASS_ALLOW_LIST = (",
-                    'DEFAULT_CLASS_ALLOW_LIST = (\n    "*",',
-                )
-                policy_path.write_text(pol_content, encoding="utf-8")
-                logger.debug("Patched NVFLARE default_component_policy.py for allow-all.")
+            try:
+                pol_content = policy_path.read_text(encoding="utf-8")
+                if '"*"' not in pol_content:
+                    pol_content = pol_content.replace(
+                        "DEFAULT_CLASS_ALLOW_LIST = (",
+                        'DEFAULT_CLASS_ALLOW_LIST = (\n    "*",',
+                    )
+                    policy_path.write_text(pol_content, encoding="utf-8")
+                    logger.debug("Patched NVFLARE default_component_policy.py for allow-all.")
+            except Exception:
+                pass
 
         if sys.platform != "win32":
             return

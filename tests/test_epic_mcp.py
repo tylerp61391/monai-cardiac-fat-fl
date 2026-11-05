@@ -269,7 +269,9 @@ def test_mcp_cohort_summary_tool(mcp_server: EpicMCPServer) -> None:
 
 def test_mcp_cardiac_quantify_study_tool(mcp_server: EpicMCPServer, synthetic_cohort_dir: Path) -> None:
     """Test cardiac_quantify_study tool on a synthetic patient directory."""
-    patient_dir = synthetic_cohort_dir / "patient_001"
+    patient_dirs = sorted([d for d in synthetic_cohort_dir.iterdir() if d.is_dir()])
+    assert len(patient_dirs) > 0
+    patient_dir = patient_dirs[0]
     assert patient_dir.exists()
 
     call_req = {
