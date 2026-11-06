@@ -317,3 +317,45 @@ def test_mcp_unknown_method_and_error_handling(mcp_server: EpicMCPServer) -> Non
     assert resp is not None
     assert resp["result"]["isError"] is True
     assert "Unknown tool" in resp["result"]["content"][0]["text"]
+
+
+def test_mcp_generate_vlm_clinical_reasoning(mcp_server: EpicMCPServer, tmp_path: Path) -> None:
+    """Test NV-Reason-CT VLM clinical reasoning MCP tool dispatch."""
+    study_dir = tmp_path / "study_vlm"
+    study_dir.mkdir()
+    scan_file = study_dir / "img.nrrd"
+    scan_file.touch()
+
+    # Case 1: Missing weights / CUDA unavailable
+    with patch("cardiac_fat_fl.nv_reason_reporter.is_nv_reason_available", return_value=False):
+        call_req = {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "method": "tools/call",
+            "params": {
+                "name": "generate_vlm_clinical_reasoning",
+                "arguments": {"study_path": str(study_dir)},
+            },
+        }
+        resp = mcp_server.handle_message(call_req)
+        assert resp is not None
+        assert "model weights not found" in resp["result"]["content"][0]["text"]
+
+    # Case 2: Successful generation
+    with patch("cardiac_fat_fl.nv_reason_reporter.is_nv_reason_available", return_value=True), \
+         patch("cardiac_fat_fl.nv_reason_reporter.generate_nv_reason_narrative", return_value="Coronary artery wall calcification"):
+        call_req = {
+            "jsonrpc": "2.0",
+            "id": 13,
+            "method": "tools/call",
+            "params": {
+                "name": "generate_vlm_clinical_reasoning",
+                "arguments": {"study_path": str(study_dir), "mode": "structured"},
+            },
+        }
+        resp = mcp_server.handle_message(call_req)
+        assert resp is not None
+        assert resp["result"]["isError"] is False
+        text = resp["result"]["content"][0]["text"]
+        assert "NVIDIA NV-Reason-CT Generative Report" in text
+        assert "Coronary artery wall calcification" in text

@@ -287,6 +287,30 @@ class EpicMCPServer:
                 },
             },
             {
+                "name": "generate_vlm_clinical_reasoning",
+                "description": (
+                    "Invoke NVIDIA NV-Reason-CT 3D Vision-Language model (3D ViT + Qwen3.5-4B) to analyze a "
+                    "patient's 3D CT volume and quantitative adipose tissue metrics. Generates board-certified "
+                    "radiologist structured findings, impression, and multi-step clinical reasoning."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "study_path": {
+                            "type": "string",
+                            "description": "Path to study directory or CT volume (.nrrd or .nii.gz).",
+                        },
+                        "mode": {
+                            "type": "string",
+                            "description": "Generation mode: 'structured' (fast SCCT report) or 'reasoning' (deep dictation).",
+                            "enum": ["structured", "reasoning"],
+                            "default": "structured",
+                        },
+                    },
+                    "required": ["study_path"],
+                },
+            },
+            {
                 "name": "open_epic_lookup_code",
                 "description": (
                     "Look up official open.epic and US Core terminology mappings for cardiac fat biomarkers, "
@@ -519,7 +543,8 @@ class EpicMCPServer:
         pvat_total_vol = metrics.get(f"{ReportedRegion.PVAT_TOTAL.value} Volume (cm3)", 0.0)
 
         lines = [f"### Automated 3D Quantification Complete for Study: `{pid}`"]
-        lines.append(f"- **Scan Processed**: `{scan_file.name}`")
+        scan_name = getattr(scan_file, "name", str(scan_file))
+        lines.append(f"- **Scan Processed**: `{scan_name}`")
         lines.append(f"- **Total EAT Volume**: **{eat_vol:.2f} cm³**")
         lines.append(f"- **Total PVAT Volume**: **{pvat_total_vol:.2f} cm³**")
         lines.append(f"- **LAD PVAT Attenuation**: **{pvat_lad_hu:.2f} HU**" if pvat_lad_hu == pvat_lad_hu else "- **LAD PVAT Attenuation**: N/A")
@@ -536,7 +561,7 @@ class EpicMCPServer:
             from cardiac_fat_fl.fhir_client import create_bundle_for_study, push_to_fhir_server
             try:
                 bundle = create_bundle_for_study(path if path.is_dir() else path.parent, pid)
-                push_res = push_to_fhir_server(bundle, target_fhir, token=self.bearer_token)
+                push_res = push_to_fhir_server(bundle, target_fhir, auth_token=self.bearer_token)
                 lines.append(f"- **HL7 FHIR Push**: {'Success' if push_res.get('success') else 'Failed'} ({target_fhir})")
             except Exception as e:
                 lines.append(f"- **HL7 FHIR Push Warning**: {e}")
@@ -547,7 +572,7 @@ class EpicMCPServer:
             study_dir = path if path.is_dir() else path.parent
             instances = find_dicom_instances_to_push(study_dir, include_ct=False)
             if instances:
-                pacs_res = push_to_dicomweb_stow(push_pacs_url, instances)
+                pacs_res = push_to_dicomweb_stow(instances, push_pacs_url)
                 lines.append(f"- **PACS DICOMweb STOW-RS**: {'Success' if pacs_res.get('success') else 'Failed'} ({len(instances)} instances)")
 
         return "\n".join(lines)
@@ -599,6 +624,48 @@ class EpicMCPServer:
             return "\n".join(lines)
         except Exception as e:
             return f"Error computing cohort summary: {e}"
+
+    def execute_generate_vlm_clinical_reasoning(self, study_path: str, mode: str = "structured") -> str:
+        """Run NV-Reason-CT generative clinical report tool."""
+        path = Path(study_path)
+        if not path.exists():
+            return f"Error: Study path does not exist: '{study_path}'"
+
+        from cardiac_fat_fl.nv_reason_reporter import generate_nv_reason_narrative, is_nv_reason_available
+        if not is_nv_reason_available():
+            return "Error: NVIDIA NV-Reason-CT model weights not found or CUDA is not available on this host."
+
+        if path.is_file():
+            scan_file = path
+            study_dir = path.parent
+        else:
+            scan_files = list(path.glob("*.nrrd")) + list(path.glob("*.nii*"))
+            if scan_files:
+                scan_file = scan_files[0]
+            else:
+                return f"Error: No 3D CT volume found in '{study_path}'"
+            study_dir = path
+
+        metrics: Dict[str, Any] = {}
+        csv_file = study_dir / "cardiac_fat_measurements.csv"
+        if csv_file.exists():
+            try:
+                import pandas as pd
+                df = pd.read_csv(csv_file)
+                if not df.empty:
+                    metrics = df.iloc[0].to_dict()
+            except Exception:
+                pass
+
+        try:
+            narrative = generate_nv_reason_narrative(
+                ct_path=scan_file,
+                metrics=metrics,
+                mode=mode,
+            )
+            return f"### NVIDIA NV-Reason-CT Generative Report for `{path.name}`\n\n{narrative}"
+        except Exception as e:
+            return f"Error running NV-Reason-CT: {e}"
 
     def execute_open_epic_lookup_code(self, concept: str) -> str:
         """Return terminology and profile mapping for open.epic."""
@@ -656,6 +723,11 @@ class EpicMCPServer:
             elif tool_name == "cardiac_get_cohort_summary":
                 return self.execute_cardiac_get_cohort_summary(
                     cohort_dir=arguments.get("cohort_dir"),
+                ), False
+            elif tool_name == "generate_vlm_clinical_reasoning":
+                return self.execute_generate_vlm_clinical_reasoning(
+                    study_path=arguments["study_path"],
+                    mode=arguments.get("mode", "structured"),
                 ), False
             elif tool_name == "open_epic_lookup_code":
                 return self.execute_open_epic_lookup_code(
