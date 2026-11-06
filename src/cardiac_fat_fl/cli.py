@@ -1311,6 +1311,16 @@ def report_cmd(
         "--browser/--no-browser",
         help="Automatically open the interactive HTML report in your default web browser.",
     ),
+    vlm_narrative: bool = typer.Option(
+        False,
+        "--vlm/--no-vlm",
+        help="Run NVIDIA NV-Reason-CT 3D Vision-Language model to generate AI clinical findings and impression.",
+    ),
+    vlm_model_dir: Optional[Path] = typer.Option(
+        None,
+        "--vlm-model-dir",
+        help="Custom path to NV-Reason-CT model directory (defaults to E:\\models\\NV-Reason-CT or NV_REASON_MODEL_DIR).",
+    ),
 ) -> None:
     """Generate a SOTA clinical-grade cardiovascular imaging report (Cleerly / HeartFlow style).
 
@@ -1419,6 +1429,25 @@ def report_cmd(
     console.print(f"  [bold]Output Directory:[/bold]   {target_out}")
     console.print(f"  [bold]3-View MPR Snapshot:[/bold] {'[green]Active (CT + 8-ch Overlay)[/green]' if ct_image_np is not None else '[yellow]Skipped (no CT loaded)[/yellow]'}")
 
+    ai_narrative: Optional[str] = None
+    if vlm_narrative:
+        from cardiac_fat_fl.nv_reason_reporter import generate_nv_reason_narrative, is_nv_reason_available
+
+        if found_ct and is_nv_reason_available(vlm_model_dir):
+            console.print("  [bold]AI VLM Narrative:[/bold]    [green]Running NVIDIA NV-Reason-CT (BF16, SDPA)...[/green]")
+            try:
+                ai_narrative = generate_nv_reason_narrative(
+                    ct_path=found_ct,
+                    metrics=metrics,
+                    model_dir=vlm_model_dir,
+                    mode="structured",
+                )
+                console.print("  [bold green]NV-Reason-CT narrative generated successfully![/bold green]")
+            except Exception as exc:
+                console.print(f"  [yellow]Warning: NV-Reason-CT generation failed: {exc}[/yellow]")
+        else:
+            console.print("  [bold]AI VLM Narrative:[/bold]    [yellow]Skipped (CT scan missing or weights not found)[/yellow]")
+
     artifacts = export_clinical_imaging_report(
         output_dir=target_out,
         metrics=metrics,
@@ -1426,6 +1455,7 @@ def report_cmd(
         mask=mask_np,
         participant_id=pid,
         ohif_viewer_url=f"http://127.0.0.1:8000/patient/{pid}/",
+        ai_reasoning_narrative=ai_narrative,
     )
 
     console.print("\n[bold green]Report bundle successfully generated:[/bold green]")

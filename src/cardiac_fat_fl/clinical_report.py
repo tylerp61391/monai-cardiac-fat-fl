@@ -70,9 +70,13 @@ class RiskEvaluation:
     vessel_risks: Dict[str, Dict[str, Any]]
     narrative_summary: str
     structured_findings_text: str
+    ai_reasoning_narrative: Optional[str] = None
 
 
-def evaluate_clinical_risk(metrics: Dict[str, float]) -> RiskEvaluation:
+def evaluate_clinical_risk(
+    metrics: Dict[str, float],
+    ai_reasoning_narrative: Optional[str] = None,
+) -> RiskEvaluation:
     """Assess clinical cardiovascular risk based on EAT volume and PVAT attenuation.
 
     Applies the validated CRISP-CT criteria (Oikonomou et al., The Lancet 2018):
@@ -170,6 +174,7 @@ def evaluate_clinical_risk(metrics: Dict[str, float]) -> RiskEvaluation:
         vessel_risks=vessel_risks,
         narrative_summary=narrative_summary,
         structured_findings_text=structured_findings_text,
+        ai_reasoning_narrative=ai_reasoning_narrative,
     )
 
 
@@ -196,9 +201,9 @@ def generate_mpr_snapshot(
         image = image[0]
 
     if mask is not None:
-        while mask.ndim > 4 and mask.shape[0] == 1:
+        while mask is not None and mask.ndim > 4 and mask.shape[0] == 1:
             mask = mask[0]
-        if mask.ndim == 3:
+        if mask is not None and mask.ndim == 3:
             mask = mask[np.newaxis, ...]
 
     # Find optimal centroid based on mask (or fallback to middle)
@@ -324,10 +329,11 @@ def generate_clinical_report_html(
     mpr_image: Optional[Image.Image] = None,
     ohif_viewer_url: Optional[str] = None,
     exam_date: Optional[str] = None,
+    ai_reasoning_narrative: Optional[str] = None,
     study_description: str = "Cardiac CT Angiography (CCTA)",
 ) -> str:
     """Generate a self-contained, publication-grade clinical imaging HTML report."""
-    risk = evaluate_clinical_risk(metrics)
+    risk = evaluate_clinical_risk(metrics, ai_reasoning_narrative=ai_reasoning_narrative)
     mpr_data_uri = image_to_base64_data_uri(mpr_image) if mpr_image is not None else None
 
     eat_total_vol = metrics.get(f"{ReportedRegion.EAT_TOTAL} Volume (cm3)", 0.0)
@@ -401,6 +407,22 @@ def generate_clinical_report_html(
           <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           Open Interactive 3D Workstation (OHIF)
         </a>
+        """
+
+    vlm_section_html = ""
+    if risk.ai_reasoning_narrative:
+        vlm_section_html = f"""
+  <!-- NVIDIA NV-Reason-CT 3D Vision-Language AI Narrative -->
+  <div class="mt-6 bg-slate-900 border border-sky-600/70 rounded-xl p-4 shadow-xl">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="text-xs font-bold text-sky-400 font-mono uppercase tracking-wider flex items-center">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
+        NVIDIA NV-Reason-CT Generative Radiology Findings &amp; Impression
+      </h3>
+      <span class="text-[10px] text-slate-400 font-mono">3D Vision Transformer + Qwen3.5-4B</span>
+    </div>
+    <pre class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed select-all">{risk.ai_reasoning_narrative}</pre>
+  </div>
         """
 
     return f"""<!DOCTYPE html>
@@ -559,6 +581,8 @@ def generate_clinical_report_html(
   <!-- MPR Cross-Sectional Montage -->
   {mpr_section_html}
 
+  {vlm_section_html}
+
   <!-- Radiologist Structured Report Box (Ready to Copy) -->
   <div class="mt-6 bg-slate-900 border border-slate-700/80 rounded-xl p-4 shadow-lg">
     <div class="flex justify-between items-center mb-2">
@@ -587,11 +611,12 @@ def generate_clinical_report_pdf(
     participant_id: str = "UNKNOWN",
     mpr_image: Optional[Image.Image] = None,
     exam_date: Optional[str] = None,
+    ai_reasoning_narrative: Optional[str] = None,
 ) -> bytes:
     """Generate a vector-rendered Letter-sized PDF clinical report using PyMuPDF."""
-    import pymupdf as fitz
+    import fitz  # pyright: ignore[reportMissingImports]
 
-    risk = evaluate_clinical_risk(metrics)
+    risk = evaluate_clinical_risk(metrics, ai_reasoning_narrative=ai_reasoning_narrative)
     doc = fitz.open()
     page = doc.new_page(width=612, height=792)  # Letter size (8.5 x 11 inches in points)
 
@@ -672,6 +697,31 @@ def generate_clinical_report_pdf(
     # 6. Regulatory Footer
     page.insert_text(fitz.Point(120, 755), "monai-cardiac-fat-fl • DICOM-SEG (1.2.840.10008.5.1.4.1.1.66.4) • DICOM-SR TID 1500 • Encapsulated PDF", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
     page.insert_text(fitz.Point(160, 765), "For Investigational / Research Use Only (RUO). Clinical verification required by board-certified physician.", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
+
+    # Page 2: NV-Reason-CT AI Narrative (if available)
+    if risk.ai_reasoning_narrative:
+        page2 = doc.new_page(width=612, height=792)
+        page2.draw_rect(fitz.Rect(36, 36, 576, 80), color=(0.04, 0.12, 0.28), fill=(0.04, 0.12, 0.28))
+        page2.insert_text(fitz.Point(50, 54), "NVIDIA NV-REASON-CT 3D VISION-LANGUAGE REPORT", fontsize=8, color=(0.2, 0.7, 0.95), fontname="helv")
+        page2.insert_text(fitz.Point(50, 68), "Generative Radiology Findings, Impression & Multi-Step Reasoning", fontsize=11, color=(1, 1, 1), fontname="helv")
+
+        page2.draw_rect(fitz.Rect(380, 42, 566, 74), color=(0.1, 0.2, 0.4), fill=(0.08, 0.16, 0.35))
+        page2.insert_text(fitz.Point(390, 54), f"Patient ID:  {participant_id}", fontsize=7.5, color=(1, 1, 1), fontname="helv")
+        page2.insert_text(fitz.Point(390, 66), f"Exam Date:   {exam_date or '2026-10-29'}", fontsize=7.5, color=(0.8, 0.85, 0.9), fontname="helv")
+
+        page2.draw_rect(fitz.Rect(36, 92, 576, 736), color=(0.8, 0.85, 0.9), fill=(0.97, 0.98, 0.99))
+        page2.insert_text(fitz.Point(46, 110), "AI GENERATIVE NARRATIVE FINDINGS & CLINICAL IMPRESSION:", fontsize=8.5, color=(0.04, 0.12, 0.28), fontname="helv")
+
+        page2.insert_textbox(
+            fitz.Rect(46, 118, 566, 726),
+            risk.ai_reasoning_narrative,
+            fontsize=7.5,
+            color=(0.15, 0.2, 0.25),
+            fontname="helv",
+        )
+
+        page2.insert_text(fitz.Point(120, 755), "monai-cardiac-fat-fl • NVIDIA NV-Reason-CT (3D ViT + Qwen3.5-4B) • Page 2 of 2", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
+        page2.insert_text(fitz.Point(160, 765), "For Investigational / Research Use Only (RUO). Clinical verification required by board-certified physician.", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
 
     pdf_bytes = doc.tobytes()
     doc.close()
@@ -759,6 +809,7 @@ def export_clinical_imaging_report(
     source_ct_dcm: Optional[Dataset] = None,
     ohif_viewer_url: Optional[str] = None,
     exam_date: Optional[str] = None,
+    ai_reasoning_narrative: Optional[str] = None,
 ) -> Dict[str, Path]:
     """Export the complete clinical imaging report bundle (HTML, PDF, DICOM Encapsulated PDF, and MPR PNG).
 
@@ -786,6 +837,7 @@ def export_clinical_imaging_report(
         mpr_image=mpr_img,
         ohif_viewer_url=ohif_viewer_url,
         exam_date=exam_date,
+        ai_reasoning_narrative=ai_reasoning_narrative,
     )
     report_html_path = out_path / "cardiac_fat_report.html"
     report_html_path.write_text(html_content, encoding="utf-8")
@@ -798,6 +850,7 @@ def export_clinical_imaging_report(
         participant_id=participant_id,
         mpr_image=mpr_img,
         exam_date=exam_date,
+        ai_reasoning_narrative=ai_reasoning_narrative,
     )
     report_pdf_path.write_bytes(pdf_bytes)
     logger.info("Exported clinical vector PDF report: %s", report_pdf_path)

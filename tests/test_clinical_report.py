@@ -200,3 +200,44 @@ def test_cli_report_command(tmp_path: Path) -> None:
     assert (study_dir / "cardiac_fat_report.html").exists()
     assert (study_dir / "cardiac_fat_report.pdf").exists()
     assert (study_dir / "eat_pvat_report.dcm").exists()
+
+
+def test_clinical_report_with_nv_reason_ai_narrative(tmp_path: Path) -> None:
+    """Test HTML and vector PDF export when NV-Reason-CT AI narrative is included."""
+    metrics = {
+        f"{ReportedRegion.EAT_TOTAL} Volume (cm3)": 140.7,
+        f"{ReportedRegion.EAT_TOTAL} Mean Attenuation (HU)": -77.0,
+        f"{ReportedRegion.PVAT_LAD} Volume (cm3)": 13.1,
+        f"{ReportedRegion.PVAT_LAD} Mean Attenuation (HU)": -79.0,
+        f"{ReportedRegion.PVAT_LCX} Volume (cm3)": 3.1,
+        f"{ReportedRegion.PVAT_LCX} Mean Attenuation (HU)": -62.0,
+        f"{ReportedRegion.PVAT_TOTAL} Volume (cm3)": 24.5,
+    }
+    ai_narrative = (
+        "TECHNIQUE: Non-contrast CT.\n\n"
+        "FINDINGS:\n"
+        "Heart: Calcified coronary arteries. Severe epicardial adiposity.\n\n"
+        "IMPRESSION:\n"
+        "1. Active LCX coronary vascular inflammation.\n"
+        "2. Severely elevated epicardial fat burden."
+    )
+
+    out_dir = tmp_path / "vlm_report_bundle"
+    artifacts = export_clinical_imaging_report(
+        output_dir=out_dir,
+        metrics=metrics,
+        participant_id="VLM_PATIENT_01",
+        ai_reasoning_narrative=ai_narrative,
+    )
+
+    html_content = artifacts["report_html"].read_text(encoding="utf-8")
+    assert "NVIDIA NV-Reason-CT Generative Radiology Findings" in html_content
+    assert "Active LCX coronary vascular inflammation" in html_content
+
+    import fitz  # pyright: ignore[reportMissingImports]
+    doc = fitz.open(str(artifacts["report_pdf"]))
+    assert len(doc) == 2  # Page 1 standard report, Page 2 NV-Reason-CT AI report
+    p2_text = doc[1].get_text()
+    assert "NVIDIA NV-REASON-CT 3D VISION-LANGUAGE REPORT" in p2_text
+    assert "Active LCX coronary vascular inflammation" in p2_text
+    doc.close()
