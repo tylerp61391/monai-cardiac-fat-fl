@@ -243,3 +243,35 @@ def test_dashboard_federated_run_trigger(test_app, monkeypatch):
     assert called["config"]["n_clients"] == 2
 
 
+def test_dashboard_api_case_vlm_narrative(test_app, monkeypatch):
+    """Verify /api/case/<pid>/vlm_narrative endpoint."""
+    import cardiac_fat_fl.nv_reason_reporter as reporter_mod
+
+    client = test_app.test_client()
+
+    # 1. 404 for unknown participant
+    res_404 = client.post("/api/case/NON_EXISTENT/vlm_narrative")
+    assert res_404.status_code == 404
+
+    # 2. 503 if NV-Reason is not available
+    monkeypatch.setattr(reporter_mod, "is_nv_reason_available", lambda: False)
+    res_503 = client.post("/api/case/0506/vlm_narrative")
+    assert res_503.status_code == 503
+    assert "not available" in res_503.get_json()["error"]
+
+    # 3. 200 with mocked narrative
+    monkeypatch.setattr(reporter_mod, "is_nv_reason_available", lambda: True)
+    monkeypatch.setattr(
+        reporter_mod,
+        "generate_nv_reason_narrative",
+        lambda ct_path, metrics, mode: f"IMPRESSION: Mild plaque in mode {mode}",
+    )
+    res_200 = client.post("/api/case/0506/vlm_narrative?mode=structured")
+    assert res_200.status_code == 200
+    data = res_200.get_json()
+    assert data["participant_id"] == "0506"
+    assert data["mode"] == "structured"
+    assert "Mild plaque in mode structured" in data["narrative"]
+
+
+

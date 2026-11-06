@@ -456,6 +456,40 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             "total_ingested": len(observations) + len(diagnostic_reports) + len(doc_refs),
         })
 
+    @app.route("/api/case/<pid>/vlm_narrative", methods=["POST", "GET"])
+    def get_case_vlm_narrative(pid: str):
+        if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
+            return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
+
+        p = _ACTIVE_COHORT.participants[pid]
+        from cardiac_fat_fl.nv_reason_reporter import generate_nv_reason_narrative, is_nv_reason_available
+        if not is_nv_reason_available():
+            return jsonify({"error": "NVIDIA NV-Reason-CT model weights or CUDA not available on this host."}), 503
+
+        mode = "structured"
+        if request.args.get("mode"):
+            mode = request.args.get("mode", "structured")
+        elif request.is_json and request.json:
+            mode = request.json.get("mode", mode)
+
+        scan_files = list(p.study_dir.glob("*.nrrd")) + list(p.study_dir.glob("*.nii*"))
+        if not scan_files:
+            return jsonify({"error": f"No 3D CT volume found in {p.study_dir}."}), 404
+
+        try:
+            narrative = generate_nv_reason_narrative(
+                ct_path=scan_files[0],
+                metrics=p.metrics or {},
+                mode=mode,
+            )
+            return jsonify({
+                "participant_id": pid,
+                "mode": mode,
+                "narrative": narrative,
+            })
+        except Exception as e:
+            return jsonify({"error": f"Failed to generate NV-Reason-CT narrative: {e}"}), 500
+
     def _serve_ohif_page(pid: str):
         if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
             return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
@@ -3447,142 +3481,6 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Segmentation Engine Leaderboard & Latency Benchmark Matrix -->
-      <div class="bg-slate-800 border border-amber-500/30 rounded-xl p-5 shadow-lg">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <h3 class="text-sm font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-trophy text-amber-400"></i>
-            Cardiac Anatomy &amp; Segmentation Engine Leaderboard (NVIDIA MedTech, MONAI &amp; Harvard)
-          </h3>
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/40">
-              RTX 4090 Benchmarks
-            </span>
-            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-700 text-slate-300">
-              Stanford COCA 1.5mm
-            </span>
-          </div>
-        </div>
-        <p class="text-xs text-slate-400 mb-4">
-          Comparative throughput, GPU resource utilization, and anatomical segmentation concordance across foundation models (<code class="text-slate-300">NV-Segment-CT</code>, <code class="text-slate-300">NV-Segment-CTMR</code>), MONAI SegResNet, TotalSegmentator (v1 &amp; v2), and the foundational Harvard/MGH pipeline.
-        </p>
-
-        <div class="overflow-x-auto rounded-lg border border-slate-700">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/90 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-700">
-              <tr>
-                <th class="px-3 py-2.5">Model Architecture</th>
-                <th class="px-3 py-2.5">Target Modality</th>
-                <th class="px-3 py-2.5">Classes</th>
-                <th class="px-3 py-2.5 text-right">Inference Latency</th>
-                <th class="px-3 py-2.5 text-right">Throughput</th>
-                <th class="px-3 py-2.5 text-right">Peak VRAM</th>
-                <th class="px-3 py-2.5 text-center">Chamber DSC</th>
-                <th class="px-3 py-2.5 text-center">Licensing / Access</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-700/60 font-mono">
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <div>
-                    <div class="font-bold">NV-Segment-CT</div>
-                    <div class="text-[10px] font-normal text-slate-400">NVIDIA-MedTech (VISTA-3D)</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">132 (Whole-body)</td>
-                <td class="px-3 py-2.5 text-right text-emerald-400 font-bold">7.22 s <span class="text-[10px] text-emerald-500 font-normal">(20.8&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~498 scans/h</td>
-                <td class="px-3 py-2.5 text-right">6.5 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-white">0.948</td>
-                <td class="px-3 py-2.5 text-center font-sans"><a href="https://huggingface.co/nvidia/NV-Segment-CT" target="_blank" class="text-sky-400 hover:underline">Hugging Face <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition bg-indigo-950/20">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
-                  <div>
-                    <div class="font-bold">NV-Segment-CTMR</div>
-                    <div class="text-[10px] font-normal text-slate-400">NVIDIA-MedTech (VISTA-3D)</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 text-[10px] border border-indigo-800">CT + Cardiac MR</span></td>
-                <td class="px-3 py-2.5 font-bold text-indigo-300">346 (Discrete 4 Chambers)</td>
-                <td class="px-3 py-2.5 text-right text-emerald-400 font-bold">7.62 s <span class="text-[10px] text-emerald-500 font-normal">(19.7&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~472 scans/h</td>
-                <td class="px-3 py-2.5 text-right">7.0 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-white">0.941</td>
-                <td class="px-3 py-2.5 text-center font-sans"><a href="https://github.com/NVIDIA-Medtech/NV-Segment-CTMR" target="_blank" class="text-indigo-400 hover:underline">GitHub / HF <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition bg-sky-950/10">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-sky-400"></span>
-                  <div>
-                    <div class="font-bold">MONAI WholeBody 1.5mm <span class="text-[10px] text-sky-400 font-normal">(Default)</span></div>
-                    <div class="text-[10px] font-normal text-slate-400">NVIDIA NGC SegResNet</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">104 (1.5mm Isotropic)</td>
-                <td class="px-3 py-2.5 text-right text-sky-300 font-bold">10.14 s <span class="text-[10px] text-sky-400 font-normal">(15.0&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~355 scans/h</td>
-                <td class="px-3 py-2.5 text-right font-bold text-emerald-400">4.2 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-white">0.912</td>
-                <td class="px-3 py-2.5 text-center font-sans"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[10px] border border-emerald-800">Apache-2.0</span></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                  <div>
-                    <div class="font-bold">TotalSegmentator v2</div>
-                    <div class="text-[10px] font-normal text-slate-400">Wasserthal et al. (nnUNetv2)</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">117 / Task301</td>
-                <td class="px-3 py-2.5 text-right text-amber-300 font-bold">48.50 s <span class="text-[10px] text-amber-400 font-normal">(3.1&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~74 scans/h</td>
-                <td class="px-3 py-2.5 text-right">12.0 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-white">0.935</td>
-                <td class="px-3 py-2.5 text-center font-sans"><span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 text-[10px] border border-amber-800">Academic Key</span></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                  <div>
-                    <div class="font-bold">TotalSegmentator v1 (Task253)</div>
-                    <div class="text-[10px] font-normal text-slate-400">Wasserthal et al. (nnUNet v1)</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">104 (5 Folds)</td>
-                <td class="px-3 py-2.5 text-right text-slate-300">95.00 s <span class="text-[10px] text-slate-400 font-normal">(1.5&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~38 scans/h</td>
-                <td class="px-3 py-2.5 text-right">11.0 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-emerald-400">1.000 <span class="text-[9px] text-slate-400">(Ref)</span></td>
-                <td class="px-3 py-2.5 text-center font-sans"><span class="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]">Open Source</span></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-rose-400"></span>
-                  <div>
-                    <div class="font-bold">Harvard circ-ml/CardiacFatQuant</div>
-                    <div class="text-[10px] font-normal text-slate-400">MGH Manuscript Pipeline</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">TotalSeg v1 + TF 1.14</td>
-                <td class="px-3 py-2.5 text-right text-rose-300">145.00 s <span class="text-[10px] text-rose-400 font-normal">(1.0&times; Ref)</span></td>
-                <td class="px-3 py-2.5 text-right">~25 scans/h</td>
-                <td class="px-3 py-2.5 text-right">14.0 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-emerald-400">1.000 <span class="text-[9px] text-slate-400">(Ref)</span></td>
-                <td class="px-3 py-2.5 text-center font-sans"><span class="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]">Apache-2.0</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       <div class="grid grid-cols-3 gap-3 text-xs">
         <div class="bg-slate-900 p-3 rounded-lg border border-slate-700/60">
           <div class="text-slate-400">Scan Type</div>
@@ -3598,142 +3496,52 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Segmentation Engine Leaderboard & Latency Benchmark Matrix -->
-      <div class="bg-slate-800 border border-amber-500/30 rounded-xl p-5 shadow-lg">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <h3 class="text-sm font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-trophy text-amber-400"></i>
-            Cardiac Anatomy &amp; Segmentation Engine Leaderboard (NVIDIA MedTech, MONAI &amp; Harvard)
-          </h3>
+      <!-- NVIDIA NV-Reason-CT AI Clinical Analysis Card -->
+      <div class="bg-gradient-to-br from-purple-950/40 via-slate-900 to-slate-900 border border-purple-500/30 rounded-xl p-4 shadow-lg space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/40">
-              RTX 4090 Benchmarks
-            </span>
-            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-700 text-slate-300">
-              Stanford COCA 1.5mm
-            </span>
+            <div class="w-7 h-7 rounded-lg bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow">
+              <i class="fa-solid fa-brain text-sm"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                NVIDIA NV-Reason-CT Radiologist Analysis
+                <span class="px-1.5 py-0.2 rounded text-[9px] bg-purple-900/80 text-purple-200 border border-purple-500/40">3D VLM</span>
+              </h4>
+              <p class="text-[10px] text-slate-400">Primus 3D ViT + Qwen3.5-4B Autoregressive Clinical Reasoning</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="modalVlmModeSelect" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-purple-500">
+              <option value="structured">Structured SCCT Mode (Fast)</option>
+              <option value="reasoning">Deep Radiologist Reasoning Mode</option>
+            </select>
+            <button id="modalVlmGenerateBtn" onclick="runModalVlmGeneration()" class="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs rounded-lg shadow flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Generate AI Narrative
+            </button>
           </div>
         </div>
-        <p class="text-xs text-slate-400 mb-4">
-          Comparative throughput, GPU resource utilization, and anatomical segmentation concordance across foundation models (<code class="text-slate-300">NV-Segment-CT</code>, <code class="text-slate-300">NV-Segment-CTMR</code>), MONAI SegResNet, TotalSegmentator (v1 &amp; v2), and the foundational Harvard/MGH pipeline.
-        </p>
 
-        <div class="overflow-x-auto rounded-lg border border-slate-700">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/90 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-700">
-              <tr>
-                <th class="px-3 py-2.5">Model Architecture</th>
-                <th class="px-3 py-2.5">Target Modality</th>
-                <th class="px-3 py-2.5">Classes</th>
-                <th class="px-3 py-2.5 text-right">Inference Latency</th>
-                <th class="px-3 py-2.5 text-right">Throughput</th>
-                <th class="px-3 py-2.5 text-right">Peak VRAM</th>
-                <th class="px-3 py-2.5 text-center">Chamber DSC</th>
-                <th class="px-3 py-2.5 text-center">Licensing / Access</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-700/60 font-mono">
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <div>
-                    <div class="font-bold">NV-Segment-CT</div>
-                    <div class="text-[10px] font-normal text-slate-400">NVIDIA-MedTech (VISTA-3D)</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">132 (Whole-body)</td>
-                <td class="px-3 py-2.5 text-right text-emerald-400 font-bold">7.22 s <span class="text-[10px] text-emerald-500 font-normal">(20.8&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~498 scans/h</td>
-                <td class="px-3 py-2.5 text-right">6.5 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-white">0.948</td>
-                <td class="px-3 py-2.5 text-center font-sans"><a href="https://huggingface.co/nvidia/NV-Segment-CT" target="_blank" class="text-sky-400 hover:underline">Hugging Face <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition bg-indigo-950/20">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
-                  <div>
-                    <div class="font-bold">NV-Segment-CTMR</div>
-                    <div class="text-[10px] font-normal text-slate-400">NVIDIA-MedTech (VISTA-3D)</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 text-[10px] border border-indigo-800">CT + Cardiac MR</span></td>
-                <td class="px-3 py-2.5 font-bold text-indigo-300">346 (Discrete 4 Chambers)</td>
-                <td class="px-3 py-2.5 text-right text-emerald-400 font-bold">7.62 s <span class="text-[10px] text-emerald-500 font-normal">(19.7&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~472 scans/h</td>
-                <td class="px-3 py-2.5 text-right">7.0 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-white">0.941</td>
-                <td class="px-3 py-2.5 text-center font-sans"><a href="https://github.com/NVIDIA-Medtech/NV-Segment-CTMR" target="_blank" class="text-indigo-400 hover:underline">GitHub / HF <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition bg-sky-950/10">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-sky-400"></span>
-                  <div>
-                    <div class="font-bold">MONAI WholeBody 1.5mm <span class="text-[10px] text-sky-400 font-normal">(Default)</span></div>
-                    <div class="text-[10px] font-normal text-slate-400">NVIDIA NGC SegResNet</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">104 (1.5mm Isotropic)</td>
-                <td class="px-3 py-2.5 text-right text-sky-300 font-bold">10.14 s <span class="text-[10px] text-sky-400 font-normal">(15.0&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~355 scans/h</td>
-                <td class="px-3 py-2.5 text-right font-bold text-emerald-400">4.2 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-white">0.912</td>
-                <td class="px-3 py-2.5 text-center font-sans"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[10px] border border-emerald-800">Apache-2.0</span></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                  <div>
-                    <div class="font-bold">TotalSegmentator v2</div>
-                    <div class="text-[10px] font-normal text-slate-400">Wasserthal et al. (nnUNetv2)</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">117 / Task301</td>
-                <td class="px-3 py-2.5 text-right text-amber-300 font-bold">48.50 s <span class="text-[10px] text-amber-400 font-normal">(3.1&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~74 scans/h</td>
-                <td class="px-3 py-2.5 text-right">12.0 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-white">0.935</td>
-                <td class="px-3 py-2.5 text-center font-sans"><span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 text-[10px] border border-amber-800">Academic Key</span></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                  <div>
-                    <div class="font-bold">TotalSegmentator v1 (Task253)</div>
-                    <div class="text-[10px] font-normal text-slate-400">Wasserthal et al. (nnUNet v1)</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">104 (5 Folds)</td>
-                <td class="px-3 py-2.5 text-right text-slate-300">95.00 s <span class="text-[10px] text-slate-400 font-normal">(1.5&times;)</span></td>
-                <td class="px-3 py-2.5 text-right">~38 scans/h</td>
-                <td class="px-3 py-2.5 text-right">11.0 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-emerald-400">1.000 <span class="text-[9px] text-slate-400">(Ref)</span></td>
-                <td class="px-3 py-2.5 text-center font-sans"><span class="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]">Open Source</span></td>
-              </tr>
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-rose-400"></span>
-                  <div>
-                    <div class="font-bold">Harvard circ-ml/CardiacFatQuant</div>
-                    <div class="text-[10px] font-normal text-slate-400">MGH Manuscript Pipeline</div>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 font-sans"><span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] border border-sky-800">CT Only</span></td>
-                <td class="px-3 py-2.5">TotalSeg v1 + TF 1.14</td>
-                <td class="px-3 py-2.5 text-right text-rose-300">145.00 s <span class="text-[10px] text-rose-400 font-normal">(1.0&times; Ref)</span></td>
-                <td class="px-3 py-2.5 text-right">~25 scans/h</td>
-                <td class="px-3 py-2.5 text-right">14.0 GB</td>
-                <td class="px-3 py-2.5 text-center font-bold text-emerald-400">1.000 <span class="text-[9px] text-slate-400">(Ref)</span></td>
-                <td class="px-3 py-2.5 text-center font-sans"><span class="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]">Apache-2.0</span></td>
-              </tr>
-            </tbody>
-          </table>
+        <div id="modalVlmLoading" class="hidden py-4 text-center space-y-2 bg-slate-950/60 rounded-lg border border-purple-500/20">
+          <div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-purple-500 border-t-transparent"></div>
+          <div class="text-xs text-purple-300 font-medium">Processing 3D CT volume with NV-Reason-CT on RTX 4090...</div>
+          <div class="text-[10px] text-slate-400">Resampling to 2mm isotropic &bull; 13,824 visual tokens &bull; Grounding EAT/PVAT metrics</div>
+        </div>
+
+        <div id="modalVlmOutputContainer" class="hidden space-y-2">
+          <div class="bg-slate-950/90 rounded-lg p-3 border border-purple-500/20 max-h-64 overflow-y-auto">
+            <pre id="modalVlmText" class="text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed"></pre>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-slate-400 px-1">
+            <span id="modalVlmMeta" class="text-purple-300">Generated on local RTX 4090</span>
+            <button onclick="copyModalVlmText()" class="text-purple-400 hover:text-purple-300 flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> Copy Narrative
+            </button>
+          </div>
         </div>
       </div>
 
+      <!-- Quantification Scorecard (19 Metrics) -->
       <div class="border-t border-slate-700 pt-3">
         <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Quantification Scorecard (19 Metrics)</h4>
         <div class="overflow-x-auto">
@@ -3887,7 +3695,6 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           </table>
         </div>
       </div>
-
       <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700 text-xs">
         <button onclick="closeCaseModal()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200">Close</button>
       </div>
@@ -5247,7 +5054,64 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       }).join('');
     }
 
+    let currentModalPid = null;
+
+    async function runModalVlmGeneration() {
+      if (!currentModalPid) return;
+      const loading = document.getElementById('modalVlmLoading');
+      const output = document.getElementById('modalVlmOutputContainer');
+      const btn = document.getElementById('modalVlmGenerateBtn');
+      const mode = document.getElementById('modalVlmModeSelect').value;
+      const pre = document.getElementById('modalVlmText');
+      const meta = document.getElementById('modalVlmMeta');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i> Generating...';
+      loading.classList.remove('hidden');
+      output.classList.add('hidden');
+
+      try {
+        const res = await fetch(`/api/case/${encodeURIComponent(currentModalPid)}/vlm_narrative?mode=${encodeURIComponent(mode)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: mode })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          alert(`NV-Reason-CT Error: ${data.error || 'Server error'}`);
+          return;
+        }
+        pre.innerText = data.narrative;
+        meta.innerText = `NVIDIA NV-Reason-CT (${mode === 'structured' ? 'SCCT Mode' : 'Deep Radiologist Reasoning'}) &bull; Local RTX 4090`;
+        output.classList.remove('hidden');
+      } catch (err) {
+        alert(`Request failed: ${err.message}`);
+      } finally {
+        loading.classList.add('hidden');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Generate AI Narrative';
+      }
+    }
+
+    function copyModalVlmText() {
+      const text = document.getElementById('modalVlmText').innerText;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('AI Radiologist Narrative copied to clipboard!');
+      }).catch(() => {
+        alert('Could not copy to clipboard.');
+      });
+    }
+
     async function openCaseModal(pid) {
+      currentModalPid = pid;
+      const vlmLoading = document.getElementById('modalVlmLoading');
+      const vlmOutput = document.getElementById('modalVlmOutputContainer');
+      const vlmText = document.getElementById('modalVlmText');
+      if (vlmLoading) vlmLoading.classList.add('hidden');
+      if (vlmOutput) vlmOutput.classList.add('hidden');
+      if (vlmText) vlmText.innerText = '';
+
       try {
         const res = await fetch(`/api/case/${pid}`);
         if (!res.ok) return;
