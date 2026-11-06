@@ -1,0 +1,23 @@
+NVIDIA NV-REASON-CT 3D VISION-LANGUAGE REPORT
+Generative Radiology Findings, Impression & Multi-Step Reasoning
+Patient ID:  0506
+Exam Date:   2026-10-29
+AI GENERATIVE NARRATIVE FINDINGS & CLINICAL IMPRESSION:
+TECHNIQUE: Non-contrast CT.
+FINDINGS:
+Medical devices: None present.
+CHEST:
+Lungs and airways: No evidence of mass or focal consolidation. Central airways are patent.
+Pleura: No pleural effusion or pneumothorax.
+Mediastinum and hila: No evidence of size significant lymphadenopathy within the mediastinum.
+Heart and pericardium: Normal heart size. Mild calcification of the coronary arteries. No pericardial effusion.
+Great vessels: Major mediastinal vasculature is unremarkable.
+Esophagus: No esophageal abnormality.
+Chest wall and breast: Normal.
+Bones: Moderate degenerative changes of the mid-thoracic spine. No suspicious bony abnormality identified.
+IMPRESSION:
+1. Mild coronary artery calcification.
+2. No evidence of active coronary inflammation.
+<answer> Coronary artery wall calcification </answer>
+monai-cardiac-fat-fl · NVIDIA NV-Reason-CT (3D ViT + Qwen3.5-4B) · Page 2 of 2
+For Investigational / Research Use Only (RUO). Clinical verification required by board-certified physician.

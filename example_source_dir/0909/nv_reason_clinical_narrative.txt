@@ -1,0 +1,25 @@
+NVIDIA NV-REASON-CT 3D VISION-LANGUAGE REPORT
+Generative Radiology Findings, Impression & Multi-Step Reasoning
+Patient ID:  0909
+Exam Date:   2026-10-29
+AI GENERATIVE NARRATIVE FINDINGS & CLINICAL IMPRESSION:
+TECHNIQUE: Non-contrast CT.
+FINDINGS:
+Medical devices: None present.
+CHEST:
+Lungs and airways: Trachea and both main bronchi are open. Centrilobular and paraseptal emphysema are observed in both lungs, more prominently at the
+apical levels. There are several tiny nonspecific nodules in both lungs.
+Pleura: No pleural effusion or pneumothorax.
+Mediastinum and hila: No enlarged lymph nodes in prevascular, pre-paratracheal, subcarinal, bilateral hilar, or axillary pathological dimensions.
+Heart and pericardium: Normal heart size. No pericardial effusion or thickening. Calcific atheroma plaques are present in the coronary arteries.
+Great vessels: Normal caliber thoracic aorta and main pulmonary artery.
+Esophagus: Thoracic esophageal caliber is normal, and no significant tumoral wall thickening is detected.
+Chest wall and breast: No chest wall or breast mass.
+Bones: Bone structures in the study area are unremarkable. Vertebral body heights are preserved.
+IMPRESSION:
+1. Centrilobular and paraseptal emphysematous changes in both lungs.
+2. Several tiny nonspecific nodules in both lungs.
+3. Coronary atherosclerosis with significant epicardial adipose tissue and vessel-specific inflammatory changes.
+<answer> Coronary artery wall calcification, Emphysema, Lung nodule </answer>
+monai-cardiac-fat-fl · NVIDIA NV-Reason-CT (3D ViT + Qwen3.5-4B) · Page 2 of 2
+For Investigational / Research Use Only (RUO). Clinical verification required by board-certified physician.

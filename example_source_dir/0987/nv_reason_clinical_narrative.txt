@@ -1,0 +1,22 @@
+NVIDIA NV-REASON-CT 3D VISION-LANGUAGE REPORT
+Generative Radiology Findings, Impression & Multi-Step Reasoning
+Patient ID:  0987
+Exam Date:   2026-10-29
+AI GENERATIVE NARRATIVE FINDINGS & CLINICAL IMPRESSION:
+TECHNIQUE: Non-contrast CT.
+FINDINGS:
+Medical devices: None present.
+CHEST:
+Lungs and airways: The lungs are clear with no infiltrate, nodule, or interstitial disease. Central airways are patent.
+Pleura: No pleural effusion or pneumothorax.
+Mediastinum and hila: No bulky mediastinal adenopathy is seen.
+Heart and pericardium: Normal heart size. Minimal pericardial fluid.
+Great vessels: The great vessels are unremarkable.
+Esophagus: No esophageal abnormality.
+Chest wall and breast: No chest wall or breast mass.
+Bones: Visualized osseous structures are normal.
+IMPRESSION:
+1. Minimal pericardial fluid.
+<answer> Pericardial effusion </answer>
+monai-cardiac-fat-fl · NVIDIA NV-Reason-CT (3D ViT + Qwen3.5-4B) · Page 2 of 2
+For Investigational / Research Use Only (RUO). Clinical verification required by board-certified physician.
