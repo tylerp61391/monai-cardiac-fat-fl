@@ -83,6 +83,10 @@ def evaluate_clinical_risk(
       - PVAT Mean Attenuation > -70.1 HU indicates active vascular inflammation.
       - EAT Total Volume > 125 cm3 indicates significant adipose burden and elevated MACE risk.
     """
+    if ai_reasoning_narrative:
+        from cardiac_fat_fl.nv_reason_reporter import clean_vlm_narrative
+        ai_reasoning_narrative = clean_vlm_narrative(ai_reasoning_narrative)
+
     eat_vol = metrics.get(f"{ReportedRegion.EAT_TOTAL} Volume (cm3)", 0.0)
     if np.isnan(eat_vol):
         eat_vol = 0.0

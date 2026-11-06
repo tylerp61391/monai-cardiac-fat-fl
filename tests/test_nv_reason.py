@@ -7,6 +7,7 @@ import torch
 
 from cardiac_fat_fl.nv_reason_reporter import (
     build_clinical_prompt,
+    clean_vlm_narrative,
     generate_nv_reason_narrative,
     is_nv_reason_available,
 )
@@ -100,4 +101,25 @@ def test_generate_nv_reason_narrative_mocked(mock_avail: MagicMock, tmp_path: Pa
 
     assert "Calcified coronary arteries" in narrative
     assert mock_model.generate.called
+
+
+def test_clean_vlm_narrative_sanitization():
+    """Test sanitization of <answer>, <thought>, <think>, and chat template tokens."""
+    raw = (
+        "<|im_start|>system\nYou are a radiologist.<|im_end|>\n"
+        "<thought>Patient has calcified plaques.</thought>\n"
+        "IMPRESSION:\n"
+        "1. Coronary atherosclerosis.\n"
+        "<answer> Coronary artery wall calcification, Emphysema </answer>"
+    )
+    cleaned = clean_vlm_narrative(raw)
+    assert "<|im_start|>" not in cleaned
+    assert "<|im_end|>" not in cleaned
+    assert "<thought>" not in cleaned
+    assert "</thought>" not in cleaned
+    assert "<answer>" not in cleaned
+    assert "</answer>" not in cleaned
+    assert "CLINICAL REASONING PROCESS:" in cleaned
+    assert "KEY FINDINGS: Coronary artery wall calcification, Emphysema" in cleaned
+
 

@@ -241,3 +241,46 @@ def test_clinical_report_with_nv_reason_ai_narrative(tmp_path: Path) -> None:
     assert "NVIDIA NV-REASON-CT 3D VISION-LANGUAGE REPORT" in p2_text
     assert "Active LCX coronary vascular inflammation" in p2_text
     doc.close()
+
+
+def test_clinical_report_sanitizes_raw_vlm_tags(tmp_path: Path) -> None:
+    """Test that raw <answer> and <thought> tags from VLM are sanitized into clean KEY FINDINGS."""
+    metrics = {
+        f"{ReportedRegion.EAT_TOTAL} Volume (cm3)": 95.0,
+        f"{ReportedRegion.EAT_TOTAL} Mean Attenuation (HU)": -78.0,
+        f"{ReportedRegion.PVAT_LAD} Volume (cm3)": 5.0,
+        f"{ReportedRegion.PVAT_LAD} Mean Attenuation (HU)": -74.0,
+    }
+    raw_vlm_narrative = (
+        "TECHNIQUE: Non-contrast CT.\n\n"
+        "FINDINGS:\n"
+        "Heart: Calcified coronary arteries.\n\n"
+        "IMPRESSION:\n"
+        "1. Coronary atherosclerosis.\n"
+        "<answer> Coronary artery wall calcification, Emphysema </answer>"
+    )
+
+    out_dir = tmp_path / "vlm_sanitized_bundle"
+    artifacts = export_clinical_imaging_report(
+        output_dir=out_dir,
+        metrics=metrics,
+        participant_id="VLM_TAG_TEST",
+        ai_reasoning_narrative=raw_vlm_narrative,
+    )
+
+    # HTML verification
+    html_content = artifacts["report_html"].read_text(encoding="utf-8")
+    assert "<answer>" not in html_content
+    assert "</answer>" not in html_content
+    assert "KEY FINDINGS: Coronary artery wall calcification, Emphysema" in html_content
+
+    # PDF verification
+    import fitz  # pyright: ignore[reportMissingImports]
+    doc = fitz.open(str(artifacts["report_pdf"]))
+    assert len(doc) == 2
+    p2_text = doc[1].get_text()
+    assert "<answer>" not in p2_text
+    assert "</answer>" not in p2_text
+    assert "KEY FINDINGS: Coronary artery wall calcification, Emphysema" in p2_text
+    doc.close()
+

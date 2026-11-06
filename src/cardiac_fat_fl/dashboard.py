@@ -462,6 +462,18 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
 
         p = _ACTIVE_COHORT.participants[pid]
+        cached_file = p.study_dir / "nv_reason_clinical_narrative.txt"
+        if request.method == "GET" and cached_file.exists():
+            from cardiac_fat_fl.nv_reason_reporter import clean_vlm_narrative
+            raw_text = cached_file.read_text(encoding="utf-8")
+            clean_text = clean_vlm_narrative(raw_text)
+            return jsonify({
+                "participant_id": pid,
+                "mode": "structured",
+                "narrative": clean_text,
+                "cached": True,
+            })
+
         from cardiac_fat_fl.nv_reason_reporter import generate_nv_reason_narrative, is_nv_reason_available
         if not is_nv_reason_available():
             return jsonify({"error": "NVIDIA NV-Reason-CT model weights or CUDA not available on this host."}), 503

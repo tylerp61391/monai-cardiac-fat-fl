@@ -2,6 +2,7 @@ NVIDIA NV-REASON-CT 3D VISION-LANGUAGE REPORT
 Generative Radiology Findings, Impression & Multi-Step Reasoning
 Patient ID:  0506
 Exam Date:   2026-10-29
+
 AI GENERATIVE NARRATIVE FINDINGS & CLINICAL IMPRESSION:
 TECHNIQUE: Non-contrast CT.
 FINDINGS:
@@ -18,6 +19,8 @@ Bones: Moderate degenerative changes of the mid-thoracic spine. No suspicious bo
 IMPRESSION:
 1. Mild coronary artery calcification.
 2. No evidence of active coronary inflammation.
-<answer> Coronary artery wall calcification </answer>
+
+KEY FINDINGS: Coronary artery wall calcification
+
 monai-cardiac-fat-fl · NVIDIA NV-Reason-CT (3D ViT + Qwen3.5-4B) · Page 2 of 2
 For Investigational / Research Use Only (RUO). Clinical verification required by board-certified physician.

@@ -10,6 +10,7 @@ from __future__ import annotations
 import gc
 import os
 from pathlib import Path
+import re
 from typing import Any, Dict, Optional
 import torch
 
@@ -25,6 +26,55 @@ def is_nv_reason_available(model_dir: Optional[Path] = None) -> bool:
     if not weights_file.exists():
         return False
     return torch.cuda.is_available()
+
+
+def clean_vlm_narrative(text: str) -> str:
+    """Sanitize and format raw Vision-Language Model generation text.
+
+    Converts model-internal ML tags (<answer>...</answer>, <thought>...</thought>,
+    <think>...</think>) into clean, publication-ready clinical headings.
+    """
+    if not text:
+        return ""
+
+    cleaned = re.sub(r"<\|im_start\|>|<\|im_end\|>|<\|endoftext\|>", "", text)
+
+    # Format internal thought/think tags into structured reasoning
+    cleaned = re.sub(r"<\s*(thought|think)\s*>", "CLINICAL REASONING PROCESS:\n", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"<\s*/\s*(thought|think)\s*>", "\n\nSTRUCTURED CLINICAL REPORT:\n", cleaned, flags=re.IGNORECASE)
+
+    # Replace <answer>...</answer> with clean 'KEY FINDINGS: ...'
+    def _replace_answer(m: re.Match[str]) -> str:
+        content = m.group(1).strip()
+        return f"\n\nKEY FINDINGS: {content}" if content else ""
+
+    cleaned = re.sub(
+        r"<\s*answer\s*>(.*?)<\s*/\s*answer\s*>",
+        _replace_answer,
+        cleaned,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+
+    # Strip any dangling or unmatched tags
+    cleaned = re.sub(r"<\s*/?\s*(answer|thought|think)\s*>", "", cleaned, flags=re.IGNORECASE)
+
+    # Strip any redundant wrapper headers/footers if string was read from an existing report
+    cleaned = re.sub(
+        r"^(NVIDIA NV-REASON-CT[^\n]*\n)?(Generative Radiology[^\n]*\n)?(Patient ID:[^\n]*\n)?(Exam Date:[^\n]*\n)?(AI GENERATIVE NARRATIVE FINDINGS & CLINICAL IMPRESSION:\s*)?",
+        "",
+        cleaned.strip(),
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"(monai-cardiac-fat-fl[^\n]*\n?)?(For Investigational / Research[^\n]*\n?)?$",
+        "",
+        cleaned.strip(),
+        flags=re.IGNORECASE,
+    )
+
+    # Clean up excess whitespace
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
 
 
 def build_clinical_prompt(metrics: Dict[str, Any], mode: str = "structured") -> str:
@@ -164,7 +214,7 @@ def generate_nv_reason_narrative(
             clean_up_tokenization_spaces=False,
         )[0]
 
-        return narrative.strip()
+        return clean_vlm_narrative(narrative)
 
     finally:
         # Guarantee CUDA cache flush so other tasks have full VRAM headroom
