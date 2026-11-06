@@ -468,6 +468,29 @@ The pipeline modernizes foundational Python 2.7 / TensorFlow 1.14 subprocess scr
    curl -L -o models/deepheartseg_loc.onnx https://github.com/tylerp61391/monai-cardiac-fat-fl/releases/download/v1.0.0/deepheartseg_loc.onnx
    ```
 
+3. **NVIDIA-MedTech VISTA-3D Foundation Models (`NV-Segment-CT` & `NV-Segment-CTMR`)**:
+   - High-throughput dedicated CT foundation model (133 classes, 7.22 s latency) and dual CT+MR 4-chamber foundation model (346 classes):
+
+   ```bash
+   # Downloads NV-Segment foundation models from Hugging Face
+   cardiac-fat-fl download-models --include-nvsegment
+   ```
+
+4. **NVIDIA NV-Reason-CT 3D Vision-Language AI Radiologist**:
+   - 3D ViT + Qwen3.5-4B generative report model producing SCCT findings, CRISP-CT inflammation reasoning, and structured EHR impressions:
+
+   ```bash
+   # Downloads NV-Reason-CT from Hugging Face
+   cardiac-fat-fl download-models --include-nvreason --nvreason-dir "E:\models\NV-Reason-CT"
+   ```
+
+5. **Turnkey Multi-Model Download**:
+   - To acquire and verify all supported model tracks in a single step:
+
+   ```bash
+   cardiac-fat-fl download-models --include-all
+   ```
+
 ### Official MGH Benchmark Test Data (`example_source_dir`)
 
 To allow users and researchers to immediately run end-to-end quantification, testing, and OHIF visualization out of the box, the repository includes the official [MGH CardiacFatQuant](https://github.com/circ-ml/CardiacFatQuant/tree/main/example_source_dir) test cohort in [`example_source_dir/`](example_source_dir):
@@ -627,7 +650,7 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | Command | Usage | Description |
 | :--- | :--- | :--- |
 | `hardware` | `cardiac-fat-fl hardware` | Inspects host CPUs, RAM, and CUDA GPUs to display safe concurrency limits. |
-| `download-models` | `cardiac-fat-fl download-models [--tag v1.0.0]` | Downloads validated DeepHeartSeg ONNX models from GitHub Release assets. |
+| `download-models` | `cardiac-fat-fl download-models [--include-wholebody] [--include-nvsegment] [--include-totalseg] [--include-nvreason] [--include-all]` | Downloads and cryptographically verifies all deep learning models (DeepHeartSeg ONNX, NGC WholeBody, NV-Segment, TotalSegmentator, NV-Reason-CT). |
 | `quantify` | `cardiac-fat-fl quantify <cohort_dir> [--workers 0] [--limit N]` | End-to-end batch quantification over DICOM/NRRD/NIfTI cohort (auto-sized). |
 | `view` | `cardiac-fat-fl view <sample_dir> [--port 8000]` | Prepares study and launches authentic OHIF v3.13 2x2 medical workstation. |
 | `export-ohif` | `cardiac-fat-fl export-ohif <sample_dir> [-o dest]` | Generates standard CT DICOM series and multi-frame `eat_pvat_seg.dcm`. |

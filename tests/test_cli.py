@@ -161,3 +161,15 @@ def test_cli_benchmark_command(synthetic_cohort_dir: Path, tmp_path: Path) -> No
     assert "Multi-Compartment Segmentation Benchmark" in result.stdout
     assert csv_out.is_file()
     assert json_out.is_file()
+
+
+def test_cli_download_models_help_and_options() -> None:
+    """Test CLI download-models command help and parameter registration."""
+    result = runner.invoke(app, ["download-models", "--help"])
+    assert result.exit_code == 0
+    assert "--include-wholebody" in result.stdout
+    assert "--include-nvsegment" in result.stdout
+    assert "--include-totalseg" in result.stdout
+    assert "--include-nvreason" in result.stdout
+    assert "--include-all" in result.stdout
+

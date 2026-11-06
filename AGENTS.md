@@ -43,6 +43,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `segmentation_evaluator.py` | 480 | `SegmentationBenchmarkEngine`, `CohortBenchmarkReport`, `compute_compartment_dice`, `compute_volume_metrics`, `compute_surface_distance_metrics` | Extensible multi-compartment segmentation evaluation, DICE metrics, IoU, RVE, MASD/HD95. |
 | `cli.py` | 1714 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `federated-simulate`; **L480**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark`; **L1425**: `fhir-export`; **L1582**: `fhir-server`; **L1620**: `mcp-server`; **L1650**: `parity-audit` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `coca_parity.py` | 1810 | `run_architectural_parity_audit`, `compute_cardiacfatquant_eat_pvat_masks`, `rasterize_coca_calcium_xml`, `align_eat_pvat_channels_from_cardiacfatquant_header`, `HARVARD_7_RULES` | 4-checkpoint end-to-end architectural parity engine and direct execution bridge for Harvard/MGH `circ-ml/CardiacFatQuant` vs. `monai-cardiac-fat-fl` on Stanford COCA. |
+| `nv_reason_reporter.py` | 225 | `is_nv_reason_available`, `clean_vlm_narrative`, `build_clinical_prompt`, `generate_nv_reason_narrative` | NVIDIA NV-Reason-CT 3D Vision-Language AI Radiologist (3D ViT + Qwen3.5-4B), BF16 / SDPA, ML tag sanitization (`KEY FINDINGS:`), and structured narrative report generator. |
 | `federated_simulator.py` | 185 | `run_federated_simulation`, `ensure_nvflare_windows_compatibility` | Turnkey SOTA NVIDIA FLARE 2.5+ multi-hospital simulation runner with automated Windows OS compatibility patching. |
 | `fl_client_algo.py` | 450 | `CardiacFatClientAlgo`, `CardiacFatTrainer` | NVFLARE client training/evaluation executor and Model Trainer bridging DXO weights to MONAI (FedProx + FedBN). |
 | `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
@@ -381,6 +382,27 @@ To verify end-to-end mathematical, anatomical, and raw CT pipeline parity betwee
    - `repo_to_repo_parity_controlled_stage3.csv`: Per-patient 8-compartment DICE scores, absolute volume differences, and mean attenuation differences.
    - `monai_cardiac_fat_measurements.csv` vs `harvard_cardiacfatquant_measurements.csv`: Exact 19-column clinical metrics verification.
    - Complete technical roadmap and derivation in [`docs/PARITY_BENCHMARK_ROADMAP.md`](docs/PARITY_BENCHMARK_ROADMAP.md).
+
+---
+
+### Recipe 14: Acquire & Cryptographically Verify Pretrained Foundation Models (`download-models`)
+
+To download and cryptographically verify model checkpoints across all tracks (DeepHeartSeg ONNX, NGC WholeBody, NV-Segment foundation models, TotalSegmentator, NV-Reason-CT):
+
+1. **One-Command Download & Verification of All Tracks**:
+
+   ```bash
+   cardiac-fat-fl download-models --include-all
+   ```
+
+2. **Track-Specific Flags**:
+   - DeepHeartSeg ONNX (pericardium): `cardiac-fat-fl download-models`
+   - NVIDIA NGC WholeBody SegResNet: `cardiac-fat-fl download-models --include-wholebody`
+   - NVIDIA-MedTech VISTA-3D Foundation Models (`NV-Segment-CT` & `NV-Segment-CTMR`): `cardiac-fat-fl download-models --include-nvsegment`
+   - TotalSegmentator v1 Task253 Checkpoint: `cardiac-fat-fl download-models --include-totalseg`
+   - NVIDIA NV-Reason-CT 3D VLM: `cardiac-fat-fl download-models --include-nvreason --nvreason-dir "E:\models\NV-Reason-CT"` (or `python scripts/download_nv_reason_ct.py`)
+3. **Cryptographic Verification**:
+   All files are validated against official SHA-256 digests in [`models/checksums.sha256`](models/checksums.sha256) and `KNOWN_MODEL_SHA256` in `cli.py`. Full details in [`MODEL_RELEASE_INSTRUCTIONS.md`](MODEL_RELEASE_INSTRUCTIONS.md).
 
 ---
 

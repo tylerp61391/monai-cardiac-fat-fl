@@ -706,6 +706,10 @@ KNOWN_MODEL_SHA256: dict[str, str] = {
     "deepheartseg_loc.onnx": "94fbafee767d872f3fb0bae364d5922387963034bf59f75e8ea5971ba0306c93",
     "wholeBody_ct_segmentation/models/model.pt": "80b429fb4b080df11c9ed0b0bdaa8a615ff083921bb213a512cf285afbc4e3fe",
     "wholeBody_ct_segmentation/models/model_lowres.pt": "c3ab55eb979785fdcb30690872c210bbeee73d79a170c32fdaa1eca117779f90",
+    "nv_segment_ct/vista3d_pretrained_model/model.pt": "c92bab26d00b4a5d89fa8a383900cdeb88302fd318e5e816df0bbec7106d9a1b",
+    "nv_segment_ctmr/vista3d_pretrained_model/model.pt": "6c6d86a48a7a9d377ddb41d663d487cfedd6456df3b828ecd931e5cba5e71f99",
+    "totalseg_v1_cardiac/Task253_TotalSegmentator_part3_cardiac_1139subj/nnUNetTrainerV2_ep4000_nomirror__nnUNetPlansv2.1/fold_0/model_final_checkpoint.model": "6fcd6e711a6eeb2241590a3f51b52fc96479cc75807b59ca6de0eb4fb506d944",
+    "federated/FL_global_model.pt": "e606fabbc0df835fd739582adde5854483e7916b8309785345bd4cd60ceeeeb3",
 }
 
 
@@ -756,6 +760,32 @@ def download_models_cmd(
         "--include-wholebody",
         "-w",
         help="Download and verify official NVIDIA NGC / MONAI Model Zoo wholeBody_ct_segmentation bundle.",
+    ),
+    include_nvsegment: bool = typer.Option(
+        False,
+        "--include-nvsegment",
+        help="Download and verify NVIDIA-MedTech NV-Segment-CT and NV-Segment-CTMR (VISTA-3D) foundation models from Hugging Face.",
+    ),
+    include_totalseg: bool = typer.Option(
+        False,
+        "--include-totalseg",
+        help="Download and verify official TotalSegmentator v1 Task253 cardiac checkpoint (nnU-Net).",
+    ),
+    include_nvreason: bool = typer.Option(
+        False,
+        "--include-nvreason",
+        help="Download and verify NVIDIA NV-Reason-CT 3D Vision-Language model (Qwen3.5-4B + 3D ViT) from Hugging Face.",
+    ),
+    nvreason_dir: Path = typer.Option(
+        Path(r"E:\models\NV-Reason-CT"),
+        "--nvreason-dir",
+        help="Destination directory for NV-Reason-CT model weights (defaults to E:\\models\\NV-Reason-CT).",
+    ),
+    include_all: bool = typer.Option(
+        False,
+        "--include-all",
+        "-a",
+        help="Download and verify all supported model tracks (DeepHeartSeg ONNX, NGC WholeBody, NV-Segment, TotalSeg).",
     ),
 ) -> None:
     """Download validated DeepHeartSeg ONNX models from GitHub Release assets."""
@@ -868,6 +898,83 @@ def download_models_cmd(
                     console.print(f"[green]NGC WholeBody low-res model verified:[/green] {wb_low_target} [dim](SHA-256 valid)[/dim]")
                 else:
                     console.print(f"[bold red]Warning: Integrity mismatch for NGC WholeBody low-res model:[/bold red] {wb_low_target}.")
+
+    # 3. NVIDIA-MedTech NV-Segment Foundation Models (NV-Segment-CT and NV-Segment-CTMR)
+    nv_ct_target = output_dir / "nv_segment_ct" / "vista3d_pretrained_model" / "model.pt"
+    nv_ct_hash = KNOWN_MODEL_SHA256["nv_segment_ct/vista3d_pretrained_model/model.pt"]
+    nv_ctmr_target = output_dir / "nv_segment_ctmr" / "vista3d_pretrained_model" / "model.pt"
+    nv_ctmr_hash = KNOWN_MODEL_SHA256["nv_segment_ctmr/vista3d_pretrained_model/model.pt"]
+
+    if include_nvsegment or include_all:
+        try:
+            from huggingface_hub import snapshot_download
+
+            if not nv_ct_target.exists() or force:
+                console.print("[cyan]Downloading nvidia/NV-Segment-CT from Hugging Face...[/cyan]")
+                snapshot_download(repo_id="nvidia/NV-Segment-CT", local_dir=str(output_dir / "nv_segment_ct"))
+            if not nv_ctmr_target.exists() or force:
+                console.print("[cyan]Downloading nvidia/NV-Segment-CTMR from Hugging Face...[/cyan]")
+                snapshot_download(repo_id="nvidia/NV-Segment-CTMR", local_dir=str(output_dir / "nv_segment_ctmr"))
+        except Exception as exc:
+            console.print(f"[yellow]Could not download NV-Segment models from Hugging Face: {exc}[/yellow]")
+
+    if nv_ct_target.exists():
+        if not skip_verify and _verify_model_file_sha256(nv_ct_target, nv_ct_hash):
+            console.print(f"[green]NV-Segment-CT model verified:[/green] {nv_ct_target} [dim](SHA-256 valid)[/dim]")
+        elif not skip_verify:
+            console.print(f"[bold red]Warning: Integrity mismatch for NV-Segment-CT:[/bold red] {nv_ct_target}.")
+
+    if nv_ctmr_target.exists():
+        if not skip_verify and _verify_model_file_sha256(nv_ctmr_target, nv_ctmr_hash):
+            console.print(f"[green]NV-Segment-CTMR model verified:[/green] {nv_ctmr_target} [dim](SHA-256 valid)[/dim]")
+        elif not skip_verify:
+            console.print(f"[bold red]Warning: Integrity mismatch for NV-Segment-CTMR:[/bold red] {nv_ctmr_target}.")
+
+    # 4. TotalSegmentator v1 Manuscript Checkpoint (Task253 nnU-Net)
+    ts_rel = "totalseg_v1_cardiac/Task253_TotalSegmentator_part3_cardiac_1139subj/nnUNetTrainerV2_ep4000_nomirror__nnUNetPlansv2.1/fold_0/model_final_checkpoint.model"
+    ts_target = output_dir / ts_rel
+    ts_hash = KNOWN_MODEL_SHA256[ts_rel]
+
+    if (include_totalseg or include_all) and (not ts_target.exists() or force):
+        console.print("[cyan]Downloading TotalSegmentator Task253 cardiac checkpoint (v1.5.6-weights)...[/cyan]")
+        import zipfile
+        ts_zip_url = "https://github.com/wasserth/TotalSegmentator/releases/download/v1.5.6-weights/Task253_TotalSegmentator_part3_cardiac_1139subj.zip"
+        ts_zip_path = output_dir / "totalseg_v1_cardiac" / "Task253.zip"
+        ts_zip_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            urllib.request.urlretrieve(ts_zip_url, str(ts_zip_path))
+            with zipfile.ZipFile(ts_zip_path, "r") as zf:
+                zf.extractall(output_dir / "totalseg_v1_cardiac")
+            ts_zip_path.unlink(missing_ok=True)
+            console.print(f"[bold green]Installed TotalSegmentator Task253 checkpoint to:[/bold green] {output_dir / 'totalseg_v1_cardiac'}")
+        except Exception as exc:
+            console.print(f"[yellow]Could not download TotalSegmentator weights: {exc}[/yellow]")
+
+    if ts_target.exists():
+        if not skip_verify and _verify_model_file_sha256(ts_target, ts_hash):
+            console.print(f"[green]TotalSegmentator Task253 cardiac model verified:[/green] {ts_target} [dim](SHA-256 valid)[/dim]")
+        elif not skip_verify:
+            console.print(f"[bold red]Warning: Integrity mismatch for TotalSegmentator model:[/bold red] {ts_target}.")
+
+    # 5. NVIDIA NV-Reason-CT 3D Vision-Language Foundation Model
+    if include_nvreason:
+        console.print(f"[cyan]Downloading nvidia/NV-Reason-CT to {nvreason_dir}...[/cyan]")
+        try:
+            from huggingface_hub import snapshot_download
+            nvreason_dir.mkdir(parents=True, exist_ok=True)
+            snapshot_download(repo_id="nvidia/NV-Reason-CT", local_dir=str(nvreason_dir))
+            console.print(f"[bold green]Successfully installed NV-Reason-CT to:[/bold green] {nvreason_dir}")
+        except Exception as exc:
+            console.print(f"[yellow]Could not download NV-Reason-CT from Hugging Face: {exc}[/yellow]")
+    elif (nvreason_dir / "model.safetensors").exists():
+        console.print(f"[green]NVIDIA NV-Reason-CT model present:[/green] {nvreason_dir / 'model.safetensors'} [dim]({(nvreason_dir / 'model.safetensors').stat().st_size / 1e9:.2f} GB)[/dim]")
+
+    # 6. Federated consensus checkpoint
+    fl_target = output_dir / "federated" / "FL_global_model.pt"
+    fl_hash = KNOWN_MODEL_SHA256["federated/FL_global_model.pt"]
+    if fl_target.exists():
+        if not skip_verify and _verify_model_file_sha256(fl_target, fl_hash):
+            console.print(f"[green]Federated consensus global model verified:[/green] {fl_target} [dim](SHA-256 valid)[/dim]")
 
 
 
