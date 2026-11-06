@@ -62,8 +62,10 @@ models/federated/
 # Unpublished scientific abstracts & manuscripts (private until publication)
 *abstract*
 *manuscript*
+*scoping*
 *.pdf
 docs/*abstract*
+docs/*scoping*
 docs/*.pdf
 !docs/Cardiac_Segmentation_Architecture.pdf
 docs/architecture_review/*.png
