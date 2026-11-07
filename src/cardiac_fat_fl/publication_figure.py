@@ -4,8 +4,8 @@ Produces high-resolution multi-panel composite figures formatted for peer-review
 cardiovascular imaging journals (JACC: Cardiovascular Imaging, Radiology, Circulation):
 - Panel A: Box & Whiskers distribution of Epicardial Adipose Tissue (EAT) Volume across Agatston CAC Tiers.
 - Panel B: Box & Whiskers distribution of Pericoronary Adipose Tissue (PVAT) Attenuation with CRISP-CT threshold.
-- Panel C: Bivariate scatter and linear regression model of EAT Volume vs. PVAT Attenuation (N=997).
-- Panel D: Compartment volumetric breakdown across cardiac chambers and coronary sulci (Canonical palette).
+- Panel C: Bivariate scatter and linear regression model of EAT Volume vs. PVAT Attenuation (N=997) with clinical legend.
+- Panel D: Dynamic compartment volumetric breakdown across cardiac chambers and coronary sulci (Canonical palette).
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from cardiac_fat_fl.cohort_research import CAC_TIER_ORDER, CohortDataset
-from cardiac_fat_fl.measurement_schema import SegmentationCompartment
 
 
 # Canonical 8-compartment colors
@@ -80,22 +79,25 @@ def generate_publication_figure(
     Returns:
         Raw PNG bytes.
     """
-    img = Image.new("RGB", (width, height), color=(255, 255, 255))
+    img = Image.new("RGB", (width, height), color=(248, 250, 252))
     draw = ImageDraw.Draw(img, "RGBA")
 
-    # Font definitions
-    font_title = _get_font(60, bold=True)
-    font_subtitle = _get_font(32, bold=False)
-    font_panel_hdr = _get_font(38, bold=True)
-    font_axis_label = _get_font(28, bold=True)
-    font_tick = _get_font(24, bold=False)
-    font_small = _get_font(20, bold=False)
-    font_stats = _get_font(24, bold=True)
+    # High-legibility font definitions
+    font_title = _get_font(54, bold=True)
+    font_subtitle = _get_font(30, bold=False)
+    font_panel_hdr = _get_font(34, bold=True)
+    font_panel_sub = _get_font(23, bold=False)
+    font_axis_label = _get_font(25, bold=True)
+    font_tick = _get_font(22, bold=False)
+    font_small = _get_font(19, bold=False)
+    font_stats = _get_font(22, bold=True)
+    font_legend = _get_font(21, bold=False)
+    font_legend_bold = _get_font(21, bold=True)
 
     # 1. Header Banner
     draw.rectangle([(0, 0), (width, 160)], fill=(15, 23, 42))  # Slate-900
     draw.text(
-        (80, 30),
+        (80, 28),
         "Epicardial (EAT) & Pericoronary (PVAT) Adipose Tissue in Cardiac CT",
         fill=(255, 255, 255),
         font=font_title,
@@ -107,36 +109,25 @@ def generate_publication_figure(
         f"Cohort Analysis (N = {n_total:,} CT Scans, {n_quant:,} Quantified, {n_cac:,} CAC Scored) "
         "— Agatston Plaque Burden & CRISP-CT Vascular Inflammation"
     )
-    draw.text((80, 105), subtitle_text, fill=(148, 163, 184), font=font_subtitle)
+    draw.text((80, 102), subtitle_text, fill=(148, 163, 184), font=font_subtitle)
 
     # Statistical summaries from cohort
     tier_stats = cohort.compute_tier_group_comparisons()
     bivariate = cohort.compute_bivariate_regression()
     summary = cohort.compute_summary_analytics()
 
-    # 4 Panel Layout Boundaries
-    pad_x = 90
-    top_y = 220
+    # 4 Panel Layout Boundaries with enhanced breathing room
+    pad_x = 80
+    top_y = 205
     mid_x = width // 2
-    mid_y = 1420
-    panel_w = mid_x - pad_x - 40
-    panel_h = mid_y - top_y - 60
+    mid_y = 1425
+    panel_w = mid_x - pad_x - 30
+    panel_h = mid_y - top_y - 45
 
     p_a_rect = (pad_x, top_y, pad_x + panel_w, top_y + panel_h)
-    p_b_rect = (mid_x + 40, top_y, mid_x + 40 + panel_w, top_y + panel_h)
+    p_b_rect = (mid_x + 30, top_y, mid_x + 30 + panel_w, top_y + panel_h)
     p_c_rect = (pad_x, mid_y + 20, pad_x + panel_w, mid_y + 20 + panel_h)
-    p_d_rect = (mid_x + 40, mid_y + 20, mid_x + 40 + panel_w, mid_y + 20 + panel_h)
-
-    # Helper: draw panel card background
-    for rect, label in [
-        (p_a_rect, "A. Total EAT Volume across Agatston CAC Tiers"),
-        (p_b_rect, "B. PVAT Attenuation across Agatston CAC Tiers"),
-        (p_c_rect, "C. Bivariate Adipose Correlation: EAT Volume vs. PVAT Attenuation"),
-        (p_d_rect, "D. Adipose Distribution across Cardiac Chambers & Sulci"),
-    ]:
-        x0, y0, x1, y1 = rect
-        draw.rounded_rectangle([(x0, y0), (x1, y1)], radius=16, fill=(248, 250, 252), outline=(226, 232, 240), width=3)
-        draw.text((x0 + 35, y0 + 30), label, fill=(15, 23, 42), font=font_panel_hdr)
+    p_d_rect = (mid_x + 30, mid_y + 20, mid_x + 30 + panel_w, mid_y + 20 + panel_h)
 
     # ==========================================
     # Panel A: Box Plot - EAT Volume across CAC
@@ -145,13 +136,15 @@ def generate_publication_figure(
         draw=draw,
         rect=p_a_rect,
         tier_data=tier_stats.get("eat_volume", {}),
+        panel_title="A. Total EAT Volume across Agatston CAC Tiers",
         y_min=0.0,
-        y_max=160.0,
-        y_label="EAT Total Volume (cm³)",
+        y_max=200.0,
+        y_label="Total EAT Volume (cm³)",
+        font_hdr=font_panel_hdr,
+        font_sub=font_panel_sub,
         font_axis=font_axis_label,
         font_tick=font_tick,
         font_small=font_small,
-        font_stats=font_stats,
         accent_color=(147, 51, 234),
     )
 
@@ -162,16 +155,18 @@ def generate_publication_figure(
         draw=draw,
         rect=p_b_rect,
         tier_data=tier_stats.get("pvat_attenuation", {}),
+        panel_title="B. PVAT Attenuation across Agatston CAC Tiers",
         y_min=-95.0,
         y_max=-45.0,
         y_label="PVAT Mean Attenuation (HU)",
+        font_hdr=font_panel_hdr,
+        font_sub=font_panel_sub,
         font_axis=font_axis_label,
         font_tick=font_tick,
         font_small=font_small,
-        font_stats=font_stats,
         accent_color=(239, 68, 68),
         threshold_val=-70.1,
-        threshold_label="CRISP-CT Active Inflammation Threshold (-70.1 HU)",
+        threshold_label="CRISP-CT Active Inflammation Cutoff (-70.1 HU)",
     )
 
     # ==========================================
@@ -182,10 +177,15 @@ def generate_publication_figure(
         rect=p_c_rect,
         cohort=cohort,
         bivariate=bivariate,
+        panel_title="C. Bivariate Adipose Correlation: EAT Volume vs. PVAT Attenuation",
+        font_hdr=font_panel_hdr,
+        font_sub=font_panel_sub,
         font_axis=font_axis_label,
         font_tick=font_tick,
         font_small=font_small,
         font_stats=font_stats,
+        font_legend=font_legend,
+        font_legend_bold=font_legend_bold,
     )
 
     # ==========================================
@@ -195,6 +195,9 @@ def generate_publication_figure(
         draw=draw,
         rect=p_d_rect,
         summary=summary,
+        panel_title="D. Adipose Distribution across Cardiac Chambers & Sulci",
+        font_hdr=font_panel_hdr,
+        font_sub=font_panel_sub,
         font_axis=font_axis_label,
         font_tick=font_tick,
         font_small=font_small,
@@ -225,33 +228,50 @@ def _draw_tier_boxplot(
     draw: ImageDraw.ImageDraw,
     rect: Tuple[int, int, int, int],
     tier_data: Dict[str, Any],
+    panel_title: str,
     y_min: float,
     y_max: float,
     y_label: str,
+    font_hdr: ImageFont.ImageFont,
+    font_sub: ImageFont.ImageFont,
     font_axis: ImageFont.ImageFont,
     font_tick: ImageFont.ImageFont,
     font_small: ImageFont.ImageFont,
-    font_stats: ImageFont.ImageFont,
     accent_color: Tuple[int, int, int],
     threshold_val: Optional[float] = None,
     threshold_label: Optional[str] = None,
 ) -> None:
-    """Render a clinical-grade box & whiskers plot across 5 CAC tiers."""
+    """Render a clinical-grade box & whiskers plot across 5 CAC tiers with clean hierarchy."""
     x0, y0, x1, y1 = rect
-    plot_x0 = x0 + 130
-    plot_x1 = x1 - 50
-    plot_y0 = y0 + 150
-    plot_y1 = y1 - 90
 
-    # Draw stats callout banner at the top of the panel
+    # 1. Panel Background Card
+    draw.rounded_rectangle([(x0, y0), (x1, y1)], radius=16, fill=(255, 255, 255), outline=(226, 232, 240), width=3)
+
+    # 2. Distinct Vertical Hierarchy for Title & Subtitle (No Overlap)
+    draw.text((x0 + 38, y0 + 28), panel_title, fill=(15, 23, 42), font=font_hdr)
+
     anova = tier_data.get("anova", {})
     kruskal = tier_data.get("kruskal_wallis", {})
-    f_str = f"ANOVA F = {anova.get('f_stat')}" if anova.get("f_stat") is not None else "ANOVA F = --"
-    p_str = f"p = {anova.get('p_value'):.3g}" if anova.get("p_value") is not None else "p = --"
-    h_str = f"Kruskal H = {kruskal.get('h_stat')}" if kruskal.get("h_stat") is not None else "H = --"
-    kh_p = f"p = {kruskal.get('p_value'):.3g}" if kruskal.get("p_value") is not None else "p = --"
-    stat_banner = f"{f_str} ({p_str})  |  {h_str} ({kh_p})"
-    draw.text((plot_x0, y0 + 85), stat_banner, fill=(71, 85, 105), font=font_stats)
+    f_stat = anova.get("f_stat")
+    f_str = f"ANOVA F = {f_stat:.2f}" if f_stat is not None else "ANOVA F = --"
+    p_str = f"p = {anova.get('p_value'):.2e}" if anova.get("p_value") is not None and anova.get("p_value") < 0.001 else (f"p = {anova.get('p_value'):.3f}" if anova.get("p_value") is not None else "p = --")
+    h_stat = kruskal.get("h_stat")
+    h_str = f"Kruskal H = {h_stat:.2f}" if h_stat is not None else "H = --"
+    kh_p = f"p = {kruskal.get('p_value'):.2e}" if kruskal.get("p_value") is not None and kruskal.get("p_value") < 0.001 else (f"p = {kruskal.get('p_value'):.3f}" if kruskal.get("p_value") is not None else "p = --")
+    stat_banner = f"Omnibus Tests: {f_str} ({p_str})  •  {h_str} ({kh_p})"
+    draw.text((x0 + 38, y0 + 74), stat_banner, fill=(71, 85, 105), font=font_sub)
+
+    # Subtle horizontal rule separating header from plot
+    draw.line([(x0 + 38, y0 + 115), (x1 - 38, y0 + 115)], fill=(241, 245, 249), width=2)
+
+    # 3. Plot Area Geometry
+    plot_x0 = x0 + 130
+    plot_x1 = x1 - 50
+    plot_y0 = y0 + 175
+    plot_y1 = y1 - 95
+
+    # 4. Y-Axis Label (Placed at y0 + 130, safely above plot_y0 without colliding with subtitle)
+    draw.text((x0 + 38, y0 + 132), y_label, fill=(15, 23, 42), font=font_axis)
 
     # Optional threshold shading (e.g. CRISP-CT inflammation zone)
     if threshold_val is not None:
@@ -265,13 +285,15 @@ def _draw_tier_boxplot(
             draw.line([(curr_x, thresh_py), (min(curr_x + dash_len, plot_x1), thresh_py)], fill=(225, 29, 72), width=3)
             curr_x += dash_len + gap
         if threshold_label:
-            draw.text((plot_x0 + 15, thresh_py - 30), threshold_label, fill=(190, 18, 60), font=font_small)
+            badge_w = 490
+            draw.rounded_rectangle([(plot_x0 + 12, thresh_py - 30), (plot_x0 + 12 + badge_w, thresh_py - 4)], radius=6, fill=(255, 255, 255, 230), outline=(225, 29, 72), width=1)
+            draw.text((plot_x0 + 20, thresh_py - 27), threshold_label, fill=(190, 18, 60), font=font_small)
 
     # Axes
     draw.line([(plot_x0, plot_y0), (plot_x0, plot_y1)], fill=(148, 163, 184), width=3)
     draw.line([(plot_x0, plot_y1), (plot_x1, plot_y1)], fill=(148, 163, 184), width=3)
 
-    # Y-axis ticks and labels
+    # Y-axis ticks and gridlines
     n_ticks = 5
     for i in range(n_ticks + 1):
         v = y_min + i * (y_max - y_min) / n_ticks
@@ -279,10 +301,7 @@ def _draw_tier_boxplot(
         draw.line([(plot_x0 - 10, py), (plot_x0, py)], fill=(148, 163, 184), width=2)
         draw.line([(plot_x0, py), (plot_x1, py)], fill=(241, 245, 249), width=1)
         val_str = f"{v:.0f}" if abs(v) >= 10 else f"{v:.1f}"
-        draw.text((plot_x0 - 75, py - 14), val_str, fill=(71, 85, 105), font=font_tick)
-
-    # Y-axis title
-    draw.text((x0 + 35, plot_y0 - 50), y_label, fill=(15, 23, 42), font=font_axis)
+        draw.text((plot_x0 - 75, py - 13), val_str, fill=(71, 85, 105), font=font_tick)
 
     # X-axis Tiers
     tiers = tier_data.get("tiers", {})
@@ -325,7 +344,7 @@ def _draw_tier_boxplot(
 
         # IQR Box
         tier_c = TIER_COLORS.get(t_key, accent_color)
-        fill_rgba = (*tier_c, 80)
+        fill_rgba = (*tier_c, 85)
         draw.rectangle([(center_x - box_w // 2, py_q3), (center_x + box_w // 2, py_q1)], fill=fill_rgba, outline=tier_c, width=3)
 
         # Median Bar
@@ -337,7 +356,6 @@ def _draw_tier_boxplot(
             draw.ellipse([(center_x - 5, py_out - 5), (center_x + 5, py_out + 5)], fill=(225, 29, 72), outline=(15, 23, 42), width=1)
 
         # Labels
-        t_key.replace(" ", "\n")
         draw.text((center_x - 35, plot_y1 + 15), t_key.split()[0], fill=(15, 23, 42), font=font_tick)
         draw.text((center_x - 28, plot_y1 + 45), f"(N={n_pts})", fill=(100, 116, 139), font=font_small)
 
@@ -347,27 +365,45 @@ def _draw_bivariate_scatter_regression(
     rect: Tuple[int, int, int, int],
     cohort: CohortDataset,
     bivariate: Dict[str, Any],
+    panel_title: str,
+    font_hdr: ImageFont.ImageFont,
+    font_sub: ImageFont.ImageFont,
     font_axis: ImageFont.ImageFont,
     font_tick: ImageFont.ImageFont,
     font_small: ImageFont.ImageFont,
     font_stats: ImageFont.ImageFont,
+    font_legend: ImageFont.ImageFont,
+    font_legend_bold: ImageFont.ImageFont,
 ) -> None:
-    """Render scatter points and linear regression trendline for EAT Vol vs PVAT HU."""
+    """Render scatter points, regression line, and publication legend distinguishing inflammation tiers."""
     x0, y0, x1, y1 = rect
-    plot_x0 = x0 + 130
-    plot_x1 = x1 - 50
-    plot_y0 = y0 + 150
-    plot_y1 = y1 - 90
 
-    # Stats banner
+    # 1. Panel Background Card
+    draw.rounded_rectangle([(x0, y0), (x1, y1)], radius=16, fill=(255, 255, 255), outline=(226, 232, 240), width=3)
+
+    # 2. Distinct Vertical Hierarchy for Title & Subtitle (No Overlap)
+    draw.text((x0 + 38, y0 + 28), panel_title, fill=(15, 23, 42), font=font_hdr)
+
     n_pts = bivariate.get("n_paired", 0)
     r = bivariate.get("pearson_r", 0.0)
-    bivariate.get("pearson_p", 1.0)
     rho = bivariate.get("spearman_rho", 0.0)
     r2 = bivariate.get("r_squared", 0.0)
     eq = bivariate.get("equation", "")
-    banner = f"N = {n_pts:,} | Pearson r = {r:.3f} (p < 10⁻⁴⁰) | Spearman ρ = {rho:.3f} | R² = {r2:.3f}"
-    draw.text((plot_x0, y0 + 85), banner, fill=(71, 85, 105), font=font_stats)
+    banner = f"Cohort Correlation: N = {n_pts:,}  •  Pearson r = {r:.3f} (p < 10⁻⁴⁰)  •  Spearman ρ = {rho:.3f}  •  R² = {r2:.3f}"
+    draw.text((x0 + 38, y0 + 74), banner, fill=(71, 85, 105), font=font_sub)
+
+    # Subtle horizontal rule
+    draw.line([(x0 + 38, y0 + 115), (x1 - 38, y0 + 115)], fill=(241, 245, 249), width=2)
+
+    # 3. Plot Area Geometry
+    plot_x0 = x0 + 130
+    plot_x1 = x1 - 50
+    plot_y0 = y0 + 175
+    plot_y1 = y1 - 95
+
+    # 4. Y-Axis Label
+    draw.text((x0 + 38, y0 + 132), "PVAT Mean Attenuation (HU)", fill=(15, 23, 42), font=font_axis)
+    draw.text((plot_x1 - 270, plot_y1 + 45), "Total EAT Volume (cm³)", fill=(15, 23, 42), font=font_axis)
 
     # Domain limits
     x_min, x_max = 0.0, 180.0
@@ -384,7 +420,10 @@ def _draw_bivariate_scatter_regression(
     thresh_py = plot_y1 - ((-70.1 - y_min) / (y_max - y_min)) * (plot_y1 - plot_y0)
     draw.rectangle([(plot_x0, plot_y0), (plot_x1, thresh_py)], fill=(254, 242, 242, 120))
     draw.line([(plot_x0, thresh_py), (plot_x1, thresh_py)], fill=(225, 29, 72), width=2)
-    draw.text((plot_x0 + 15, thresh_py - 28), "CRISP-CT Active Vascular Inflammation Zone (> -70.1 HU)", fill=(190, 18, 60), font=font_small)
+
+    # Threshold callout badge
+    draw.rounded_rectangle([(plot_x0 + 12, thresh_py - 28), (plot_x0 + 440, thresh_py - 4)], radius=4, fill=(255, 255, 255, 220), outline=(225, 29, 72), width=1)
+    draw.text((plot_x0 + 18, thresh_py - 25), "CRISP-CT Active Inflammation Cutoff (> -70.1 HU)", fill=(190, 18, 60), font=font_small)
 
     # Axes
     draw.line([(plot_x0, plot_y0), (plot_x0, plot_y1)], fill=(148, 163, 184), width=3)
@@ -394,7 +433,8 @@ def _draw_bivariate_scatter_regression(
     for v in np.linspace(y_min, y_max, 6):
         _, py = to_px(0, v)
         draw.line([(plot_x0 - 8, py), (plot_x0, py)], fill=(148, 163, 184), width=2)
-        draw.text((plot_x0 - 75, py - 14), f"{v:.0f}", fill=(71, 85, 105), font=font_tick)
+        draw.line([(plot_x0, py), (plot_x1, py)], fill=(241, 245, 249), width=1)
+        draw.text((plot_x0 - 75, py - 13), f"{v:.0f}", fill=(71, 85, 105), font=font_tick)
 
     # X Ticks
     for v in np.linspace(x_min, x_max, 7):
@@ -402,21 +442,29 @@ def _draw_bivariate_scatter_regression(
         draw.line([(px, plot_y1), (px, plot_y1 + 8)], fill=(148, 163, 184), width=2)
         draw.text((px - 20, plot_y1 + 15), f"{v:.0f}", fill=(71, 85, 105), font=font_tick)
 
-    draw.text((x0 + 35, plot_y0 - 50), "PVAT Mean Attenuation (HU)", fill=(15, 23, 42), font=font_axis)
-    draw.text((plot_x1 - 250, plot_y1 + 45), "Total EAT Volume (cm³)", fill=(15, 23, 42), font=font_axis)
-
-    # Scatter points
+    # Scatter points & counts for legend
+    n_inflam = 0
+    n_normal = 0
     pts = []
     for p in cohort.participants.values():
         vol = p.metrics.get("EAT Total Volume (cm3)")
         hu = p.metrics.get("PVAT Total Mean Attenuation (HU)")
         if vol is not None and hu is not None and not (math.isnan(vol) or math.isnan(hu)):
-            pts.append((vol, hu, p.crisp_ct_status))
+            is_active = p.crisp_ct_status == "Active Vascular Inflammation" or hu > -70.1
+            if is_active:
+                n_inflam += 1
+            else:
+                n_normal += 1
+            pts.append((vol, hu, is_active))
 
-    for vol, hu, status in pts:
+    for vol, hu, is_active in pts:
         px, py = to_px(vol, hu)
-        pt_color = (225, 29, 72, 160) if status == "Active Vascular Inflammation" else (59, 130, 246, 120)
-        draw.ellipse([(px - 4, py - 4), (px + 4, py + 4)], fill=pt_color)
+        if is_active:
+            # Active inflammation: Red circle
+            draw.ellipse([(px - 5, py - 5), (px + 5, py + 5)], fill=(225, 29, 72, 175), outline=(190, 18, 60))
+        else:
+            # Normal attenuation: Blue circle
+            draw.ellipse([(px - 4, py - 4), (px + 4, py + 4)], fill=(59, 130, 246, 135), outline=(37, 99, 235))
 
     # Linear Regression Line: y = m*x + b
     slope = bivariate.get("slope", 0.0)
@@ -428,46 +476,93 @@ def _draw_bivariate_scatter_regression(
         p1 = to_px(rx1, ry1)
         draw.line([p0, p1], fill=(15, 23, 42), width=5)
 
-        # Equation callout badge
-        badge_x, badge_y = plot_x1 - 420, plot_y0 + 20
-        draw.rounded_rectangle([(badge_x, badge_y), (badge_x + 400, badge_y + 60)], radius=8, fill=(255, 255, 255, 220), outline=(15, 23, 42), width=2)
-        draw.text((badge_x + 15, badge_y + 16), eq, fill=(15, 23, 42), font=font_stats)
+    # =========================================================================
+    # SOTA Publication Legend Box (Explains Blue vs. Red Circles & Fit Line)
+    # =========================================================================
+    leg_w = 520
+    leg_h = 165
+    leg_x0 = plot_x1 - leg_w - 15
+    leg_y0 = plot_y0 + 15
+    leg_x1 = leg_x0 + leg_w
+    leg_y1 = leg_y0 + leg_h
+
+    # Card background
+    draw.rounded_rectangle([(leg_x0, leg_y0), (leg_x1, leg_y1)], radius=12, fill=(255, 255, 255, 245), outline=(203, 213, 225), width=2)
+
+    # Entry 1: Linear Fit Line
+    draw.line([(leg_x0 + 20, leg_y0 + 32), (leg_x0 + 55, leg_y0 + 32)], fill=(15, 23, 42), width=4)
+    draw.text((leg_x0 + 68, leg_y0 + 20), f"Linear Fit: {eq}", fill=(15, 23, 42), font=font_legend_bold)
+
+    # Entry 2: Active Inflammation (Red Circle)
+    draw.ellipse([(leg_x0 + 28, leg_y0 + 68), (leg_x0 + 46, leg_y0 + 86)], fill=(225, 29, 72), outline=(190, 18, 60), width=1)
+    draw.text((leg_x0 + 68, leg_y0 + 66), f"Active Inflammation (PVAT > -70.1 HU, N = {n_inflam})", fill=(190, 18, 60), font=font_legend)
+
+    # Entry 3: Normal Perivascular Attenuation (Blue Circle)
+    draw.ellipse([(leg_x0 + 28, leg_y0 + 115), (leg_x0 + 46, leg_y0 + 133)], fill=(59, 130, 246), outline=(37, 99, 235), width=1)
+    draw.text((leg_x0 + 68, leg_y0 + 113), f"Normal Perivascular Attenuation (N = {n_normal})", fill=(30, 64, 175), font=font_legend)
 
 
 def _draw_chamber_bar_chart(
     draw: ImageDraw.ImageDraw,
     rect: Tuple[int, int, int, int],
     summary: Dict[str, Any],
+    panel_title: str,
+    font_hdr: ImageFont.ImageFont,
+    font_sub: ImageFont.ImageFont,
     font_axis: ImageFont.ImageFont,
     font_tick: ImageFont.ImageFont,
     font_small: ImageFont.ImageFont,
 ) -> None:
-    """Render chamber and sulci volumetric breakdown with standard deviation error bars."""
+    """Render chamber and sulci volumetric breakdown with dynamic ceiling preventing bar clipping."""
     x0, y0, x1, y1 = rect
+
+    # 1. Panel Background Card
+    draw.rounded_rectangle([(x0, y0), (x1, y1)], radius=16, fill=(255, 255, 255), outline=(226, 232, 240), width=3)
+
+    # 2. Distinct Vertical Hierarchy for Title & Subtitle (No Overlap)
+    draw.text((x0 + 38, y0 + 28), panel_title, fill=(15, 23, 42), font=font_hdr)
+    draw.text((x0 + 38, y0 + 74), "Depot Compartmentalization (cm³ ± SD): 4-Chamber Epicardial & 3-Vessel Perivascular Depots", fill=(71, 85, 105), font=font_sub)
+
+    # Subtle horizontal rule
+    draw.line([(x0 + 38, y0 + 115), (x1 - 38, y0 + 115)], fill=(241, 245, 249), width=2)
+
+    # 3. Plot Area Geometry
     plot_x0 = x0 + 130
     plot_x1 = x1 - 50
-    plot_y0 = y0 + 150
-    plot_y1 = y1 - 90
+    plot_y0 = y0 + 175
+    plot_y1 = y1 - 95
 
-    draw.text((plot_x0, y0 + 85), "Mean Volume (cm³ ± SD) across Chamber and Sulci Adipose Depots", fill=(71, 85, 105), font=font_axis)
+    # 4. Y-Axis Label
+    draw.text((x0 + 38, y0 + 132), "Depot Volume (cm³)", fill=(15, 23, 42), font=font_axis)
 
     chambers = ["EAT LA", "EAT LV", "EAT RA", "EAT RV", "PVAT LAD", "PVAT LCX", "PVAT RCA"]
     chamber_stats = summary.get("chamber_volume_summaries", {})
 
-    y_max = 35.0  # cm3
+    # =========================================================================
+    # Dynamic y_max Scaling: Prevents EAT RV bar & error bar from clipping axis
+    # =========================================================================
+    max_observed = max(
+        (st.get("mean", 0.0) + st.get("std", 0.0))
+        for st in chamber_stats.values()
+    ) if chamber_stats else 40.0
+    # Ceiling to comfortable round multiple of 20 (e.g. 80.0 cm3 for COCA where EAT RV reaches 66.2 cm3)
+    y_max = float(max(60.0, math.ceil(max_observed / 20.0) * 20.0))
+
+    # Axes
     draw.line([(plot_x0, plot_y0), (plot_x0, plot_y1)], fill=(148, 163, 184), width=3)
     draw.line([(plot_x0, plot_y1), (plot_x1, plot_y1)], fill=(148, 163, 184), width=3)
 
-    for v in np.linspace(0, y_max, 8):
+    # Y Ticks and gridlines
+    n_ticks = 4
+    for i in range(n_ticks + 1):
+        v = i * (y_max / n_ticks)
         py = plot_y1 - (v / y_max) * (plot_y1 - plot_y0)
         draw.line([(plot_x0 - 8, py), (plot_x0, py)], fill=(148, 163, 184), width=2)
         draw.line([(plot_x0, py), (plot_x1, py)], fill=(241, 245, 249), width=1)
-        draw.text((plot_x0 - 65, py - 14), f"{v:.0f}", fill=(71, 85, 105), font=font_tick)
-
-    draw.text((x0 + 35, plot_y0 - 50), "Mean Volume (cm³)", fill=(15, 23, 42), font=font_axis)
+        draw.text((plot_x0 - 65, py - 13), f"{v:.0f}", fill=(71, 85, 105), font=font_tick)
 
     step = (plot_x1 - plot_x0) / len(chambers)
-    bar_w = 70
+    bar_w = 72
 
     for idx, ch_name in enumerate(chambers):
         cx = plot_x0 + step * (idx + 0.5)
@@ -487,11 +582,10 @@ def _draw_chamber_bar_chart(
             draw.line([(cx, py_bot), (cx, py_top)], fill=(15, 23, 42), width=3)
             draw.line([(cx - 15, py_top), (cx + 15, py_top)], fill=(15, 23, 42), width=3)
             draw.line([(cx - 15, py_bot), (cx + 15, py_bot)], fill=(15, 23, 42), width=3)
-
-        # Value label
-        draw.text((cx - 25, py_bar - 32), f"{mean_v:.1f}", fill=(15, 23, 42), font=font_small)
+            # Numeric value above error bar
+            draw.text((cx - 24, py_top - 28), f"{mean_v:.1f}", fill=(15, 23, 42), font=font_small)
+        else:
+            draw.text((cx - 24, py_bar - 28), f"{mean_v:.1f}", fill=(15, 23, 42), font=font_small)
 
         # X label
-        ch_name.replace(" ", "\n")
         draw.text((cx - 30, plot_y1 + 15), ch_name.replace(" ", "\n"), fill=(15, 23, 42), font=font_small)
-
