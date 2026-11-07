@@ -293,7 +293,7 @@ def create_big_picture_figure(output_png: Path, output_pdf: Path | None = None) 
     for idx, b in enumerate(research_bullets):
         col = "#b45309" if "Invariant" in b or "Fail-closed" in b else "#1e293b"
         weight = "bold" if "Invariant" in b or "Fail-closed" in b else "normal"
-        ax.text(24.2, 55.5 - idx * 1.6, b, color=col, fontsize=7.6, fontweight=weight, va="top", zorder=4)
+        ax.text(24.2, 54.6 - idx * 1.6, b, color=col, fontsize=7.6, fontweight=weight, va="top", zorder=4)
 
     # Connect Ingestion to Dual-Mode
     draw_arrow(18.5, 73.0, 23.3, 73.0, color="#0284c7", width=2.2, label="Clinical", label_color="#0369a1")
@@ -331,7 +331,7 @@ def create_big_picture_figure(output_png: Path, output_pdf: Path | None = None) 
 
     # Subcard: Spatial Morphology & Invariants
     draw_card(
-        x=45.8, y=49.0, w=20.4, h=17.0,
+        x=45.8, y=50.2, w=20.4, h=16.0,
         bg="#faf5ff", border="#d8b4fe",
         title="Clinical Invariants & 3D Spatial Transforms",
         title_color="#7e22ce", title_size=10.0,
@@ -345,11 +345,11 @@ def create_big_picture_figure(output_png: Path, output_pdf: Path | None = None) 
         "• Empty Region Guardrail: 0.0 cm3 volume & NaN mean HU",
     ]
     for idx, b in enumerate(invariant_bullets):
-        ax.text(46.5, 59.5 - idx * 1.85, b, color="#1e293b", fontsize=7.6, va="top", zorder=4)
+        ax.text(46.5, 60.0 - idx * 1.75, b, color="#1e293b", fontsize=7.6, va="top", zorder=4)
 
     # Subcard: 8 Compartment Palette
     draw_card(
-        x=45.8, y=37.0, w=20.4, h=10.5,
+        x=45.8, y=36.8, w=20.4, h=12.0,
         bg="#faf5ff", border="#d8b4fe",
         title="8-Compartment Segmentation (eat_pvat.seg.nrrd)",
         title_color="#7e22ce", title_size=9.5,
@@ -363,10 +363,10 @@ def create_big_picture_figure(output_png: Path, output_pdf: Path | None = None) 
         row = idx // 4
         col = idx % 4
         cx = 46.5 + col * 4.9
-        cy = 42.2 - row * 2.1
-        p = Rectangle((cx, cy), 1.0, 1.3, facecolor=c_color, edgecolor="#64748b", linewidth=0.5, zorder=4)
+        cy = 41.2 - row * 2.5
+        p = Rectangle((cx, cy), 1.0, 1.35, facecolor=c_color, edgecolor="#64748b", linewidth=0.6, zorder=4)
         ax.add_patch(p)
-        ax.text(cx + 1.3, cy + 0.65, c_name, color="#0f172a", fontsize=7.0, fontweight="bold", va="center", zorder=4)
+        ax.text(cx + 1.3, cy + 0.675, c_name, color="#0f172a", fontsize=7.2, fontweight="bold", va="center", zorder=4)
 
     # Connect Dual-Mode to Segmentation
     draw_arrow(39.7, 73.0, 44.5, 68.0, color="#0284c7", width=2.0)
