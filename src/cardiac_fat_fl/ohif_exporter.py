@@ -770,17 +770,36 @@ def generate_ohif_3pane_viewer_html(
         </tr>
         """
 
-    participants_list = available_participants or ["0", "1", "10", "106", "108", "110", "113", "120", "121", "156", "157", "173"]
-    quick_pids = participants_list[:24] if len(participants_list) > 24 else participants_list
+    def _nat_sort_key(x: Any) -> tuple:
+        s = str(x)
+        if s.isdigit():
+            return (0, int(s), "")
+        import re
+        parts = re.split(r'(\d+)', s)
+        return (1, 0, [int(p) if p.isdigit() else p.lower() for p in parts])
+
+    raw_list = available_participants or ["0", "1", "10", "106", "108", "110", "113", "120", "121", "156", "157", "173"]
+    participants_list = sorted(list(raw_list), key=_nat_sort_key)
     participant_options = "".join(
         f'<option value="{p}" {"selected" if str(p) == str(participant_id) else ""}>Participant {p}</option>'
         for p in participants_list
     )
-    chip_items = []
-    for p in quick_pids:
-        active_cls = " active" if str(p) == str(participant_id) else ""
-        chip_items.append('<button class="cohort-chip' + active_cls + '" onclick="switchParticipant(\'' + str(p) + '\')">P' + str(p) + '</button>')
-    cohort_chips_html = "".join(chip_items)
+    pill_items = []
+    row_items = []
+    for p in participants_list:
+        p_str = str(p)
+        active_cls = " active" if p_str == str(participant_id) else ""
+        pill_items.append(
+            f'<button class="cohort-pill{active_cls}" data-pid="{p_str}" onclick="switchParticipant(\'{p_str}\')" title="Participant {p_str}">Pt {p_str}</button>'
+        )
+        row_items.append(
+            f'<div class="cohort-row-item{active_cls}" data-pid="{p_str}" onclick="switchParticipant(\'{p_str}\')">'
+            f'<span class="cohort-row-id">Pt {p_str}</span>'
+            f'<div class="cohort-row-tags"><span class="cohort-row-meta">Case {p_str}</span></div>'
+            f'</div>'
+        )
+    cohort_pills_html = "".join(pill_items)
+    cohort_list_rows_html = "".join(row_items)
 
     info = mpr_info or {
         "axial_count": num_slices,
@@ -879,12 +898,61 @@ def generate_ohif_3pane_viewer_html(
     .card-title {{ font-size: 10px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }}
     .card-sub {{ font-size: 8.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }}
 
-    /* Cohort Chips */
-    .cohort-section {{ padding: 8px; border-top: 1px solid #1e293b; }}
-    .cohort-chips {{ display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }}
-    .cohort-chip {{ font-size: 9.5px; background: #0f172a; border: 1px solid #334155; color: #94a3b8; border-radius: 3px; padding: 2px 5px; cursor: pointer; }}
-    .cohort-chip:hover {{ color: #fff; border-color: #38bdf8; }}
-    .cohort-chip.active {{ background: #0284c7; color: #fff; border-color: #38bdf8; }}
+    /* Cohort Navigator & Explorer Drawer */
+    .cohort-section {{ padding: 8px 10px; border-top: 1px solid #1e293b; display: flex; flex-direction: column; gap: 6px; background: #070b14; }}
+    .cohort-header-row {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }}
+    .cohort-header-title {{ font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }}
+    .cohort-badge {{ background: #082f49; color: #38bdf8; border: 1px solid #0369a1; padding: 1px 5px; border-radius: 10px; font-size: 9px; font-family: monospace; font-weight: 600; }}
+    .cohort-view-toggles {{ display: flex; align-items: center; gap: 2px; }}
+    .view-mode-btn {{ background: transparent; border: 1px solid #334155; border-radius: 3px; padding: 2px 5px; color: #64748b; cursor: pointer; font-size: 9.5px; line-height: 1; }}
+    .view-mode-btn.active {{ background: #0f172a; color: #38bdf8; border-color: #0284c7; font-weight: 600; }}
+
+    /* Cohort Search Bar */
+    .cohort-search-wrap {{ position: relative; display: flex; align-items: center; background: #020617; border: 1px solid #1e293b; border-radius: 4px; padding: 3px 6px; gap: 6px; transition: border-color 0.15s; }}
+    .cohort-search-wrap:focus-within {{ border-color: #0284c7; box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.4); }}
+    .cohort-search-icon {{ width: 12px; height: 12px; color: #64748b; flex-shrink: 0; }}
+    .cohort-search-input {{ flex: 1; background: transparent; border: none; outline: none; color: #f8fafc; font-size: 10.5px; font-family: inherit; }}
+    .cohort-search-input::placeholder {{ color: #475569; font-size: 10px; }}
+    .cohort-clear-btn {{ background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 13px; line-height: 1; padding: 0 2px; display: none; }}
+    .cohort-clear-btn:hover {{ color: #f8fafc; }}
+
+    /* Quick Filter Chips */
+    .cohort-filter-pills {{ display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }}
+    .cohort-filter-pills::-webkit-scrollbar {{ display: none; }}
+    .filter-pill {{ font-size: 9px; font-weight: 600; background: #0b1120; border: 1px solid #1e293b; color: #94a3b8; border-radius: 3px; padding: 2px 6px; cursor: pointer; white-space: nowrap; transition: all 0.12s; }}
+    .filter-pill:hover {{ background: #1e293b; color: #cbd5e1; }}
+    .filter-pill.active {{ background: rgba(2, 132, 199, 0.2); border-color: #0284c7; color: #38bdf8; }}
+
+    /* Scrollable Participant Container */
+    .cohort-scroll-container {{ max-height: 260px; overflow-y: auto; overflow-x: hidden; border: 1px solid #1e293b; border-radius: 4px; background: #030712; padding: 4px; scrollbar-width: thin; scrollbar-color: #334155 #0b1120; }}
+    .cohort-scroll-container::-webkit-scrollbar {{ width: 5px; }}
+    .cohort-scroll-container::-webkit-scrollbar-track {{ background: #0b1120; }}
+    .cohort-scroll-container::-webkit-scrollbar-thumb {{ background: #334155; border-radius: 3px; }}
+    .cohort-scroll-container::-webkit-scrollbar-thumb:hover {{ background: #0284c7; }}
+
+    /* Grid View: 4-Column Responsive Layout */
+    .cohort-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }}
+    .cohort-pill {{ position: relative; font-size: 9.5px; font-family: monospace; background: #0b1120; border: 1px solid #1e293b; color: #94a3b8; border-radius: 3px; padding: 3px 2px; text-align: center; cursor: pointer; transition: all 0.12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; gap: 2px; }}
+    .cohort-pill:hover {{ background: #1e293b; color: #f8fafc; border-color: #38bdf8; }}
+    .cohort-pill.active {{ background: #0284c7 !important; color: #ffffff !important; border-color: #38bdf8 !important; font-weight: 700; box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); }}
+    .cohort-pill.has-seg::after {{ content: ''; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #22c55e; margin-left: 2px; flex-shrink: 0; }}
+    .cohort-pill.hidden-by-filter {{ display: none !important; }}
+
+    /* List View: Rich Row Details */
+    .cohort-list {{ display: flex; flex-direction: column; gap: 3px; }}
+    .cohort-row-item {{ display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; border-radius: 3px; background: #0b1120; border: 1px solid #1e293b; cursor: pointer; transition: all 0.12s; }}
+    .cohort-row-item:hover {{ background: #1e293b; border-color: #38bdf8; }}
+    .cohort-row-item.active {{ background: rgba(2, 132, 199, 0.25) !important; border-color: #0284c7 !important; }}
+    .cohort-row-id {{ font-size: 10px; font-weight: 700; color: #f8fafc; font-family: monospace; }}
+    .cohort-row-tags {{ display: flex; align-items: center; gap: 4px; font-size: 8.5px; }}
+    .tag-seg {{ color: #4ade80; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); padding: 0 3px; border-radius: 2px; }}
+    .tag-gated {{ color: #38bdf8; background: rgba(2, 132, 199, 0.15); border: 1px solid rgba(2, 132, 199, 0.3); padding: 0 3px; border-radius: 2px; }}
+    .tag-cac {{ color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 0 3px; border-radius: 2px; }}
+    .cohort-row-meta {{ font-size: 8.5px; color: #64748b; font-family: monospace; }}
+    .cohort-row-item.hidden-by-filter {{ display: none !important; }}
+
+    /* Empty state */
+    .cohort-empty-state {{ padding: 12px 6px; text-align: center; color: #64748b; font-size: 10px; display: none; }}
 
     /* ========================================================= */
     /* CENTER VIEWPORTS: 2x2 Grid (100% Height, No Clunky Bottom Bar!) */
@@ -1034,6 +1102,11 @@ def generate_ohif_3pane_viewer_html(
         <button class="patient-step-btn" onclick="stepPatient(1)" title="Next Patient">&rsaquo;</button>
       </div>
 
+      <a href="/" class="badge-link" style="color:#38bdf8; border-color:#0284c7; display:inline-flex; align-items:center; gap:4px;" title="Return to Cardiac Fat Research Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="/report/{participant_id}/pdf" target="_blank" class="badge-link" style="color:#cbd5e1;" title="Clinical Diagnostic Report (PDF)">Report PDF</a>
       <a href="studies.json" target="_blank" class="badge-link" title="OHIF v3.13 Naturalized DICOM JSON Manifest">studies.json</a>
       <a href="https://ohif.org/release-notes/3p13" target="_blank" class="badge-link" title="OHIF v3.13 Release Notes">v3.13 Notes</a>
       <a href="https://viewer.ohif.org/local" id="btnLaunchOHIF" target="_blank" class="cloud-btn" title="Launch in official OHIF v3.13 Cloud Viewer">
@@ -1142,11 +1215,45 @@ def generate_ohif_3pane_viewer_html(
         </div>
       </div>
 
-      <!-- Cohort Quick Navigation Chips -->
+      <!-- Upgraded SOTA Cohort Navigator & Explorer -->
       <div class="cohort-section">
-        <div class="drawer-heading">COCA Cohort ({len(participants_list)})</div>
-        <div class="cohort-chips">
-          {cohort_chips_html}
+        <div class="cohort-header-row">
+          <div class="cohort-header-title">
+            <span>Cohort Explorer</span>
+            <span class="cohort-badge" id="cohortCountBadge">{len(participants_list)} Cases</span>
+          </div>
+          <div class="cohort-view-toggles">
+            <button class="view-mode-btn active" id="btnModeGrid" onclick="setCohortViewMode('grid')" title="Compact Grid View (See 40+ at once)">Grid</button>
+            <button class="view-mode-btn" id="btnModeList" onclick="setCohortViewMode('list')" title="Detailed List View (With CAC & metrics)">List</button>
+          </div>
+        </div>
+
+        <!-- Instant Search / Jump Input -->
+        <div class="cohort-search-wrap">
+          <svg class="cohort-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="cohortSearchInput" class="cohort-search-input" type="text" placeholder="Search / Jump ID (e.g. 506)..." oninput="onCohortSearch(this.value)" onkeydown="onCohortSearchKey(event)">
+          <button id="cohortClearBtn" class="cohort-clear-btn" onclick="clearCohortSearch()">&times;</button>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="cohort-filter-pills">
+          <button class="filter-pill active" id="fltAll" onclick="setCohortFilter('all')">All (<span id="cntAll">{len(participants_list)}</span>)</button>
+          <button class="filter-pill" id="fltSeg" onclick="setCohortFilter('seg')">3D Seg (<span id="cntSeg">...</span>)</button>
+          <button class="filter-pill" id="fltGated" onclick="setCohortFilter('gated')">Gated</button>
+          <button class="filter-pill" id="fltInflam" onclick="setCohortFilter('inflam')">Active Inflam</button>
+        </div>
+
+        <!-- Scrollable High-Performance Container -->
+        <div class="cohort-scroll-container" id="cohortScrollWrap">
+          <div class="cohort-grid" id="cohortGrid">
+            {cohort_pills_html}
+          </div>
+          <div class="cohort-list" id="cohortList" style="display:none;">
+            {cohort_list_rows_html}
+          </div>
+          <div class="cohort-empty-state" id="cohortEmptyState">
+            No participants match search query.
+          </div>
         </div>
       </div>
     </aside>
@@ -1958,6 +2065,9 @@ def generate_ohif_3pane_viewer_html(
   }}
 
   const currentParticipantId = "{participant_id}";
+  let currentCohortFilter = "all";
+  let currentCohortViewMode = "grid";
+  let cohortCasesData = null;
 
   function switchParticipant(pid) {{
     if (String(pid) === String(currentParticipantId)) return;
@@ -1972,6 +2082,222 @@ def generate_ohif_3pane_viewer_html(
       switchParticipant(sel.options[nextIdx].value);
     }}
   }}
+
+  function setCohortViewMode(mode) {{
+    currentCohortViewMode = mode;
+    const btnGrid = $('btnModeGrid');
+    const btnList = $('btnModeList');
+    const gridEl = $('cohortGrid');
+    const listEl = $('cohortList');
+
+    if (mode === 'grid') {{
+      btnGrid.classList.add('active');
+      btnList.classList.remove('active');
+      gridEl.style.display = 'grid';
+      listEl.style.display = 'none';
+    }} else {{
+      btnList.classList.add('active');
+      btnGrid.classList.remove('active');
+      gridEl.style.display = 'none';
+      listEl.style.display = 'flex';
+    }}
+    onCohortSearch($('cohortSearchInput').value);
+  }}
+
+  function setCohortFilter(filter) {{
+    currentCohortFilter = filter;
+    ['fltAll', 'fltSeg', 'fltGated', 'fltInflam'].forEach(id => {{
+      const el = $(id);
+      if (el) el.classList.remove('active');
+    }});
+
+    if (filter === 'all' && $('fltAll')) $('fltAll').classList.add('active');
+    else if (filter === 'seg' && $('fltSeg')) $('fltSeg').classList.add('active');
+    else if (filter === 'gated' && $('fltGated')) $('fltGated').classList.add('active');
+    else if (filter === 'inflam' && $('fltInflam')) $('fltInflam').classList.add('active');
+
+    onCohortSearch($('cohortSearchInput').value);
+  }}
+
+  function clearCohortSearch() {{
+    const input = $('cohortSearchInput');
+    if (input) {{
+      input.value = '';
+      onCohortSearch('');
+      input.focus();
+    }}
+  }}
+
+  function onCohortSearchKey(e) {{
+    if (e.key === 'Enter') {{
+      const firstPill = document.querySelector('.cohort-pill:not(.hidden-by-filter)');
+      if (firstPill && firstPill.dataset.pid) {{
+        switchParticipant(firstPill.dataset.pid);
+      }}
+    }}
+  }}
+
+  function onCohortSearch(query) {{
+    query = (query || '').trim().toLowerCase();
+    const clearBtn = $('cohortClearBtn');
+    if (clearBtn) {{
+      clearBtn.style.display = query ? 'block' : 'none';
+    }}
+
+    const pills = document.querySelectorAll('.cohort-pill');
+    const rows = document.querySelectorAll('.cohort-row-item');
+    let visibleCount = 0;
+
+    function matchesFilter(el) {{
+      const pid = (el.dataset.pid || '').toLowerCase();
+      if (query && !pid.includes(query)) return false;
+
+      if (currentCohortFilter === 'seg') {{
+        if (el.dataset.seg !== 'true') return false;
+      }} else if (currentCohortFilter === 'gated') {{
+        if (el.dataset.gated !== 'true') return false;
+      }} else if (currentCohortFilter === 'inflam') {{
+        if (el.dataset.inflam !== 'true') return false;
+      }}
+      return true;
+    }}
+
+    pills.forEach(el => {{
+      if (matchesFilter(el)) {{
+        el.classList.remove('hidden-by-filter');
+        visibleCount++;
+      }} else {{
+        el.classList.add('hidden-by-filter');
+      }}
+    }});
+
+    rows.forEach(el => {{
+      if (matchesFilter(el)) {{
+        el.classList.remove('hidden-by-filter');
+      }} else {{
+        el.classList.add('hidden-by-filter');
+      }}
+    }});
+
+    const badge = $('cohortCountBadge');
+    if (badge) {{
+      badge.textContent = `${{visibleCount}} Cases`;
+    }}
+
+    const empty = $('cohortEmptyState');
+    if (empty) {{
+      empty.style.display = (visibleCount === 0) ? 'block' : 'none';
+    }}
+  }}
+
+  function syncCohortCasesFromDashboard(cases) {{
+    if (!cases || !cases.length) return;
+    cohortCasesData = cases;
+
+    const caseMap = new Map();
+    let segCount = 0;
+    let gatedCount = 0;
+    let inflamCount = 0;
+
+    cases.forEach(c => {{
+      caseMap.set(String(c.participant_id), c);
+      if (c.has_seg) segCount++;
+      const isGated = c.scan_type && c.scan_type.toLowerCase().includes('gated');
+      if (isGated) gatedCount++;
+      const isInflam = c.crisp_ct_status && c.crisp_ct_status.toLowerCase().includes('active');
+      if (isInflam) inflamCount++;
+    }});
+
+    if ($('cntAll')) $('cntAll').textContent = cases.length;
+    if ($('cntSeg')) $('cntSeg').textContent = segCount;
+    if ($('fltGated')) $('fltGated').textContent = `Gated (${{gatedCount}})`;
+    if ($('fltInflam')) $('fltInflam').textContent = `Inflam (${{inflamCount}})`;
+    if ($('cohortCountBadge')) $('cohortCountBadge').textContent = `${{cases.length}} Cases`;
+
+    document.querySelectorAll('.cohort-pill').forEach(pill => {{
+      const pid = pill.dataset.pid;
+      const c = caseMap.get(pid);
+      if (c) {{
+        if (c.has_seg) {{
+          pill.dataset.seg = 'true';
+          pill.classList.add('has-seg');
+        }}
+        if (c.scan_type && c.scan_type.toLowerCase().includes('gated')) {{
+          pill.dataset.gated = 'true';
+        }}
+        if (c.crisp_ct_status && c.crisp_ct_status.toLowerCase().includes('active')) {{
+          pill.dataset.inflam = 'true';
+        }}
+        const eatVol = c.metrics && c.metrics['EAT Total Volume (cm3)'] ? c.metrics['EAT Total Volume (cm3)'].toFixed(1) : null;
+        const pvatHu = c.metrics && c.metrics['PVAT Total Mean Attenuation (HU)'] ? c.metrics['PVAT Total Mean Attenuation (HU)'].toFixed(1) : null;
+        let tip = `Patient ${{pid}} | ${{c.scan_type || 'CT'}}`;
+        if (eatVol) tip += `\\nEAT: ${{eatVol}} cm3 | PVAT: ${{pvatHu}} HU`;
+        if (c.calcium_risk_tier) tip += `\\nCAC: ${{c.calcium_risk_tier}}`;
+        pill.title = tip;
+      }}
+    }});
+
+    document.querySelectorAll('.cohort-row-item').forEach(row => {{
+      const pid = row.dataset.pid;
+      const c = caseMap.get(pid);
+      if (c) {{
+        if (c.has_seg) row.dataset.seg = 'true';
+        if (c.scan_type && c.scan_type.toLowerCase().includes('gated')) row.dataset.gated = 'true';
+        if (c.crisp_ct_status && c.crisp_ct_status.toLowerCase().includes('active')) row.dataset.inflam = 'true';
+
+        const tagWrap = row.querySelector('.cohort-row-tags');
+        if (tagWrap) {{
+          let tagsHtml = '';
+          if (c.scan_type) {{
+            const shortType = c.scan_type.toLowerCase().includes('gated') ? 'Gated' : 'Non-Gated';
+            tagsHtml += `<span class="tag-gated">${{shortType}}</span>`;
+          }}
+          if (c.has_seg) {{
+            tagsHtml += `<span class="tag-seg">3D SEG</span>`;
+          }}
+          if (c.calcium_risk_tier) {{
+            const tierShort = c.calcium_risk_tier.split(' ')[0];
+            tagsHtml += `<span class="tag-cac">${{tierShort}}</span>`;
+          }}
+          if (c.metrics && c.metrics['EAT Total Volume (cm3)']) {{
+            tagsHtml += `<span class="cohort-row-meta">${{c.metrics['EAT Total Volume (cm3)'].toFixed(0)}}cm3</span>`;
+          }}
+          tagWrap.innerHTML = tagsHtml;
+        }}
+      }}
+    }});
+
+    const sel = $('patientSelector');
+    if (sel && sel.options.length < cases.length) {{
+      const currentSelected = sel.value;
+      sel.innerHTML = cases.map(c => 
+        `<option value="${{c.participant_id}}" ${{String(c.participant_id) === String(currentSelected) ? 'selected' : ''}}>Participant ${{c.participant_id}}</option>`
+      ).join('');
+    }}
+  }}
+
+  function scrollActiveParticipantIntoView() {{
+    setTimeout(() => {{
+      const activePill = document.querySelector('.cohort-pill.active');
+      if (activePill) {{
+        activePill.scrollIntoView({{ block: 'center', behavior: 'smooth' }});
+      }}
+    }}, 150);
+  }}
+
+  fetch('/api/cohort/cases')
+    .then(r => {{
+      if (!r.ok) throw new Error('API not available');
+      return r.json();
+    }})
+    .then(data => {{
+      if (data && data.cases) {{
+        syncCohortCasesFromDashboard(data.cases);
+      }}
+    }})
+    .catch(() => {{}});
+
+  scrollActiveParticipantIntoView();
 
   function selectSeriesTile(plane) {{
     document.querySelectorAll('.series-card').forEach(c => c.classList.remove('active'));

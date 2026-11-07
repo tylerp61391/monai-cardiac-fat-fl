@@ -597,20 +597,68 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
 
         p = _ACTIVE_COHORT.participants[pid]
         export_dir = p.study_dir / "ohif_export"
+        html_file = export_dir / "index.html"
 
-        if not (export_dir / "index.html").exists():
-            from cardiac_fat_fl.ohif_exporter import export_sample_to_ohif
+        all_cohort_pids = list(_ACTIVE_COHORT.participants.keys())
 
+        # Upgrade/generate index.html with SOTA full cohort navigator if missing or older template
+        needs_html_refresh = False
+        if not html_file.exists():
+            needs_html_refresh = True
+        else:
             try:
-                export_sample_to_ohif(
-                    sample_dir=p.study_dir,
-                    available_participants=list(_ACTIVE_COHORT.participants.keys()),
-                )
-            except Exception as e:
-                return (
-                    f"<h3>Error generating OHIF viewer package for patient {pid}:</h3><pre>{e}</pre>",
-                    500,
-                )
+                idx_txt = html_file.read_text(encoding="utf-8", errors="ignore")
+                if "cohortSearchInput" not in idx_txt or "syncCohortCasesFromDashboard" not in idx_txt:
+                    needs_html_refresh = True
+            except Exception:
+                needs_html_refresh = True
+
+        if needs_html_refresh:
+            from cardiac_fat_fl.ohif_exporter import export_sample_to_ohif, generate_ohif_3pane_viewer_html
+
+            slices_dir = export_dir / "slices"
+            if slices_dir.exists() and any(slices_dir.glob("ct_*.png")):
+                try:
+                    num_slices = len(list(slices_dir.glob("ct_*.png")))
+                    cor_slices = len(list((export_dir / "coronal").glob("ct_*.png"))) or 256
+                    sag_slices = len(list((export_dir / "sagittal").glob("ct_*.png"))) or 256
+                    vol_frames = len(list((export_dir / "volume3d").glob("frame_*.png"))) or 36
+                    generate_ohif_3pane_viewer_html(
+                        participant_id=pid,
+                        output_dir=export_dir,
+                        num_slices=num_slices,
+                        summary_metrics=p.metrics or {},
+                        available_participants=all_cohort_pids,
+                        mpr_info={
+                            "axial_count": num_slices,
+                            "sag_count": sag_slices,
+                            "cor_count": cor_slices,
+                            "vol_frames": vol_frames,
+                            "spacing_mm": [3.0, 0.47, 0.47],
+                        },
+                    )
+                except Exception:
+                    try:
+                        export_sample_to_ohif(
+                            sample_dir=p.study_dir,
+                            available_participants=all_cohort_pids,
+                        )
+                    except Exception as ex:
+                        return (
+                            f"<h3>Error generating OHIF viewer package for patient {pid}:</h3><pre>{ex}</pre>",
+                            500,
+                        )
+            else:
+                try:
+                    export_sample_to_ohif(
+                        sample_dir=p.study_dir,
+                        available_participants=all_cohort_pids,
+                    )
+                except Exception as e:
+                    return (
+                        f"<h3>Error generating OHIF viewer package for patient {pid}:</h3><pre>{e}</pre>",
+                        500,
+                    )
 
         return send_file(export_dir / "index.html")
 

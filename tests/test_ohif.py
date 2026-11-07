@@ -71,3 +71,42 @@ def test_export_sample_to_ohif_synthetic(synthetic_nrrd_scan: Path) -> None:
     assert len(manifest["studies"][0]["series"]) == 2
     assert manifest["studies"][0]["series"][0]["Modality"] == "CT"
     assert manifest["studies"][0]["series"][1]["Modality"] == "SEG"
+
+    # Verify SOTA Cohort Explorer features in index.html
+    html_content = (result_dir / "index.html").read_text(encoding="utf-8")
+    assert "cohortSearchInput" in html_content
+    assert "cohortGrid" in html_content
+    assert "cohortList" in html_content
+    assert "btnModeGrid" in html_content
+    assert "btnModeList" in html_content
+    assert "fltSeg" in html_content
+    assert "fltInflam" in html_content
+    assert "syncCohortCasesFromDashboard" in html_content
+    assert "scrollActiveParticipantIntoView" in html_content
+
+
+def test_ohif_cohort_navigator_html_large_cohort(tmp_path: Path) -> None:
+    """Test generating OHIF viewer with a 100+ participant cohort and natural alphanumeric sorting."""
+    from cardiac_fat_fl.ohif_exporter import generate_ohif_3pane_viewer_html
+
+    sample_pids = [str(i) for i in range(120)] + ["nongated_0", "nongated_5", "nongated_12"]
+    html_file = generate_ohif_3pane_viewer_html(
+        participant_id="5",
+        output_dir=tmp_path,
+        num_slices=35,
+        available_participants=sample_pids,
+    )
+
+    assert html_file.exists()
+    content = html_file.read_text(encoding="utf-8")
+
+    # Check that all 123 participants are present in the grid and dropdown
+    assert "data-pid=\"5\"" in content
+    assert "data-pid=\"100\"" in content
+    assert "data-pid=\"nongated_12\"" in content
+    assert "<option value=\"5\" selected>" in content
+    assert "<option value=\"119\" >" in content
+    assert "Cohort Explorer" in content
+    assert "123 Cases" in content
+    assert "Report PDF" in content
+    assert "Dashboard" in content

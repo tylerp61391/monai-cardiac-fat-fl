@@ -84,6 +84,7 @@ class CohortHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                             or "viewportsGrid" not in idx_txt
                             or "Coronal CT" not in idx_txt
                             or "let isSpinning = true;" in idx_txt
+                            or "cohortSearchInput" not in idx_txt
                         ):
                             needs_export = True
                     except Exception:
@@ -186,7 +187,7 @@ def launch_viewer(
 
     export_dir = sample_path / "ohif_export"
     idx_file = export_dir / "index.html"
-    if not idx_file.exists() or "v3.13 Next" not in idx_file.read_text(encoding="utf-8", errors="ignore"):
+    if not idx_file.exists() or "v3.13 Next" not in idx_file.read_text(encoding="utf-8", errors="ignore") or "cohortSearchInput" not in idx_file.read_text(encoding="utf-8", errors="ignore"):
         print(f"Preparing OHIF DICOM study & segmentation package for {sample_path.name}...")
         export_dir = export_sample_to_ohif(sample_path, available_participants=all_pids)
     print(f"OHIF study ready at: {export_dir}")
