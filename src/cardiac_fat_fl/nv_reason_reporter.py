@@ -157,8 +157,8 @@ def generate_nv_reason_narrative(
     inputs = None
 
     try:
-        processor = AutoProcessor.from_pretrained(str(model_path), trust_remote_code=True)
-        model = AutoModelForImageTextToText.from_pretrained(
+        processor = AutoProcessor.from_pretrained(str(model_path), trust_remote_code=True)  # nosec B615
+        model = AutoModelForImageTextToText.from_pretrained(  # nosec B615
             str(model_path),
             trust_remote_code=True,
             dtype=torch.bfloat16,

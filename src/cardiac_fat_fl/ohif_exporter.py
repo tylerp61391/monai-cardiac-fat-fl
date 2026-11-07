@@ -2270,7 +2270,7 @@ def generate_ohif_3pane_viewer_html(
     const sel = $('patientSelector');
     if (sel && sel.options.length < cases.length) {{
       const currentSelected = sel.value;
-      sel.innerHTML = cases.map(c => 
+      sel.innerHTML = cases.map(c =>
         `<option value="${{c.participant_id}}" ${{String(c.participant_id) === String(currentSelected) ? 'selected' : ''}}>Participant ${{c.participant_id}}</option>`
       ).join('');
     }}

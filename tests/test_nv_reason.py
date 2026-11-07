@@ -89,8 +89,11 @@ def test_generate_nv_reason_narrative_mocked(mock_avail: MagicMock, tmp_path: Pa
         "PVAT Total Mean Attenuation (HU)": -73.0,
     }
 
-    with patch("transformers.AutoProcessor.from_pretrained", return_value=mock_processor), \
-         patch("transformers.AutoModelForImageTextToText.from_pretrained", return_value=mock_model):
+    mock_transformers = MagicMock()
+    mock_transformers.AutoProcessor.from_pretrained.return_value = mock_processor
+    mock_transformers.AutoModelForImageTextToText.from_pretrained.return_value = mock_model
+
+    with patch.dict("sys.modules", {"transformers": mock_transformers}):
         narrative = generate_nv_reason_narrative(
             ct_path=ct_file,
             metrics=metrics,

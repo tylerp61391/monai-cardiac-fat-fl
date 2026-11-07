@@ -203,7 +203,6 @@ def audit_study_anonymization(
         if mode == "research":
             # Check patient identity
             pname = str(getattr(ds, "PatientName", "") or "")
-            pid = str(getattr(ds, "PatientID", "") or "")
             if pname and not _is_pseudonymous_id(pname):
                 phi_count += 1
                 findings.append(DeidAuditFinding(
@@ -309,7 +308,7 @@ def anonymize_dicom_series(
 
     # Deterministic date shift if not explicitly provided
     if date_shift_days is None:
-        hash_val = int(hashlib.md5(f"{salt}_{pid}".encode("utf-8")).hexdigest()[:6], 16)
+        hash_val = int(hashlib.sha256(f"{salt}_{pid}".encode("utf-8")).hexdigest()[:6], 16)
         date_shift_days = (hash_val % 730) - 365  # Between -365 and +365 days
 
     shift_delta = timedelta(days=date_shift_days)

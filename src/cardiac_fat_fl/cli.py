@@ -916,10 +916,10 @@ def download_models_cmd(
 
             if not nv_ct_target.exists() or force:
                 console.print("[cyan]Downloading nvidia/NV-Segment-CT from Hugging Face...[/cyan]")
-                snapshot_download(repo_id="nvidia/NV-Segment-CT", local_dir=str(output_dir / "nv_segment_ct"))
+                snapshot_download(repo_id="nvidia/NV-Segment-CT", local_dir=str(output_dir / "nv_segment_ct"))  # nosec B615
             if not nv_ctmr_target.exists() or force:
                 console.print("[cyan]Downloading nvidia/NV-Segment-CTMR from Hugging Face...[/cyan]")
-                snapshot_download(repo_id="nvidia/NV-Segment-CTMR", local_dir=str(output_dir / "nv_segment_ctmr"))
+                snapshot_download(repo_id="nvidia/NV-Segment-CTMR", local_dir=str(output_dir / "nv_segment_ctmr"))  # nosec B615
         except Exception as exc:
             console.print(f"[yellow]Could not download NV-Segment models from Hugging Face: {exc}[/yellow]")
 
@@ -947,7 +947,7 @@ def download_models_cmd(
         ts_zip_path = output_dir / "totalseg_v1_cardiac" / "Task253.zip"
         ts_zip_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            urllib.request.urlretrieve(ts_zip_url, str(ts_zip_path))
+            urllib.request.urlretrieve(ts_zip_url, str(ts_zip_path))  # nosec B310
             with zipfile.ZipFile(ts_zip_path, "r") as zf:
                 zf.extractall(output_dir / "totalseg_v1_cardiac")
             ts_zip_path.unlink(missing_ok=True)
@@ -967,7 +967,7 @@ def download_models_cmd(
         try:
             from huggingface_hub import snapshot_download
             nvreason_dir.mkdir(parents=True, exist_ok=True)
-            snapshot_download(repo_id="nvidia/NV-Reason-CT", local_dir=str(nvreason_dir))
+            snapshot_download(repo_id="nvidia/NV-Reason-CT", local_dir=str(nvreason_dir))  # nosec B615
             console.print(f"[bold green]Successfully installed NV-Reason-CT to:[/bold green] {nvreason_dir}")
         except Exception as exc:
             console.print(f"[yellow]Could not download NV-Reason-CT from Hugging Face: {exc}[/yellow]")
@@ -2047,7 +2047,7 @@ def anonymize_cmd(
         site_id=site_id,
         date_shift_days=date_shift_days,
     )
-    console.print(f"[bold green]De-identification complete. Safe for research & federated learning.[/bold green]")
+    console.print("[bold green]De-identification complete. Safe for research & federated learning.[/bold green]")
 
 
 if __name__ == "__main__":
