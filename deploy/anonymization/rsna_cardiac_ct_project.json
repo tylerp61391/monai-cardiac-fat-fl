@@ -1,0 +1,34 @@
+{
+  "version": "19.0.10",
+  "project_name": "CardiacFatResearch",
+  "site_id": "SITE01",
+  "storage_dir": "anonymized_cohort",
+  "language_code": "en",
+  "uid_root": "2.25",
+  "date_shift_enabled": true,
+  "date_shift_range_days": 365,
+  "anonymize_free_text": true,
+  "rules": {
+    "retain_patient_characteristics": true,
+    "retain_device_identity": true,
+    "retain_longitudinal_temporal_information": true,
+    "retain_safe_private": true,
+    "mandatory_preserved_elements": [
+      "(0028,0030)",
+      "(0018,0050)",
+      "(0020,0032)",
+      "(0020,0037)",
+      "(0028,1052)",
+      "(0028,1053)",
+      "(0018,0060)",
+      "(0018,1210)",
+      "(0010,0040)",
+      "(0010,1010)"
+    ]
+  },
+  "ai_batch_config": {
+    "enable_pixel_ocr": false,
+    "ocr_scout_only": true,
+    "enable_face_blurring": false
+  }
+}

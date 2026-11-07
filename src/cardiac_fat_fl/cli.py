@@ -257,6 +257,11 @@ def quantify(
         "--resume/--no-resume",
         help="Resume execution by skipping participant IDs already recorded in destination CSV.",
     ),
+    mode: str = typer.Option(
+        "research",
+        "--mode",
+        help="Pipeline execution mode: 'research' (enforces de-identification & pseudonyms) or 'clinical' (preserves patient identity for EHR/PACS).",
+    ),
 ) -> None:
     """Execute end-to-end quantification across participants in source_dir."""
     console.print(f"[bold cyan]Scanning directory:[/bold cyan] {source_dir}")
@@ -1323,6 +1328,11 @@ def daemon_cmd(
         "--insecure",
         help="Disable SSL/TLS certificate verification for local development testbeds.",
     ),
+    mode: str = typer.Option(
+        "clinical",
+        "--mode",
+        help="Operational mode: 'clinical' (preserves patient identity for hospital PACS/EHR) or 'research' (enforces de-identification).",
+    ),
 ) -> None:
     """Run the Automated PACS Watchdog & Auto-Router Daemon.
 
@@ -1438,6 +1448,11 @@ def report_cmd(
         False,
         "--overwrite",
         help="Re-generate reports even if cardiac_fat_report.pdf already exists on disk.",
+    ),
+    mode: str = typer.Option(
+        "research",
+        "--mode",
+        help="Report execution mode: 'research' (de-identified pseudonyms) or 'clinical' (preserves real patient MRN, Name, and hospital metadata).",
     ),
 ) -> None:
     """Generate a SOTA clinical-grade cardiovascular imaging report (Cleerly / HeartFlow style).
@@ -1928,6 +1943,111 @@ def parity_audit(
         f"Overall Mean Dice: {report.get('mean_overall_dice', 0.0):.6f} | "
         f"EAT Vol MAE: {cp_d.get('eat_volume_mae_cm3', 0.0):.3f} cm3"
     )
+
+
+@app.command(name="deid-audit")
+def deid_audit_cmd(
+    target_path: Path = typer.Argument(
+        ...,
+        help="Path to study directory, single DICOM, or full cohort.",
+        exists=True,
+        resolve_path=True,
+    ),
+    mode: str = typer.Option(
+        "research",
+        "--mode",
+        help="Evaluation mode: 'research' (enforces zero PHI) or 'clinical' (verifies geometry only).",
+    ),
+    output_report: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Optional path to export JSON audit report.",
+    ),
+    sanitize: bool = typer.Option(
+        False,
+        "--sanitize",
+        help="Automatically de-identify and sanitize any detected PHI leaks into an 'anonymized/' subfolder.",
+    ),
+) -> None:
+    """Pre-flight audit for DICOM PS 3.15 Annex E & HIPAA Safe Harbor de-identification compliance."""
+    from cardiac_fat_fl.anonymizer import audit_study_anonymization, anonymize_dicom_series
+    import json
+
+    console.print(f"[cyan]Auditing DICOM de-identification ({mode} mode) on: {target_path}[/cyan]")
+    report = audit_study_anonymization(target_path, mode=mode)
+
+    status_color = "green" if report.is_anonymized else "red"
+    console.print(
+        f"[{status_color}]Audit Result: {report.summary.get('status', 'FAIL')} - {report.summary.get('message', '')}[/{status_color}]"
+    )
+    console.print(
+        f"Files scanned: {report.total_files_scanned} | PHI Leaks: {report.phi_leaks_found} | Geometry Defects: {report.geometry_defects_found}"
+    )
+
+    if output_report is not None:
+        output_report.parent.mkdir(parents=True, exist_ok=True)
+        output_report.write_text(json.dumps(report.to_dict(), indent=2), encoding="utf-8")
+        console.print(f"[green]Saved audit report to {output_report}[/green]")
+
+    if sanitize and not report.is_anonymized:
+        clean_dir = (
+            target_path.parent / f"{target_path.name}_anonymized"
+            if target_path.is_dir()
+            else target_path.parent / "anonymized"
+        )
+        console.print(f"[yellow]Auto-sanitizing detected PHI leaks to {clean_dir}...[/yellow]")
+        anonymize_dicom_series(target_path, clean_dir)
+        console.print(f"[bold green]Successfully sanitized study to {clean_dir}[/bold green]")
+
+    if not report.is_anonymized and not sanitize:
+        raise typer.Exit(code=1)
+
+
+@app.command(name="anonymize")
+def anonymize_cmd(
+    source_dir: Path = typer.Argument(
+        ...,
+        help="Source directory containing raw DICOM series.",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        resolve_path=True,
+    ),
+    output_dir: Path = typer.Option(
+        ...,
+        "--output-dir",
+        "-o",
+        help="Destination directory for de-identified DICOM files.",
+    ),
+    pseudonym_id: Optional[str] = typer.Option(
+        None,
+        "--id",
+        help="Pseudonym participant ID (e.g. SITE01_0001). Defaults to folder name.",
+    ),
+    site_id: str = typer.Option(
+        "RESEARCH",
+        "--site-id",
+        help="Clinical site identifier prefix.",
+    ),
+    date_shift_days: Optional[int] = typer.Option(
+        None,
+        "--shift-days",
+        help="Days to shift dates (defaults to deterministic hash offset).",
+    ),
+) -> None:
+    """Batch de-identify a DICOM study or cohort with strict cardiac geometry and HU preservation."""
+    from cardiac_fat_fl.anonymizer import anonymize_dicom_series
+
+    console.print(f"[cyan]De-identifying DICOM series from {source_dir} to {output_dir}...[/cyan]")
+    anonymize_dicom_series(
+        input_dir=source_dir,
+        output_dir=output_dir,
+        pseudonym_id=pseudonym_id,
+        site_id=site_id,
+        date_shift_days=date_shift_days,
+    )
+    console.print(f"[bold green]De-identification complete. Safe for research & federated learning.[/bold green]")
 
 
 if __name__ == "__main__":
