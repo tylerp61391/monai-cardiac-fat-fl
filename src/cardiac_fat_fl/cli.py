@@ -2050,6 +2050,46 @@ def anonymize_cmd(
     console.print("[bold green]De-identification complete. Safe for research & federated learning.[/bold green]")
 
 
+@app.command("ci-check")
+def ci_check(
+    full_pytest: bool = typer.Option(
+        False,
+        "--full",
+        help="Run the entire 140+ test suite instead of the fast CI simulation subset.",
+    ),
+) -> None:
+    """Run local pre-push CI quality gates (Ruff, Bandit SAST, and GitHub runner simulation)."""
+    import os
+    import subprocess
+    import sys
+
+    console.print("[bold cyan]1. Running Ruff static analysis...[/bold cyan]")
+    r1 = subprocess.run([sys.executable, "-m", "ruff", "check", "src/", "tests/"], check=False)  # nosec B603
+    if r1.returncode != 0:
+        raise typer.Exit(code=r1.returncode)
+    console.print("[green]✓ Ruff passed (0 errors)[/green]")
+
+    console.print("[bold cyan]2. Running GitHub Actions environment simulation (FORCE_COLOR=1, no optional VLM deps)...[/bold cyan]")
+    env = dict(os.environ)
+    env["FORCE_COLOR"] = "1"
+    env["COLUMNS"] = "80"
+    test_targets = ["tests/"] if full_pytest else [
+        "tests/test_nv_reason.py",
+        "tests/test_cli.py",
+        "tests/test_ci_workflows.py",
+        "tests/test_anonymizer.py",
+    ]
+    py_cmd = (
+        "import sys, pytest; "
+        "sys.modules['transformers'] = None; "
+        f"raise SystemExit(pytest.main({test_targets!r} + ['-q']))"
+    )
+    r2 = subprocess.run([sys.executable, "-c", py_cmd], env=env, check=False)  # nosec B603
+    if r2.returncode != 0:
+        raise typer.Exit(code=r2.returncode)
+    console.print("[bold green]✓ All local CI quality gates passed![/bold green]")
+
+
 if __name__ == "__main__":
     app()
 

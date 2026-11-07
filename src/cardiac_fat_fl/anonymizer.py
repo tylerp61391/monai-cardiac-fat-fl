@@ -150,32 +150,60 @@ def _hash_uid(uid: str, salt: str = "cardiac_fat_fl_salt") -> str:
 def audit_study_anonymization(
     target_path: Union[str, Path],
     mode: str = "research",
+    max_files: Optional[int] = None,
 ) -> DeidAuditReport:
     """Audit a single DICOM file, study folder, or batch cohort for PHI leaks and geometry integrity.
 
     Args:
         target_path: Path to DICOM file or directory.
         mode: "research" (enforces strict de-identification) or "clinical" (allows identified data).
+        max_files: Optional maximum number of files to inspect (useful for fast UI sampling across large cohorts).
 
     Returns:
         DeidAuditReport with pass/fail status and detailed findings.
     """
     path = Path(target_path).resolve()
     dcm_files: List[Path] = []
+    nrrd_files: List[Path] = []
     if path.is_file():
-        dcm_files = [path]
+        if path.suffix.lower() == ".nrrd":
+            nrrd_files = [path]
+        else:
+            dcm_files = [path]
     elif path.is_dir():
-        dcm_files = [
-            f for f in path.rglob("*")
-            if f.is_file() and not f.name.startswith(".") and f.suffix.lower() in ("", ".dcm", ".ima")
-        ]
+        for f in path.rglob("*"):
+            if not f.is_file() or f.name.startswith("."):
+                continue
+            sfx = f.suffix.lower()
+            if sfx in ("", ".dcm", ".ima"):
+                dcm_files.append(f)
+            elif f.name == "img.nrrd" or f.name == "scan.nrrd":
+                nrrd_files.append(f)
+            if max_files is not None and (len(dcm_files) + len(nrrd_files)) >= max_files:
+                break
 
-    total = len(dcm_files)
+    total = len(dcm_files) + len(nrrd_files)
     findings: List[DeidAuditFinding] = []
     phi_count = 0
     geom_count = 0
 
     mode = mode.lower()
+
+    for nf in nrrd_files:
+        try:
+            import nrrd
+            header = nrrd.read_header(str(nf))
+            if "space directions" not in header and "spacings" not in header:
+                geom_count += 1
+                findings.append(DeidAuditFinding(
+                    file_path=str(nf.name),
+                    tag="NRRD:space_directions",
+                    tag_name="SpaceDirections",
+                    risk_level="GEOMETRY_DEFECT",
+                    detail="Missing mandatory 3D NRRD spacing/affine header",
+                ))
+        except Exception:
+            continue
 
     for f in dcm_files:
         try:

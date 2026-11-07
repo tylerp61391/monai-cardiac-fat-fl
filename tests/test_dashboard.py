@@ -307,5 +307,40 @@ def test_dashboard_report_routes(test_app):
     assert res_404.status_code == 404
 
 
+def test_dashboard_privacy_and_regulatory_routes(test_app):
+    """Verify Privacy Gate PHI/Geometry audit, RSNA V19 config download, and SaMD blueprint routes."""
+    client = test_app.test_client()
+
+    # 1. Privacy Audit in research mode
+    res_audit = client.post("/api/privacy/audit", json={"mode": "research", "max_files": 50})
+    assert res_audit.status_code == 200
+    data = res_audit.get_json()
+    assert data["mode_evaluated"] == "research"
+    assert data["is_anonymized"] is True
+    assert data["phi_leaks_found"] == 0
+    assert data["geometry_defects_found"] == 0
+    assert len(data["mandatory_geometry_tags"]) == 6
+
+    # 2. RSNA V19 Config Download
+    res_cfg = client.get("/api/privacy/rsna-config?project_name=TestCohort&site_id=MGH01")
+    assert res_cfg.status_code == 200
+    assert res_cfg.mimetype == "application/json"
+    cfg_json = res_cfg.get_json()
+    assert cfg_json["version"] == "19.0.10"
+    assert cfg_json["project_name"] == "TestCohort"
+    assert cfg_json["site_id"] == "MGH01"
+
+    # 3. SaMD Regulatory Blueprint routes
+    res_bp_html = client.get("/api/regulatory/blueprint?format=html")
+    assert res_bp_html.status_code == 200
+    res_bp_pdf = client.get("/api/regulatory/blueprint?format=pdf")
+    assert res_bp_pdf.status_code == 200
+    assert res_bp_pdf.mimetype == "application/pdf"
+    res_bp_png = client.get("/api/regulatory/blueprint?format=png")
+    assert res_bp_png.status_code == 200
+    assert res_bp_png.mimetype == "image/png"
+
+
+
 
 
