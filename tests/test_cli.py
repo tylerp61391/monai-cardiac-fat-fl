@@ -165,11 +165,14 @@ def test_cli_benchmark_command(synthetic_cohort_dir: Path, tmp_path: Path) -> No
 
 def test_cli_download_models_help_and_options() -> None:
     """Test CLI download-models command help and parameter registration."""
-    result = runner.invoke(app, ["download-models", "--help"])
+    import re
+
+    result = runner.invoke(app, ["download-models", "--help"], env={"NO_COLOR": "1", "TERM": "dumb"})
     assert result.exit_code == 0
-    assert "--include-wholebody" in result.stdout
-    assert "--include-nvsegment" in result.stdout
-    assert "--include-totalseg" in result.stdout
-    assert "--include-nvreason" in result.stdout
-    assert "--include-all" in result.stdout
+    clean_out = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
+    assert "--include-wholebody" in clean_out
+    assert "--include-nvsegment" in clean_out
+    assert "--include-totalseg" in clean_out
+    assert "--include-nvreason" in clean_out
+    assert "--include-all" in clean_out
 
