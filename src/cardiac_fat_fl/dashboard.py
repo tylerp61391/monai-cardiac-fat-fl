@@ -1539,14 +1539,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
                 <th onclick="sortTableBy('crisp_ct_status')" class="px-4 py-3 cursor-pointer hover:text-white transition">
                   CRISP-CT Status <i id="sortIcon_crisp_ct_status" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
                 </th>
-                <th onclick="sortTableBy('has_seg')" class="px-4 py-3 cursor-pointer hover:text-white transition select-none">
-                  Artifacts <i id="sortIcon_has_seg" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
-                </th>
                 <th class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="casesTableBody" class="divide-y divide-slate-700/60">
-              <tr><td colspan="10" class="text-center py-8 text-slate-400">Loading cases...</td></tr>
+              <tr><td colspan="9" class="text-center py-8 text-slate-400">Loading cases...</td></tr>
             </tbody>
           </table>
         </div>
@@ -3206,21 +3203,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     function renderCasesTable(cases) {
       const tbody = document.getElementById('casesTableBody');
       if (cases.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-slate-400">No matching cases found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-8 text-slate-400">No matching cases found</td></tr>';
         return;
       }
 
       tbody.innerHTML = cases.map((c, idx) => {
-        const segBadge = c.has_seg
-          ? `<a href="/patient/${encodeURIComponent(c.participant_id)}/" target="_blank"
-                class="px-2.5 py-1 rounded bg-emerald-950/80 hover:bg-emerald-800 text-emerald-300 hover:text-white border border-emerald-500/50 text-[10px] font-semibold flex items-center gap-1.5 transition shadow-sm group cursor-pointer"
-                title="Launch OHIF 2D MPR & 3D Slicer Viewer for Patient ${c.participant_id}">
-               <i class="fa-solid fa-cube text-[10px] text-emerald-400 group-hover:scale-110 transition-transform"></i>
-               <span>Segmented</span>
-               <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-75 group-hover:opacity-100"></i>
-             </a>`
-          : '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-500 text-[10px] border border-slate-700/50">Unsegmented</span>';
-
         const inflamBadge = c.crisp_ct_status === 'Active Vascular Inflammation'
           ? '<span class="px-2 py-0.5 rounded bg-rose-900/60 text-rose-400 border border-rose-500/40 text-[10px]"><i class="fa-solid fa-fire text-[9px] mr-1"></i>Active</span>'
           : `<span class="text-slate-400 text-[11px]">${c.crisp_ct_status}</span>`;
@@ -3235,7 +3222,6 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             <td class="px-4 py-2.5 font-mono text-slate-300">${c.pvat_volume_cm3 !== null && c.pvat_volume_cm3 !== undefined ? c.pvat_volume_cm3.toFixed(2) + ' cm³' : '--'}</td>
             <td class="px-4 py-2.5 font-mono text-indigo-300">${c.pvat_mean_hu !== null && c.pvat_mean_hu !== undefined ? c.pvat_mean_hu.toFixed(1) + ' HU' : '--'}</td>
             <td class="px-4 py-2.5">${inflamBadge}</td>
-            <td class="px-4 py-2.5 flex items-center gap-1.5">${segBadge}</td>
             <td class="px-4 py-2.5 text-right space-x-1.5 whitespace-nowrap">
               ${c.has_report_pdf ? `
                 <a href="/report/${encodeURIComponent(c.participant_id)}/pdf" target="_blank"
@@ -3252,12 +3238,12 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
               ` : '')}
               ${c.has_seg ? `
                 <a href="/patient/${encodeURIComponent(c.participant_id)}/" target="_blank"
-                   class="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 text-xs font-medium px-2 py-0.5 rounded bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 transition shadow-sm"
-                   title="Open interactive OHIF Viewer for Patient ${c.participant_id}">
-                  <i class="fa-solid fa-cube text-[10px]"></i> View OHIF
+                   class="inline-flex items-center gap-1 text-emerald-300 hover:text-white text-xs font-medium px-2.5 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-800 border border-emerald-500/40 transition shadow-sm"
+                   title="Open interactive OHIF v3.13 Viewer for Patient ${c.participant_id}">
+                  <i class="fa-solid fa-cube text-[10px] text-emerald-400"></i> View OHIF
                 </a>
-              ` : ''}
-              <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-400 hover:text-sky-300 text-xs font-medium px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 transition">Deep Dive</button>
+              ` : '<span class="px-2 py-0.5 rounded bg-slate-800/80 text-slate-500 text-[10px] border border-slate-700/50">Unsegmented</span>'}
+              <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-400 hover:text-sky-300 text-xs font-medium px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">Deep Dive</button>
             </td>
           </tr>
         `;
