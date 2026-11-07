@@ -42,7 +42,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `publication_figure.py` | 420 | `generate_publication_figure` | 300 DPI publication-grade multi-panel composite figure generator formatted for peer-reviewed cardiovascular imaging journals (*JACC*, *Radiology*, *Circulation*). |
 | `dashboard.py` | 2260 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard & embedded OHIF workstation server (Flask, Chart.js, KPI scorecards, interactive SVG box plots across 5 CAC tiers with ANOVA/Kruskal scorecards, bivariate regression model, 300 DPI publication figure export endpoint `/api/cohort/publication-figure`, case explorer, `/viewer/<pid>/` launcher, DICE benchmark runner). |
 | `segmentation_evaluator.py` | 480 | `SegmentationBenchmarkEngine`, `CohortBenchmarkReport`, `compute_compartment_dice`, `compute_volume_metrics`, `compute_surface_distance_metrics` | Extensible multi-compartment segmentation evaluation, DICE metrics, IoU, RVE, MASD/HD95. |
-| `cli.py` | 1714 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `federated-simulate`; **L480**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark`; **L1425**: `fhir-export`; **L1582**: `fhir-server`; **L1620**: `mcp-server`; **L1650**: `parity-audit` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cli.py` | 2040 | **L51**: `_process_one_participant`; **L176**: `quantify`; **L361**: `federated-train`; **L399**: `federated-stats`; **L418**: `federated-simulate`; **L480**: `compare-models`; **L501**: `view`; **L524**: `export-ohif`; **L546**: `hardware`; **L553**: `download-models`; **L627**: `push`; **L934**: `map-run`; **L990**: `daemon`; **L1100**: `report`; **L1310**: `dashboard`; **L1340**: `benchmark`; **L1425**: `fhir-export`; **L1582**: `fhir-server`; **L1620**: `mcp-server`; **L1650**: `parity-audit`; **L1949**: `deid-audit`; **L2008**: `anonymize` | Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `coca_parity.py` | 1810 | `run_architectural_parity_audit`, `compute_cardiacfatquant_eat_pvat_masks`, `rasterize_coca_calcium_xml`, `align_eat_pvat_channels_from_cardiacfatquant_header`, `HARVARD_7_RULES` | 4-checkpoint end-to-end architectural parity engine and direct execution bridge for Harvard/MGH `circ-ml/CardiacFatQuant` vs. `monai-cardiac-fat-fl` on Stanford COCA. |
 | `nv_reason_reporter.py` | 225 | `is_nv_reason_available`, `clean_vlm_narrative`, `build_clinical_prompt`, `generate_nv_reason_narrative` | NVIDIA NV-Reason-CT 3D Vision-Language AI Radiologist (3D ViT + Qwen3.5-4B), BF16 / SDPA, ML tag sanitization (`KEY FINDINGS:`), and structured narrative report generator. |
 | `federated_simulator.py` | 185 | `run_federated_simulation`, `ensure_nvflare_windows_compatibility` | Turnkey SOTA NVIDIA FLARE 2.5+ multi-hospital simulation runner with automated Windows OS compatibility patching. |
@@ -408,6 +408,46 @@ To download and cryptographically verify model checkpoints across all tracks (De
    - NVIDIA NV-Reason-CT 3D VLM: `cardiac-fat-fl download-models --include-nvreason --nvreason-dir "E:\models\NV-Reason-CT"` (or `python scripts/download_nv_reason_ct.py`)
 3. **Cryptographic Verification**:
    All files are validated against official SHA-256 digests in [`models/checksums.sha256`](models/checksums.sha256) and `KNOWN_MODEL_SHA256` in `cli.py`. Full details in [`MODEL_RELEASE_INSTRUCTIONS.md`](MODEL_RELEASE_INSTRUCTIONS.md).
+
+---
+
+### Recipe 15: DICOM De-Identification, Pre-Flight PHI Audit & Dual-Mode Processing (Clinical vs. Research)
+
+To ensure HIPAA Safe Harbor (45 CFR § 164.514(b)(2)) and DICOM PS 3.15 Annex E compliance while supporting hospital clinical deployment:
+
+1. **Dual-Mode Operational Scope**:
+   - `--mode clinical`: Hospital intranet trust zone. Preserves `PatientName`, `PatientID` (MRN), `AccessionNumber`, and `StudyDate` so generated DICOM-SEG, DICOM-SR, PDF reports, and HL7 FHIR records file into the patient's EHR chart. Blocked from crossing firewalls.
+   - `--mode research` (default): De-identified research/FL consortium zone. Replaces PHI with pseudonyms (`Participant {pid}`), hashes UIDs, and shifts dates. Pre-flight audit blocks raw PHI leaks.
+
+2. **Pre-Flight PHI Audit Gate (`cardiac-fat-fl deid-audit`)**:
+
+   ```bash
+   # Audit cohort before research export or federated learning (fails with code 1 if PHI is leaked)
+   cardiac-fat-fl deid-audit "path/to/cohort" --mode research
+
+   # Audit and automatically scrub lingering PHI tags in-place
+   cardiac-fat-fl deid-audit "path/to/cohort" --mode research --sanitize --output audit_report.json
+   ```
+
+3. **High-Throughput Batch De-Identification (1,000s of CT Scans)**:
+   - **Method A: RSNA Anonymizer (V19) via Isolated Runner**:
+     Executes RSNA V19 via `uv tool run` in an isolated virtual environment, completely preventing dependency downgrade conflicts with modern NumPy 2.x and PyTorch:
+
+     ```bash
+     uv tool run --from rsna-anonymizer rsna-anonymizer \
+       --project deploy/anonymization/rsna_cardiac_ct_project.json \
+       --input "raw_hospital_cohort/" \
+       --output "research_cohort_deid/"
+     ```
+
+   - **Method B: Native High-Throughput CLI**:
+
+     ```bash
+     cardiac-fat-fl anonymize "raw_hospital_cohort/" -o "research_cohort_deid/" --mode research
+     ```
+
+4. **Preserved Radiometric & Volumetric Invariants**:
+   Under all de-identification procedures, spatial geometry tags (`(0028,0030)` PixelSpacing, `(0018,0050)` SliceThickness, `(0020,0032)` ImagePositionPatient, `(0020,0037)` ImageOrientationPatient) and HU calibration (`(0028,1052)` RescaleIntercept, `(0028,1053)` RescaleSlope) MUST remain intact. Volumetric pixel OCR is bypassed to prevent slice corruption.
 
 ---
 

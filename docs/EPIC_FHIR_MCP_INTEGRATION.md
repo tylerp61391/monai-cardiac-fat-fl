@@ -398,39 +398,10 @@ Add the server to your client's configuration (e.g., `claude_desktop_config.json
 
 ---
 
-## 6. Native Cardiac AI & open.epic Model Context Protocol (MCP) Server
+## 7. Dual-Mode Identity Binding & HIPAA De-Identification
 
-`monai-cardiac-fat-fl` provides a native **Model Context Protocol (MCP) Server** (`src/cardiac_fat_fl/epic_mcp_server.py`) that bridges 3D CT AI inference, HL7 FHIR EHR archives, and clinical cohort analytics directly to AI coding assistants and autonomous agents.
+When exporting FHIR R4 bundles or pushing to institutional EHR endpoints:
 
-### Connecting the Native MCP Server to AI Clients
-
-Add the server to your client's configuration (e.g., `claude_desktop_config.json` or Antigravity MCP settings):
-
-```json
-{
-  "mcpServers": {
-    "cardiac-fat-epic": {
-      "command": "python",
-      "args": [
-        "-m",
-        "cardiac_fat_fl.cli",
-        "mcp-server",
-        "--fhir-url",
-        "http://127.0.0.1:8050/r4"
-      ]
-    }
-  }
-}
-```
-
-### Registered Clinical & Imaging Tools
-
-| Tool Name | Parameters | Responsibility & Clinical Output |
-| :--- | :--- | :--- |
-| `epic_get_patient_observations` | `patient_id`, `code` (optional) | Retrieves discrete EAT volume (LOINC `84245-0`) and vessel PVAT HU (RadLex `RID49533`) with CRISP-CT vascular inflammation warnings. |
-| `epic_get_diagnostic_report` | `patient_id` | Fetches finalized cardiology reports, narrative impressions, and referenced observation IDs. |
-| `epic_create_diagnostic_report` | `patient_id`, `conclusion`, `status` | Submits a structured cardiology diagnostic report into the EHR. |
-| `epic_create_document_reference` | `patient_id`, `file_path`, `title` | Files clinical vector PDFs or images into Epic Chart Review via base64 FHIR `DocumentReference`. |
-| `cardiac_quantify_study` | `study_path`, `save_seg`, `push_pacs_url`, `push_fhir_url` | Triggers automated 3D SegResNet segmentation and adipose quantification with optional PACS and EHR filing. |
-| `cardiac_get_cohort_summary` | `cohort_dir` (optional) | Returns cohort-wide Agatston CAC tier distributions, mean EAT burden, and CRISP-CT inflammation rates. |
-| `open_epic_lookup_code` | `concept` ('eat', 'pvat', 'diagnostic_report', 'all') | Inspects open.epic terminology standards, LOINC/RadLex codes, and US Core profiles. |
+- **Clinical Mode (`--mode clinical`)**: Binds directly to the real institutional MRN (`Patient/MRN_12345`) and Accession Number so resources index into the official patient chart in Epic Hyperspace.
+- **Research Mode (`--mode research`)**: Generates pseudonymized references (`Patient/Participant_0506`) with shifted timestamps compliant with HIPAA Safe Harbor (45 CFR § 164.514(b)(2)).
+- For complete de-identification specifications, see [`docs/DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md`](DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md) and [`SECURITY.md`](../SECURITY.md).

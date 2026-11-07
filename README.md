@@ -329,6 +329,49 @@ Modernizing the legacy Python 2.7 / TensorFlow 1.14 CPU pipeline into Python 3.1
 
 For the complete technical derivation, ablation analysis (including the legacy Voronoi ablation drift, $\text{Dice} = 0.2965$), and audit specifications, refer to [`docs/PARITY_BENCHMARK_ROADMAP.md`](docs/PARITY_BENCHMARK_ROADMAP.md).
 
+### 6. DICOM De-Identification, PHI Compliance & Dual-Mode Execution (Clinical vs. Research)
+
+For hospital ingestion, multi-center research, and batch processing 1,000s of cardiac CT studies, `monai-cardiac-fat-fl` implements a strict **Dual-Mode Operational Boundary** compliant with **HIPAA Safe Harbor (45 CFR § 164.514(b)(2))** and **DICOM PS 3.15 Annex E Basic Application Level Confidentiality Profile**:
+
+| Mode | Target Scope | Retained vs. De-Identified Identifiers | PACS & EHR Behavior |
+| :--- | :--- | :--- | :--- |
+| **`--mode clinical`** | Hospital intranet / local PACS trust boundary | **Retains** `PatientName`, `PatientID` (MRN), `AccessionNumber`, `StudyDate`, `ReferringPhysicianName` | Generated DICOM-SEG, DICOM-SR, PDF reports, and HL7 FHIR records match and index directly into the patient's existing EHR chart. Prohibited from crossing external firewalls. |
+| **`--mode research`** *(default)* | Multi-center FL / open datasets / public cohorts | **De-identifies** all 18 HIPAA Safe Harbor tags; replaces names with `Participant {pid}`, hashes UIDs via SHA-256 HMAC, shifts dates | Strips all PHI before consensus aggregation or publication. Pre-flight audit blocks raw PHI leaks. |
+
+#### Batch De-Identification of 1,000s of CT Scans
+
+- **Option A: RSNA Anonymizer (V19) via Sandboxed Tool Runner**:
+  Integrates with the official RSNA Anonymizer V19 profile ([`deploy/anonymization/rsna_cardiac_ct_project.json`](deploy/anonymization/rsna_cardiac_ct_project.json)). Executed in an isolated virtual environment via `uv tool run` to avoid dependency conflicts with modern PyTorch / NumPy 2.x:
+
+  ```bash
+  uv tool run --from rsna-anonymizer rsna-anonymizer \
+    --project deploy/anonymization/rsna_cardiac_ct_project.json \
+    --input "/path/to/raw_hospital_cohort" \
+    --output "/path/to/deidentified_cohort"
+  ```
+
+- **Option B: Native High-Throughput CLI (`cardiac-fat-fl anonymize`)**:
+
+  ```bash
+  cardiac-fat-fl anonymize "/path/to/raw_hospital_cohort" -o "/path/to/deidentified_cohort" --mode research
+  ```
+
+#### Automated Pre-Flight De-Identification Audit (`cardiac-fat-fl deid-audit`)
+
+Before exporting datasets or triggering federated learning distillation, run the automated compliance auditor:
+
+```bash
+# Audit a single study or full cohort directory (e.g. 1,000 scans)
+cardiac-fat-fl deid-audit "/path/to/cohort" --mode research
+
+# Audit with automatic sanitization of any detected residual PHI leaks
+cardiac-fat-fl deid-audit "/path/to/cohort" --mode research --sanitize --output audit_report.json
+```
+
+- **Fail-Closed Security**: In `--mode research`, the command inspects all 18 HIPAA Safe Harbor attributes across all slices. If any real patient name, clinical MRN, or identifying hospital header is detected, it prints an itemized violation report and halts with exit code `1`.
+- **Preserved Physical Geometry & HU Calibration**: Whitelists spatial tags (`PixelSpacing`, `SliceThickness`, `ImagePositionPatient`, `ImageOrientationPatient`) and HU calibration (`RescaleIntercept`, `RescaleSlope`) to guarantee zero corruption of 3D fat quantification. Bypasses pixel OCR for volumetric CT to achieve throughput over 100 slices/sec.
+- See [`docs/DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md`](docs/DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md) and [`SECURITY.md`](SECURITY.md) for full compliance specifications.
+
 ---
 
 ## Clinical & Anatomical Specifications
@@ -654,7 +697,7 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | :--- | :--- | :--- |
 | `hardware` | `cardiac-fat-fl hardware` | Inspects host CPUs, RAM, and CUDA GPUs to display safe concurrency limits. |
 | `download-models` | `cardiac-fat-fl download-models [--include-wholebody] [--include-nvsegment] [--include-totalseg] [--include-nvreason] [--include-all]` | Downloads and cryptographically verifies all deep learning models (DeepHeartSeg ONNX, NGC WholeBody, NV-Segment, TotalSegmentator, NV-Reason-CT). |
-| `quantify` | `cardiac-fat-fl quantify <cohort_dir> [--workers 0] [--limit N]` | End-to-end batch quantification over DICOM/NRRD/NIfTI cohort (auto-sized). |
+| `quantify` | `cardiac-fat-fl quantify <cohort_dir> [--workers 0] [--limit N] [--mode research\|clinical]` | End-to-end batch quantification over DICOM/NRRD/NIfTI cohort (auto-sized). |
 | `view` | `cardiac-fat-fl view <sample_dir> [--port 8000]` | Prepares study and launches authentic OHIF v3.13 2x2 medical workstation. |
 | `export-ohif` | `cardiac-fat-fl export-ohif <sample_dir> [-o dest]` | Generates standard CT DICOM series and multi-frame `eat_pvat_seg.dcm`. |
 | `push` | `cardiac-fat-fl push <sample_dir> [--url ... / --host ...] [--ca-bundle ...]` | Stores DICOM-SEG and CT slices to PACS via DICOMweb (STOW-RS with enterprise TLS) or DIMSE (C-STORE). |
@@ -663,8 +706,10 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `federated-stats` | `cardiac-fat-fl federated-stats -c <csv_path>` | Extracts multi-site privacy-preserving cohort statistical moments. |
 | `federated-simulate` | `cardiac-fat-fl federated-simulate [--n-clients 2] [--rounds 2]` | Turnkey multi-hospital NVIDIA FLARE 2.5+ simulation (FedProx + FedBN + CrossSiteModelEval). |
 | `map-run` | `cardiac-fat-fl map-run -i <study_dir> -o <dest>` | Executes the MONAI Deploy Application Package (MAP) DAG emitting DICOM-SEG, DICOM-SR, and metrics. |
-| `daemon` | `cardiac-fat-fl daemon <inbox_dir> [--outbox ...] [--pacs-url ...] [--dry-run]` | Autonomous background watchdog: monitors incoming CT scans, executes MAP DAG, and auto-routes DICOM-SEG/SR to PACS. |
-| `report` | `cardiac-fat-fl report <study_dir> [-o dest]` | Generates SOTA clinical diagnostic report with 3-view orthogonal MPR montage (HTML, vector PDF, and DICOM Encapsulated PDF `.104.1`). |
+| `daemon` | `cardiac-fat-fl daemon <inbox_dir> [--outbox ...] [--pacs-url ...] [--mode research\|clinical] [--dry-run]` | Autonomous background watchdog: monitors incoming CT scans, executes MAP DAG, and auto-routes DICOM-SEG/SR to PACS. |
+| `report` | `cardiac-fat-fl report <study_dir> [-o dest] [--mode research\|clinical]` | Generates SOTA clinical diagnostic report with 3-view orthogonal MPR montage (HTML, vector PDF, and DICOM Encapsulated PDF `.104.1`). |
+| `deid-audit` | `cardiac-fat-fl deid-audit <path> [--mode research\|clinical] [--sanitize] [-o report.json]` | Audits DICOM cohorts for HIPAA Safe Harbor 18 PHI identifiers and verifies de-identification integrity. |
+| `anonymize` | `cardiac-fat-fl anonymize <input_dir> -o <dest_dir> [--mode research\|clinical]` | High-throughput batch de-identification engine preserving 3D spatial geometry and HU calibration. |
 
 ### End-to-End Workflow: From Raw CT to Interactive OHIF Visualization
 
@@ -1039,6 +1084,8 @@ Every pull request and merge to `main` undergoes rigorous multi-stage automated 
 ## Security & Healthcare Compliance
 
 For institutional security policies, HIPAA Technical Safeguards (45 CFR § 164.312), GDPR privacy-preserving boundaries, and responsible vulnerability disclosure, please refer to [`SECURITY.md`](SECURITY.md).
+
+For comprehensive instructions on DICOM de-identification, the RSNA Anonymizer (V19) profile, pre-flight PHI auditing, and dual-mode governance, see [`docs/DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md`](docs/DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md).
 
 For FDA Class II 510(k) Software as a Medical Device (SaMD) traceability (IEC 62304), clinical risk management (ISO 14971 FMEA), and Predetermined Change Control Plan (PCCP) specifications, see [`docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md`](docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md).
 

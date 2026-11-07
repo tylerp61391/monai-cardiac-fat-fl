@@ -286,7 +286,10 @@ The interactive Research Dashboard (`cardiac-fat-fl dashboard --port 8050`) prov
 1. **HIPAA & GDPR Physical Data Isolation**:
    - Patient Health Information (PHI) and raw high-resolution CT volumes remain strictly locked inside institutional boundaries.
    - The NVIDIA FLARE communication channel is TLS-encrypted and restricted to numeric parameter vectors.
-2. **Cryptographic Model Verification**:
+2. **Dual-Mode Operational Boundary & Pre-Flight De-Identification**:
+   - Clinical deployment uses `--mode clinical` to retain patient MRN and order accession numbers for institutional PACS/EHR routing.
+   - Multi-center federated training and open research cohorts use `--mode research`, enforced via pre-flight PHI audits (`cardiac-fat-fl deid-audit`) and RSNA Anonymizer (V19) de-identification. See [`docs/DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md`](DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md).
+3. **Cryptographic Model Verification**:
    - Model weights mounted at runtime (`/opt/holoscan/models/`) are verified against pinned SHA-256 digests in memory before execution, preventing supply-chain poisoning.
-3. **FDA SaMD Design History**:
+4. **FDA SaMD Design History**:
    - Conforms to IEC 62304 software safety standards and ISO 14971 medical device risk management documented in [`docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md`](regulatory/FDA_SAMD_REGULATORY_DOSSIER.md).
