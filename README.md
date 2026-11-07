@@ -28,6 +28,10 @@ This repository builds upon and optimizes the foundational MGH [`CardiacFatQuant
 
 ## End-to-End System Architecture
 
+![End-to-End Clinical & Federated SaMD Architecture](docs/figures/samd_regulatory_pipeline_big_picture.png)
+
+*Figure 2: Comprehensive SaMD Architecture: Multi-vendor CT ingestion, dual-mode privacy gateway (clinical identified vs. research RSNA V19), multi-model 3D segmentation engine, to local hospital EHR/PACS deployment and (World) privacy-preserving federated learning consortium. An interactive blueprint is available in [`docs/samd_big_picture_infographic.html`](docs/samd_big_picture_infographic.html).*
+
 ![End-to-End System Architecture: monai-cardiac-fat-fl](docs/figures/cardiac_fat_fl_architecture_infographic.jpg)
 
 *An interactive, publication-grade web blueprint is also available in [`docs/architecture_infographic.html`](docs/architecture_infographic.html).*

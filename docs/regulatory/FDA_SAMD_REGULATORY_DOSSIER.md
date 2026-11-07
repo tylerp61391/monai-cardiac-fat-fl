@@ -20,6 +20,62 @@ This document provides the foundational **Design History File (DHF)** architectu
 
 > `monai-cardiac-fat-fl` is an automated radiological post-processing software package intended for the three-dimensional segmentation and volumetric/attenuation quantification of Epicardial Adipose Tissue (EAT) and Pericoronary Adipose Tissue (PVAT) from gated and non-gated thoracic and cardiac Computed Tomography (CT) scans. The software outputs standard multi-frame DICOM Segmentation (`1.2.840.10008.5.1.4.1.1.66.4`) overlays, DICOM Structured Reports (`1.2.840.10008.5.1.4.1.1.88.34`, TID 1500), and interactive multi-planar reconstructions (MPR) for visual verification by qualified physicians. Results are intended to supplement, and not replace, standard clinical interpretation.
 
+### Big Picture End-to-End SaMD Architecture
+
+![End-to-End Clinical & Federated SaMD Architecture](../figures/samd_regulatory_pipeline_big_picture.png)
+
+*Figure: Complete FDA SaMD processing pipeline from multi-vendor CT ingestion, dual-mode privacy governance (clinical identified vs. research RSNA V19), multi-model 3D segmentation engine, to dual local EHR/PACS deployment and (World) privacy-preserving federated learning consortium.*
+
+An interactive web blueprint is available in [`docs/samd_big_picture_infographic.html`](../samd_big_picture_infographic.html).
+
+```mermaid
+flowchart TD
+    subgraph S1["1. CT INGESTION"]
+        CT["Volumetric Cardiac CT<br/>(Siemens, GE, Philips, Canon)<br/>(CCTA / CAC / Non-Gated)"]
+    end
+
+    subgraph S2["2. DUAL-MODE PRIVACY GATE"]
+        Router{"Mode Selection"}
+        ClinMode["Clinical Mode (--mode clinical)<br/>• Hospital Intranet Trust Zone<br/>• Retains PatientName, MRN, Accession<br/>• Links directly to Patient EHR Chart"]
+        ResMode["Research Mode (--mode research)<br/>• Zero-Trust Consortium Zone<br/>• RSNA V19 / 18 Safe Harbor Scrubbed<br/>• Deterministic Pseudonyms & SHA-256 UIDs<br/>• Pre-Flight PHI Audit Gate (deid-audit)<br/>• 100% Geometry & HU Invariants Preserved"]
+    end
+
+    subgraph S3["3. 3D ANATOMY & SEGMENTATION ENGINE"]
+        Backends["Selectable Chamber Backend (--chamber-backend)<br/>• monai (NGC SegResNet 1.5mm, 104 cls)<br/>• totalsegmentator (nnU-Net Task253)<br/>• nvsegment (VISTA-3D Foundation)"]
+        Pericardium["DeepHeartSeg ONNX Pericardium"]
+        Sulci["Geometric Sulci Derivation (LAD, LCX, RCA)"]
+        Morphology["3D Voronoi EDT (10mm Radial Dilation)<br/>[-190.0, -30.0] HU Adipose Window"]
+        Deliverables["8-Compartment Segmentation<br/>(eat_pvat.seg.nrrd + 19-col CSV + CRISP-CT)"]
+    end
+
+    subgraph S4A["4A. LOCAL HOSPITAL CARE"]
+        PACS["Enterprise PACS (STOW-RS / C-STORE)<br/>• Multi-frame DICOM-SEG (.66.4)<br/>• DICOM-SR TID 1500 (.88.34)<br/>• Encapsulated PDF (.104.1)"]
+        EHR["Hospital EHR (Epic on FHIR / Cerner)<br/>• DiagnosticReport & Chart DocumentReference<br/>• Discrete LOINC 84245-0 EAT volume<br/>• open.epic MCP Server"]
+        Workstation["OHIF v3.13 Medical Workstation<br/>• 2x2 3D Slicer MPR Layout"]
+    end
+
+    subgraph S4B["4B. WORLD FEDERATED CONSORTIUM"]
+        FL["NVIDIA FLARE 2.5+ Consortium<br/>• ZERO DICOM / Image Transfer<br/>• FedProx Regularization + FedBN Local Norm<br/>• Welford Scalar Moment Aggregation<br/>• CrossSiteModelEval Consensus"]
+    end
+
+    subgraph S5["5. FOUNDATION FOR REGULATORY FILING (SaMD)"]
+        Reg["FDA Class II 510(k) (21 CFR § 892.2050, LLZ/QIH)<br/>• IEC 62304 Class B Software Safety & Traceability<br/>• ISO 14971 Risk Controls (HAZ-001 - HAZ-010)<br/>• FDA AI/ML Predetermined Change Control Plan (PCCP)<br/>• Section 524B Cybersecurity & CycloneDX SBOM"]
+    end
+
+    CT --> Router
+    Router -->|"Clinical Care"| ClinMode
+    Router -->|"De-Identified Research"| ResMode
+    ClinMode --> Backends
+    ResMode --> Backends
+    Backends --> Pericardium & Sulci
+    Pericardium & Sulci --> Morphology
+    Morphology --> Deliverables
+    Deliverables -->|"Identified Demographics"| PACS & EHR & Workstation
+    Deliverables -->|"De-ID Gradients / Moments"| FL
+    FL -.->|"PCCP Retrained Global Model"| Backends
+    S1 & S2 & S3 & S4A & S4B -.- Reg
+```
+
 ---
 
 ## 2. IEC 62304 Requirements & Verification Traceability Matrix
