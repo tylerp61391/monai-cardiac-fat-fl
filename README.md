@@ -5,7 +5,7 @@
 [![CUDA 13.0+](https://img.shields.io/badge/CUDA-13.0%2B-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
 [![MONAI](https://img.shields.io/badge/MONAI-1.6.1-green.svg)](https://project-monai.github.io/)
 [![NVIDIA FLARE](https://img.shields.io/badge/NVIDIA%20FLARE-2.5%2B-76b900.svg)](https://developer.nvidia.com/flare)
-[![CI Test Suite](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml/badge.svg)](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml)
+[![CI Test Suite](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml)
 [![Docker MAP](https://img.shields.io/badge/MONAI%20Deploy-MAP%20Package-76B900.svg?logo=nvidia&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-map)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![DICOM-SEG](https://img.shields.io/badge/DICOM--SEG-SOP%201.2.840...66.4-purple.svg)](https://dicom.nema.org/)
