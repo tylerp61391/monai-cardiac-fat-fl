@@ -2067,7 +2067,7 @@ def ci_check(
     r1 = subprocess.run([sys.executable, "-m", "ruff", "check", "src/", "tests/"], check=False)  # nosec B603
     if r1.returncode != 0:
         raise typer.Exit(code=r1.returncode)
-    console.print("[green]✓ Ruff passed (0 errors)[/green]")
+    console.print("[green][PASS] Ruff passed (0 errors)[/green]")
 
     console.print("[bold cyan]2. Running GitHub Actions environment simulation (FORCE_COLOR=1, no optional VLM deps)...[/bold cyan]")
     env = dict(os.environ)
@@ -2087,7 +2087,52 @@ def ci_check(
     r2 = subprocess.run([sys.executable, "-c", py_cmd], env=env, check=False)  # nosec B603
     if r2.returncode != 0:
         raise typer.Exit(code=r2.returncode)
-    console.print("[bold green]✓ All local CI quality gates passed![/bold green]")
+    console.print("[bold green][PASS] All local CI quality gates passed![/bold green]")
+
+
+@app.command("regulatory-export")
+def regulatory_export(
+    output_pdf: Path = typer.Option(
+        Path("docs/FDA_510k_SaMD_DHF_Evidence_Dossier.pdf"),
+        "--output-pdf",
+        "-o",
+        help="Destination path for the vector PDF FDA 510(k) DHF Evidence Dossier.",
+    ),
+    output_json: Optional[Path] = typer.Option(
+        None,
+        "--output-json",
+        "-j",
+        help="Optional destination path for the machine-readable JSON DHF Dossier.",
+    ),
+    cohort_dir: Optional[Path] = typer.Option(
+        None,
+        "--cohort-dir",
+        "-c",
+        help="Optional cohort directory to include live clinical verification metrics.",
+    ),
+) -> None:
+    """Generate an FDA Class II 510(k) / SaMD Design History File (DHF) Evidence Dossier (PDF & JSON)."""
+    from cardiac_fat_fl.regulatory_dossier import (
+        build_fda_510k_dhf_dossier,
+        generate_fda_510k_dhf_pdf,
+    )
+
+    cohort_summary = None
+    if cohort_dir and cohort_dir.exists():
+        from cardiac_fat_fl.cohort_research import CohortDataset
+
+        ds = CohortDataset(cohort_dir)
+        cohort_summary = ds.compute_summary_analytics()
+
+    pdf_out = generate_fda_510k_dhf_pdf(output_pdf_path=output_pdf, cohort_summary=cohort_summary)
+    console.print(f"[bold green]Exported FDA 510(k) SaMD DHF PDF Dossier:[/bold green] {pdf_out}")
+    if output_json:
+        import json
+
+        dossier = build_fda_510k_dhf_dossier(cohort_summary=cohort_summary)
+        output_json.parent.mkdir(parents=True, exist_ok=True)
+        output_json.write_text(json.dumps(dossier, indent=2), encoding="utf-8")
+        console.print(f"[bold green]Exported FDA 510(k) SaMD DHF JSON Dossier:[/bold green] {output_json}")
 
 
 if __name__ == "__main__":

@@ -714,6 +714,8 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `report` | `cardiac-fat-fl report <study_dir> [-o dest] [--mode research\|clinical]` | Generates SOTA clinical diagnostic report with 3-view orthogonal MPR montage (HTML, vector PDF, and DICOM Encapsulated PDF `.104.1`). |
 | `deid-audit` | `cardiac-fat-fl deid-audit <path> [--mode research\|clinical] [--sanitize] [-o report.json]` | Audits DICOM cohorts for HIPAA Safe Harbor 18 PHI identifiers and verifies de-identification integrity. |
 | `anonymize` | `cardiac-fat-fl anonymize <input_dir> -o <dest_dir> [--mode research\|clinical]` | High-throughput batch de-identification engine preserving 3D spatial geometry and HU calibration. |
+| `regulatory-export` | `cardiac-fat-fl regulatory-export [-o dossier.pdf] [-j dossier.json]` | Generates an FDA Class II 510(k) / SaMD Design History File (DHF) Evidence Dossier (IEC 62304 traceability, ISO 14971 FMEA, PCCP, and architecture blueprint). |
+| `ci-check` | `cardiac-fat-fl ci-check [--fast]` | Runs local pre-push quality gates (`ruff`, `bandit`, `markdownlint-cli`, and clean-runner `pytest` simulation). |
 
 ### End-to-End Workflow: From Raw CT to Interactive OHIF Visualization
 

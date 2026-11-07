@@ -229,15 +229,56 @@ def read_medical_image_as_metatensor(path_or_dir: Union[str, Path]) -> MetaTenso
                 series_ids,
                 key=lambda sid: len(reader.GetGDCMSeriesFileNames(str(dcm_dir), sid)),
             )
-            file_names = reader.GetGDCMSeriesFileNames(str(dcm_dir), best_series_id)
+            file_names = list(reader.GetGDCMSeriesFileNames(str(dcm_dir), best_series_id))
             reader.SetFileNames(file_names)
 
-        sitk_image = reader.Execute()
-        data_np = sitk.GetArrayFromImage(sitk_image).astype(np.float32)  # Shape (D, H, W)
-        spacing = sitk_image.GetSpacing()
-        origin = sitk_image.GetOrigin()
-        direction = sitk_image.GetDirection()
-        affine = _compute_affine_from_sitk(sitk_image)
+        try:
+            sitk_image = reader.Execute()
+            data_np = sitk.GetArrayFromImage(sitk_image).astype(np.float32)  # Shape (D, H, W)
+            spacing = sitk_image.GetSpacing()
+            origin = sitk_image.GetOrigin()
+            direction = sitk_image.GetDirection()
+            affine = _compute_affine_from_sitk(sitk_image)
+        except Exception as sitk_err:
+            if "Zero-valued spacing" not in str(sitk_err):
+                raise
+            # Recover from corrupted (0018,0088) SpacingBetweenSlices='0.0' or duplicate Z-slices (e.g., Stanford COCA nongated_195)
+            import pydicom
+
+            current_files = list(reader.GetFileNames())
+            z_slices: List[Tuple[float, Any]] = []
+            seen_z: set[float] = set()
+            for fn in current_files:
+                try:
+                    ds_slice = pydicom.dcmread(fn)
+                    ipp = getattr(ds_slice, "ImagePositionPatient", None)
+                    z_val = round(float(ipp[2]), 3) if ipp and len(ipp) >= 3 else float(len(z_slices))
+                    if z_val not in seen_z:
+                        seen_z.add(z_val)
+                        z_slices.append((z_val, ds_slice))
+                except Exception:
+                    continue
+            if len(z_slices) < 2:
+                raise sitk_err
+            z_slices.sort(key=lambda item: item[0])
+            first_ds = z_slices[0][1]
+            ps = getattr(first_ds, "PixelSpacing", [1.0, 1.0])
+            dx, dy = float(ps[1]), float(ps[0])
+            dz_diffs = [abs(z_slices[i + 1][0] - z_slices[i][0]) for i in range(len(z_slices) - 1)]
+            dz = float(np.median(dz_diffs)) if dz_diffs and np.median(dz_diffs) > 0 else float(getattr(first_ds, "SliceThickness", 3.0) or 3.0)
+            slices_hu = []
+            for _, ds_s in z_slices:
+                arr = ds_s.pixel_array.astype(np.float32)
+                slope = float(getattr(ds_s, "RescaleSlope", 1.0) or 1.0)
+                inter = float(getattr(ds_s, "RescaleIntercept", 0.0) or 0.0)
+                slices_hu.append(arr * slope + inter)
+            data_np = np.stack(slices_hu, axis=0).astype(np.float32)
+            spacing = (dx, dy, dz)
+            ipp0 = getattr(first_ds, "ImagePositionPatient", [0.0, 0.0, 0.0])
+            origin = (float(ipp0[0]), float(ipp0[1]), float(ipp0[2]))
+            direction = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+            affine = np.diag([dx, dy, dz, 1.0]).astype(np.float64)
+            affine[:3, 3] = np.array(origin, dtype=np.float64)
 
         meta: Dict[str, Any] = {
             "spatial_shape": list(data_np.shape),

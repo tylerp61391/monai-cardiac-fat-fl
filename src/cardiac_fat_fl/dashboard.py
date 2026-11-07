@@ -1006,6 +1006,34 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             return send_file(str(html_path), mimetype="text/html")
         return jsonify({"error": "SaMD architecture blueprint not found"}), 404
 
+    @app.route("/api/regulatory/dhf", methods=["GET"])
+    def serve_fda_510k_dhf():
+        import tempfile
+        from cardiac_fat_fl.regulatory_dossier import (
+            build_fda_510k_dhf_dossier,
+            generate_fda_510k_dhf_pdf,
+        )
+
+        summary_dict = (
+            sanitize_nans(_ACTIVE_COHORT.compute_summary_analytics()) if _ACTIVE_COHORT is not None else None
+        )
+        fmt = request.args.get("format", "pdf").lower()
+        if fmt == "json":
+            dossier = build_fda_510k_dhf_dossier(cohort_summary=summary_dict)
+            return Response(
+                json.dumps(dossier, indent=2),
+                mimetype="application/json",
+                headers={"Content-Disposition": "attachment; filename=FDA_510k_SaMD_DHF_Dossier.json"},
+            )
+
+        tmp_pdf = Path(tempfile.gettempdir()) / "FDA_510k_SaMD_DHF_Evidence_Dossier.pdf"
+        generate_fda_510k_dhf_pdf(output_pdf_path=tmp_pdf, cohort_summary=summary_dict)
+        return send_file(
+            str(tmp_pdf),
+            mimetype="application/pdf",
+            download_name="FDA_510k_SaMD_DHF_Evidence_Dossier.pdf",
+        )
+
     return app
 
 
@@ -1943,7 +1971,13 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
         <div class="flex flex-wrap items-center gap-2.5">
           <a href="/api/privacy/rsna-config?project_name=CardiacFatResearch&site_id=SITE01" download class="px-3.5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sky-300 border border-slate-600 text-xs font-semibold transition flex items-center gap-1.5 shadow">
-            <i class="fa-solid fa-file-shield text-sky-400"></i> Download RSNA V19 Config
+            <i class="fa-solid fa-file-shield text-sky-400"></i> RSNA V19 Config
+          </a>
+          <a href="/api/regulatory/dhf?format=pdf" target="_blank" class="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow" title="Open 3-Page FDA Class II 510(k) Design History File (DHF) Evidence Dossier PDF">
+            <i class="fa-solid fa-file-contract"></i> FDA 510(k) DHF PDF
+          </a>
+          <a href="/api/regulatory/dhf?format=json" download class="px-3.5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-indigo-300 border border-slate-600 text-xs font-semibold transition flex items-center gap-1.5 shadow" title="Download machine-readable FDA 510(k) DHF JSON">
+            <i class="fa-solid fa-file-code"></i> DHF JSON
           </a>
           <a href="/api/regulatory/blueprint?format=pdf" target="_blank" class="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow">
             <i class="fa-solid fa-file-pdf"></i> SaMD Architecture PDF

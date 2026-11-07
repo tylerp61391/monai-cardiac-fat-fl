@@ -340,6 +340,18 @@ def test_dashboard_privacy_and_regulatory_routes(test_app):
     assert res_bp_png.status_code == 200
     assert res_bp_png.mimetype == "image/png"
 
+    # 4. FDA 510(k) DHF Evidence Dossier routes (PDF & JSON)
+    res_dhf_json = client.get("/api/regulatory/dhf?format=json")
+    assert res_dhf_json.status_code == 200
+    assert res_dhf_json.mimetype == "application/json"
+    dhf_data = res_dhf_json.get_json()
+    assert len(dhf_data["iec_62304_traceability_matrix"]) == 13
+    assert len(dhf_data["iso_14971_risk_controls"]) == 6
+
+    res_dhf_pdf = client.get("/api/regulatory/dhf?format=pdf")
+    assert res_dhf_pdf.status_code == 200
+    assert res_dhf_pdf.mimetype == "application/pdf"
+
 
 
 
