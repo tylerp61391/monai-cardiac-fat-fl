@@ -383,6 +383,11 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             if inflam_only and p.crisp_ct_status != "Active Vascular Inflammation":
                 continue
 
+            has_pdf = (p.report_pdf is not None and p.report_pdf.is_file()) or (p.study_dir / "cardiac_fat_report.pdf").is_file() or (p.study_dir / "report" / "cardiac_fat_report.pdf").is_file()
+            has_html = (p.report_html is not None and p.report_html.is_file()) or (p.study_dir / "cardiac_fat_report.html").is_file() or (p.study_dir / "report" / "cardiac_fat_report.html").is_file()
+            has_dcm = (p.report_dcm is not None and p.report_dcm.is_file()) or (p.study_dir / "eat_pvat_report.dcm").is_file() or (p.study_dir / "report" / "eat_pvat_report.dcm").is_file()
+            has_vlm = (p.study_dir / "nv_reason_narrative.txt").is_file() or (p.study_dir / "nv_reason_clinical_narrative.txt").is_file()
+
             cases.append({
                 "participant_id": p.participant_id,
                 "scan_type": p.scan_type,
@@ -393,8 +398,10 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
                 "eat_volume_cm3": p.metrics.get("EAT Total Volume (cm3)"),
                 "pvat_volume_cm3": p.metrics.get("PVAT Total Volume (cm3)"),
                 "pvat_mean_hu": p.metrics.get("PVAT Total Mean Attenuation (HU)"),
-                "has_report_pdf": p.report_pdf is not None,
-                "has_report_html": p.report_html is not None,
+                "has_report_pdf": has_pdf,
+                "has_report_html": has_html,
+                "has_report_dcm": has_dcm,
+                "has_nv_reason": has_vlm,
                 "has_ohif": p.ohif_export_dir is not None,
                 "available_segs": list(p.available_segmentations.keys()),
             })
@@ -462,16 +469,31 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
 
         p = _ACTIVE_COHORT.participants[pid]
-        cached_file = p.study_dir / "nv_reason_clinical_narrative.txt"
-        if request.method == "GET" and cached_file.exists():
-            from cardiac_fat_fl.nv_reason_reporter import clean_vlm_narrative
-            raw_text = cached_file.read_text(encoding="utf-8")
-            clean_text = clean_vlm_narrative(raw_text)
+        cached_candidates = [
+            p.study_dir / "nv_reason_narrative.txt",
+            p.study_dir / "nv_reason_clinical_narrative.txt",
+            p.study_dir / "nv_reason_ct_cardiac_specialized_report.txt",
+            p.study_dir / "nv_reason_ct_generated_report.txt",
+            p.study_dir / "report" / "nv_reason_narrative.txt",
+        ]
+        cached_file = next((f for f in cached_candidates if f.is_file()), None)
+
+        if request.method == "GET":
+            if cached_file:
+                from cardiac_fat_fl.nv_reason_reporter import clean_vlm_narrative
+                raw_text = cached_file.read_text(encoding="utf-8")
+                clean_text = clean_vlm_narrative(raw_text)
+                return jsonify({
+                    "participant_id": pid,
+                    "mode": "structured",
+                    "narrative": clean_text,
+                    "cached": True,
+                })
             return jsonify({
                 "participant_id": pid,
                 "mode": "structured",
-                "narrative": clean_text,
-                "cached": True,
+                "narrative": None,
+                "cached": False,
             })
 
         from cardiac_fat_fl.nv_reason_reporter import generate_nv_reason_narrative, is_nv_reason_available
@@ -484,13 +506,17 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         elif request.is_json and request.json:
             mode = request.json.get("mode", mode)
 
-        scan_files = list(p.study_dir.glob("*.nrrd")) + list(p.study_dir.glob("*.nii*"))
-        if not scan_files:
-            return jsonify({"error": f"No 3D CT volume found in {p.study_dir}."}), 404
+        scan_path = p.scan_path if p.scan_path and p.scan_path.exists() else None
+        if not scan_path:
+            scan_files = list(p.study_dir.glob("*.nrrd")) + list(p.study_dir.glob("*.nii*"))
+            if scan_files:
+                scan_path = scan_files[0]
+            else:
+                return jsonify({"error": f"No 3D CT volume found in {p.study_dir}."}), 404
 
         try:
             narrative = generate_nv_reason_narrative(
-                ct_path=scan_files[0],
+                ct_path=scan_path,
                 metrics=p.metrics or {},
                 mode=mode,
             )
@@ -498,9 +524,72 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
                 "participant_id": pid,
                 "mode": mode,
                 "narrative": narrative,
+                "cached": False,
             })
         except Exception as e:
             return jsonify({"error": f"Failed to generate NV-Reason-CT narrative: {e}"}), 500
+
+    @app.route("/report/<pid>/pdf", methods=["GET"])
+    @app.route("/api/case/<pid>/report/pdf", methods=["GET"])
+    def get_case_report_pdf(pid: str):
+        if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
+            return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
+
+        p = _ACTIVE_COHORT.participants[pid]
+        pdf_candidates = [
+            p.study_dir / "cardiac_fat_report.pdf",
+            p.study_dir / "report" / "cardiac_fat_report.pdf",
+        ]
+        pdf_path = next((f for f in pdf_candidates if f.is_file()), None)
+        if not pdf_path:
+            return jsonify({"error": f"Clinical PDF report not found for participant {pid}."}), 404
+
+        as_download = request.args.get("download", "").lower() in ["true", "1"]
+        return send_file(
+            pdf_path,
+            mimetype="application/pdf",
+            as_attachment=as_download,
+            download_name=f"cardiac_fat_report_{pid}.pdf",
+        )
+
+    @app.route("/report/<pid>/html", methods=["GET"])
+    @app.route("/api/case/<pid>/report/html", methods=["GET"])
+    def get_case_report_html(pid: str):
+        if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
+            return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
+
+        p = _ACTIVE_COHORT.participants[pid]
+        html_candidates = [
+            p.study_dir / "cardiac_fat_report.html",
+            p.study_dir / "report" / "cardiac_fat_report.html",
+        ]
+        html_path = next((f for f in html_candidates if f.is_file()), None)
+        if not html_path:
+            return jsonify({"error": f"Clinical HTML report not found for participant {pid}."}), 404
+
+        return send_file(html_path, mimetype="text/html")
+
+    @app.route("/report/<pid>/dicom", methods=["GET"])
+    @app.route("/api/case/<pid>/report/dicom", methods=["GET"])
+    def get_case_report_dicom(pid: str):
+        if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
+            return jsonify({"error": f"Participant {pid} not found in cohort"}), 404
+
+        p = _ACTIVE_COHORT.participants[pid]
+        dcm_candidates = [
+            p.study_dir / "eat_pvat_report.dcm",
+            p.study_dir / "report" / "eat_pvat_report.dcm",
+        ]
+        dcm_path = next((f for f in dcm_candidates if f.is_file()), None)
+        if not dcm_path:
+            return jsonify({"error": f"DICOM Encapsulated PDF report not found for participant {pid}."}), 404
+
+        return send_file(
+            dcm_path,
+            mimetype="application/dicom",
+            as_attachment=True,
+            download_name=f"eat_pvat_report_{pid}.dcm",
+        )
 
     def _serve_ohif_page(pid: str):
         if _ACTIVE_COHORT is None or pid not in _ACTIVE_COHORT.participants:
@@ -1716,6 +1805,12 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           Case Deep Dive: <span id="modalCaseId" class="font-mono text-sky-300">--</span>
         </h3>
         <div class="flex items-center gap-2">
+          <a id="modalPdfBtn" href="#" target="_blank" class="hidden px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs items-center gap-1.5 shadow transition" title="Open 2-Page Clinical Diagnostic PDF">
+            <i class="fa-solid fa-file-pdf"></i> PDF Report
+          </a>
+          <a id="modalHtmlBtn" href="#" target="_blank" class="hidden px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs items-center gap-1.5 shadow transition" title="View Interactive HTML Report">
+            <i class="fa-solid fa-file-lines"></i> HTML Report
+          </a>
           <a id="modalFhirBtn" href="#" target="_blank" download class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 shadow transition">
             <i class="fa-solid fa-fire text-amber-300"></i> FHIR R4 Bundle
           </a>
@@ -2881,7 +2976,20 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             <td class="px-4 py-2.5 font-mono text-indigo-300">${c.pvat_mean_hu !== null && c.pvat_mean_hu !== undefined ? c.pvat_mean_hu.toFixed(1) + ' HU' : '--'}</td>
             <td class="px-4 py-2.5">${inflamBadge}</td>
             <td class="px-4 py-2.5 flex items-center gap-1.5">${segBadge}</td>
-            <td class="px-4 py-2.5 text-right space-x-2 whitespace-nowrap">
+            <td class="px-4 py-2.5 text-right space-x-1.5 whitespace-nowrap">
+              ${c.has_report_pdf ? `
+                <a href="/report/${encodeURIComponent(c.participant_id)}/pdf" target="_blank"
+                   class="inline-flex items-center gap-1 text-rose-300 hover:text-white text-xs font-medium px-2 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 transition shadow-sm"
+                   title="View 2-Page Clinical Diagnostic PDF for Patient ${c.participant_id}">
+                  <i class="fa-solid fa-file-pdf text-[10px] text-rose-400"></i> Report
+                </a>
+              ` : (c.has_report_html ? `
+                <a href="/report/${encodeURIComponent(c.participant_id)}/html" target="_blank"
+                   class="inline-flex items-center gap-1 text-amber-300 hover:text-white text-xs font-medium px-2 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 transition shadow-sm"
+                   title="View Clinical HTML Report for Patient ${c.participant_id}">
+                  <i class="fa-solid fa-file-lines text-[10px] text-amber-400"></i> HTML
+                </a>
+              ` : '')}
               ${c.has_seg ? `
                 <a href="/patient/${encodeURIComponent(c.participant_id)}/" target="_blank"
                    class="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 text-xs font-medium px-2 py-0.5 rounded bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 transition shadow-sm"
@@ -2889,7 +2997,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
                   <i class="fa-solid fa-cube text-[10px]"></i> View OHIF
                 </a>
               ` : ''}
-              <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-400 hover:text-sky-300 text-xs font-medium">Deep Dive</button>
+              <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-400 hover:text-sky-300 text-xs font-medium px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 transition">Deep Dive</button>
             </td>
           </tr>
         `;
@@ -2964,6 +3072,30 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         document.getElementById('modalCacScore').innerText = data.calcium_score !== null ? `${data.calcium_score} (${data.calcium_risk_tier})` : 'Not available';
         document.getElementById('modalCrispStatus').innerText = data.crisp_ct_status;
 
+        const pdfBtn = document.getElementById('modalPdfBtn');
+        if (pdfBtn) {
+          if (data.has_report_pdf) {
+            pdfBtn.href = `/report/${encodeURIComponent(pid)}/pdf`;
+            pdfBtn.classList.remove('hidden');
+            pdfBtn.classList.add('flex');
+          } else {
+            pdfBtn.classList.add('hidden');
+            pdfBtn.classList.remove('flex');
+          }
+        }
+
+        const htmlBtn = document.getElementById('modalHtmlBtn');
+        if (htmlBtn) {
+          if (data.has_report_html) {
+            htmlBtn.href = `/report/${encodeURIComponent(pid)}/html`;
+            htmlBtn.classList.remove('hidden');
+            htmlBtn.classList.add('flex');
+          } else {
+            htmlBtn.classList.add('hidden');
+            htmlBtn.classList.remove('flex');
+          }
+        }
+
         const fhirBtn = document.getElementById('modalFhirBtn');
         if (fhirBtn) {
           fhirBtn.href = `/api/case/${encodeURIComponent(pid)}/fhir?download=true`;
@@ -2978,6 +3110,25 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
           ohifBtn.classList.add('hidden');
           ohifBtn.classList.remove('flex');
         }
+
+        // Auto-check and display cached NV-Reason-CT narrative if present
+        fetch(`/api/case/${encodeURIComponent(pid)}/vlm_narrative`)
+          .then(res => res.json())
+          .then(vlmData => {
+            if (vlmData && vlmData.cached && vlmData.narrative) {
+              const pre = document.getElementById('modalVlmText');
+              const meta = document.getElementById('modalVlmMeta');
+              const output = document.getElementById('modalVlmOutputContainer');
+              const btn = document.getElementById('modalVlmGenerateBtn');
+              if (pre && output) {
+                pre.innerText = vlmData.narrative;
+                if (meta) meta.innerHTML = '<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check"></i> NVIDIA NV-Reason-CT Narrative Ready</span> &bull; Local RTX 4090';
+                output.classList.remove('hidden');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-rotate text-[10px]"></i> Regenerate AI Narrative';
+              }
+            }
+          })
+          .catch(e => console.log('No cached narrative yet:', e));
 
         const tbody = document.getElementById('modalMetricsBody');
         const metrics = data.metrics || {};

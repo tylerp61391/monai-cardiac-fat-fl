@@ -274,4 +274,38 @@ def test_dashboard_api_case_vlm_narrative(test_app, monkeypatch):
     assert "Mild plaque in mode structured" in data["narrative"]
 
 
+def test_dashboard_api_case_vlm_narrative_cached(test_app):
+    """Verify GET /api/case/<pid>/vlm_narrative retrieves cached narrative."""
+    client = test_app.test_client()
+    res = client.get("/api/case/0506/vlm_narrative")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["participant_id"] == "0506"
+    assert data["cached"] is True
+    assert data["narrative"] is not None
+
+
+def test_dashboard_report_routes(test_app):
+    """Verify PDF, HTML, and DICOM report serving routes."""
+    client = test_app.test_client()
+
+    # 1. 200 OK for existing case 0506
+    res_pdf = client.get("/report/0506/pdf")
+    assert res_pdf.status_code == 200
+    assert res_pdf.mimetype == "application/pdf"
+
+    res_html = client.get("/report/0506/html")
+    assert res_html.status_code == 200
+    assert "text/html" in res_html.mimetype
+
+    res_dcm = client.get("/report/0506/dicom")
+    assert res_dcm.status_code == 200
+    assert res_dcm.mimetype == "application/dicom"
+
+    # 2. 404 for unknown participant
+    res_404 = client.get("/report/UNKNOWN_PID/pdf")
+    assert res_404.status_code == 404
+
+
+
 

@@ -97,6 +97,11 @@ class CohortParticipant:
         if isinstance(cac_val, float) and (math.isnan(cac_val) or math.isinf(cac_val)):
             cac_val = None
 
+        has_pdf = (self.report_pdf is not None and self.report_pdf.is_file()) or (self.study_dir / "cardiac_fat_report.pdf").is_file() or (self.study_dir / "report" / "cardiac_fat_report.pdf").is_file()
+        has_html = (self.report_html is not None and self.report_html.is_file()) or (self.study_dir / "cardiac_fat_report.html").is_file() or (self.study_dir / "report" / "cardiac_fat_report.html").is_file()
+        has_dcm = (self.report_dcm is not None and self.report_dcm.is_file()) or (self.study_dir / "eat_pvat_report.dcm").is_file() or (self.study_dir / "report" / "eat_pvat_report.dcm").is_file()
+        has_vlm = (self.study_dir / "nv_reason_narrative.txt").is_file() or (self.study_dir / "nv_reason_clinical_narrative.txt").is_file()
+
         return {
             "participant_id": self.participant_id,
             "study_dir": str(self.study_dir),
@@ -105,8 +110,10 @@ class CohortParticipant:
             "seg_path": str(self.seg_path) if self.seg_path else None,
             "available_segmentations": {k: str(v) for k, v in self.available_segmentations.items()},
             "has_measurements": bool(self.metrics),
-            "has_report_pdf": self.report_pdf is not None,
-            "has_report_html": self.report_html is not None,
+            "has_report_pdf": has_pdf,
+            "has_report_html": has_html,
+            "has_report_dcm": has_dcm,
+            "has_nv_reason": has_vlm,
             "has_ohif": self.ohif_export_dir is not None,
             "calcium_score": cac_val,
             "calcium_risk_tier": self.calcium_risk_tier,
