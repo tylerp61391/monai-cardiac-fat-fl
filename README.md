@@ -128,8 +128,11 @@ In addition to quantitative CSV matrices and DICOM-SEG binary masks, `monai-card
 The report pipeline synthesizes 8-compartment volumetric and attenuation quantification, evaluates active pericoronary vascular inflammation against the clinically validated **CRISP-CT threshold** ($> -70.1\text{ HU}$), generates a 3-view orthogonal MPR snapshot montage (Axial, Coronal, Sagittal) under standard soft-tissue windowing ($WL=40\text{ HU}, WW=400\text{ HU}$), and exports native deliverables formatted for institutional PACS and electronic health record (EHR) ingestion:
 
 ```bash
-# Generate clinical diagnostic report bundle with 3-view MPR montage
+# Generate clinical diagnostic report bundle with 3-view MPR montage for a single study
 cardiac-fat-fl report /path/to/participant_dir
+
+# Batch-generate clinical reports across an entire cohort (e.g., Stanford COCA, 998 studies in ~60s)
+cardiac-fat-fl report /path/to/cohort_dir --overwrite
 ```
 
 #### Standard Clinical Deliverables Produced

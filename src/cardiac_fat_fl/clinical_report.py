@@ -126,7 +126,7 @@ def evaluate_clinical_risk(
             "mean_hu": v_hu,
             "is_inflamed": is_inflamed,
             "delta_threshold": (v_hu - CRISP_CT_INFLAMMATION_HU_THRESHOLD) if not np.isnan(v_hu) else 0.0,
-            "status": "ELEVATED INFLAMMATION (> -70.1 HU)" if is_inflamed else "Normal Attenuation (≤ -70.1 HU)",
+            "status": "ELEVATED INFLAMMATION (> -70.1 HU)" if is_inflamed else "Normal Attenuation (<= -70.1 HU)",
             "status_color": "#ef4444" if is_inflamed else "#10b981",
         }
 
@@ -146,9 +146,9 @@ def evaluate_clinical_risk(
     if inflamed_vessels:
         inflam_phrase = f"Elevated pericoronary adipose attenuation (> -70.1 HU) detected along the {', '.join(inflamed_vessels)}, consistent with active coronary vascular inflammation and vulnerable plaque biology (CRISP-CT criteria)."
     else:
-        inflam_phrase = "Pericoronary adipose attenuation along the LAD, LCX, and RCA is within normal limits (≤ -70.1 HU), indicating low active vascular inflammation."
+        inflam_phrase = "Pericoronary adipose attenuation along the LAD, LCX, and RCA is within normal limits (<= -70.1 HU), indicating low active vascular inflammation."
 
-    eat_phrase = f"Total Epicardial Adipose Tissue (EAT) volume is {eat_vol:.1f} cm³ ({eat_category} burden, ~{eat_percentile}th percentile), with mean attenuation of {eat_hu:.1f} HU." if not np.isnan(eat_hu) else f"Total Epicardial Adipose Tissue (EAT) volume is {eat_vol:.1f} cm³."
+    eat_phrase = f"Total Epicardial Adipose Tissue (EAT) volume is {eat_vol:.1f} cm3 ({eat_category} burden, ~{eat_percentile}th percentile), with mean attenuation of {eat_hu:.1f} HU." if not np.isnan(eat_hu) else f"Total Epicardial Adipose Tissue (EAT) volume is {eat_vol:.1f} cm3."
 
     narrative_summary = f"{eat_phrase} {inflam_phrase}"
 
@@ -618,7 +618,7 @@ def generate_clinical_report_pdf(
     ai_reasoning_narrative: Optional[str] = None,
 ) -> bytes:
     """Generate a vector-rendered Letter-sized PDF clinical report using PyMuPDF."""
-    import fitz  # pyright: ignore[reportMissingImports]
+    import pymupdf as fitz  # pyright: ignore[reportMissingImports]
 
     risk = evaluate_clinical_risk(metrics, ai_reasoning_narrative=ai_reasoning_narrative)
     doc = fitz.open()
@@ -650,15 +650,15 @@ def generate_clinical_report_pdf(
     page.insert_text(fitz.Point(46, 168), "EPICARDIAL ADIPOSE TISSUE (EAT)", fontsize=9, color=(0.8, 0.15, 0.15), fontname="helv")
     eat_vol = metrics.get(f"{ReportedRegion.EAT_TOTAL} Volume (cm3)", 0.0)
     eat_hu = metrics.get(f"{ReportedRegion.EAT_TOTAL} Mean Attenuation (HU)", float("nan"))
-    page.insert_text(fitz.Point(46, 192), f"Total EAT Volume:  {eat_vol:.1f} cm³", fontsize=11, color=(0.05, 0.1, 0.2), fontname="helv")
+    page.insert_text(fitz.Point(46, 192), f"Total EAT Volume:  {eat_vol:.1f} cm3", fontsize=11, color=(0.05, 0.1, 0.2), fontname="helv")
     page.insert_text(fitz.Point(46, 206), f"Mean Attenuation:  {eat_hu:.1f} HU", fontsize=9, color=(0.2, 0.4, 0.6), fontname="helv")
 
     # Chamber Breakdown text
     page.insert_text(fitz.Point(46, 226), "Chamber Sub-Compartments:", fontsize=8, color=(0.4, 0.45, 0.5), fontname="helv")
-    page.insert_text(fitz.Point(56, 240), f"• Left Ventricle (LV):   {metrics.get(f'{ReportedRegion.EAT_LV} Volume (cm3)', 0.0):.1f} cm³", fontsize=8, color=(0.2, 0.25, 0.3), fontname="helv")
-    page.insert_text(fitz.Point(56, 252), f"• Right Ventricle (RV):  {metrics.get(f'{ReportedRegion.EAT_RV} Volume (cm3)', 0.0):.1f} cm³", fontsize=8, color=(0.2, 0.25, 0.3), fontname="helv")
-    page.insert_text(fitz.Point(56, 264), f"• Left Atrium (LA):      {metrics.get(f'{ReportedRegion.EAT_LA} Volume (cm3)', 0.0):.1f} cm³", fontsize=8, color=(0.2, 0.25, 0.3), fontname="helv")
-    page.insert_text(fitz.Point(56, 274), f"• Right Atrium (RA):     {metrics.get(f'{ReportedRegion.EAT_RA} Volume (cm3)', 0.0):.1f} cm³", fontsize=8, color=(0.2, 0.25, 0.3), fontname="helv")
+    page.insert_text(fitz.Point(56, 240), f"- Left Ventricle (LV):   {metrics.get(f'{ReportedRegion.EAT_LV} Volume (cm3)', 0.0):.1f} cm3", fontsize=8, color=(0.2, 0.25, 0.3), fontname="helv")
+    page.insert_text(fitz.Point(56, 252), f"- Right Ventricle (RV):  {metrics.get(f'{ReportedRegion.EAT_RV} Volume (cm3)', 0.0):.1f} cm3", fontsize=8, color=(0.2, 0.25, 0.3), fontname="helv")
+    page.insert_text(fitz.Point(56, 264), f"- Left Atrium (LA):      {metrics.get(f'{ReportedRegion.EAT_LA} Volume (cm3)', 0.0):.1f} cm3", fontsize=8, color=(0.2, 0.25, 0.3), fontname="helv")
+    page.insert_text(fitz.Point(56, 274), f"- Right Atrium (RA):     {metrics.get(f'{ReportedRegion.EAT_RA} Volume (cm3)', 0.0):.1f} cm3", fontsize=8, color=(0.2, 0.25, 0.3), fontname="helv")
 
     # Right Card: PVAT Inflammation Table
     page.draw_rect(fitz.Rect(316, 152, 576, 280), color=(0.8, 0.85, 0.9), fill=(0.98, 0.99, 1.0))
@@ -668,7 +668,7 @@ def generate_clinical_report_pdf(
     for vname in ["LAD", "LCX", "RCA"]:
         vinfo = risk.vessel_risks[vname]
         hu_str = f"{vinfo['mean_hu']:.1f} HU" if not np.isnan(vinfo['mean_hu']) else "N/A"
-        vol_str = f"{vinfo['volume_cm3']:.1f} cm³"
+        vol_str = f"{vinfo['volume_cm3']:.1f} cm3"
         vcolor = (0.85, 0.1, 0.1) if vinfo["is_inflamed"] else (0.1, 0.6, 0.3)
         page.insert_text(fitz.Point(326, v_y), f"{vname} PVAT:", fontsize=9, color=(0.1, 0.15, 0.25), fontname="helv")
         page.insert_text(fitz.Point(386, v_y), vol_str, fontsize=8.5, color=(0.3, 0.35, 0.4), fontname="helv")
@@ -676,9 +676,9 @@ def generate_clinical_report_pdf(
         page.insert_text(fitz.Point(506, v_y), "INFLAMED" if vinfo["is_inflamed"] else "Normal", fontsize=8, color=vcolor, fontname="helv")
         v_y += 22
 
-    page.insert_text(fitz.Point(326, 268), f"Total Pericoronary Fat Volume: {metrics.get(f'{ReportedRegion.PVAT_TOTAL} Volume (cm3)', 0.0):.1f} cm³", fontsize=8, color=(0.3, 0.35, 0.45), fontname="helv")
+    page.insert_text(fitz.Point(326, 268), f"Total Pericoronary Fat Volume: {metrics.get(f'{ReportedRegion.PVAT_TOTAL} Volume (cm3)', 0.0):.1f} cm3", fontsize=8, color=(0.3, 0.35, 0.45), fontname="helv")
 
-    # 4. Embedded MPR Snapshot Image
+    # 4. Embedded MPR Snapshot Image or Clinical Reference Guide
     if mpr_image is not None:
         page.draw_rect(fitz.Rect(36, 290, 576, 520), color=(0.1, 0.15, 0.25), fill=(0.05, 0.07, 0.12))
         page.insert_text(fitz.Point(46, 305), "3-VIEW ORTHOGONAL MULTI-PLANAR RECONSTRUCTION (MPR) WITH AI OVERLAYS", fontsize=8, color=(0.3, 0.75, 0.95), fontname="helv")
@@ -687,6 +687,51 @@ def generate_clinical_report_pdf(
         buf = io.BytesIO()
         mpr_image.save(buf, format="PNG")
         page.insert_image(fitz.Rect(46, 324, 566, 510), stream=buf.getvalue())
+    else:
+        # Clinical Risk Stratification & Landmark Reference Card
+        page.draw_rect(fitz.Rect(36, 290, 576, 520), color=(0.8, 0.85, 0.9), fill=(0.98, 0.99, 1.0))
+        page.insert_text(fitz.Point(46, 308), "CLINICAL RISK THRESHOLDS & CARDIAC FAT BENCHMARK REFERENCE", fontsize=8.5, color=(0.05, 0.15, 0.3), fontname="helv")
+        page.insert_text(fitz.Point(46, 320), "Validated clinical guidelines and cardiovascular prognostic risk cutoffs", fontsize=7.5, color=(0.4, 0.45, 0.5), fontname="helv")
+
+        # Col 1: CRISP-CT Fat Attenuation Index (FAI)
+        page.draw_rect(fitz.Rect(46, 330, 212, 508), color=(0.85, 0.88, 0.92), fill=(1.0, 1.0, 1.0))
+        page.insert_text(fitz.Point(54, 346), "CRISP-CT INFLAMMATION", fontsize=8, color=(0.85, 0.15, 0.15), fontname="helv")
+        page.insert_text(fitz.Point(54, 359), "Cutoff: > -70.1 HU", fontsize=9, color=(0.1, 0.15, 0.25), fontname="helv")
+        page.insert_text(fitz.Point(54, 372), "Pericoronary Fat (PVAT)", fontsize=7.5, color=(0.3, 0.35, 0.4), fontname="helv")
+        page.insert_text(fitz.Point(54, 390), "- High Risk: > -70.1 HU", fontsize=7.5, color=(0.8, 0.1, 0.1), fontname="helv")
+        page.insert_text(fitz.Point(54, 404), "  HR 2.15 for cardiac death", fontsize=7, color=(0.4, 0.45, 0.5), fontname="helv")
+        page.insert_text(fitz.Point(54, 422), "- Normal: <= -70.1 HU", fontsize=7.5, color=(0.1, 0.6, 0.3), fontname="helv")
+        page.insert_text(fitz.Point(54, 436), "  Quiescent perivascular fat", fontsize=7, color=(0.4, 0.45, 0.5), fontname="helv")
+        page.insert_text(fitz.Point(54, 460), "Ref: Oikonomou et al.", fontsize=7, color=(0.4, 0.45, 0.5), fontname="helv")
+        page.insert_text(fitz.Point(54, 472), "The Lancet (2018)", fontsize=7, color=(0.4, 0.45, 0.5), fontname="helv")
+        page.insert_text(fitz.Point(54, 492), "Caristo CaRi-Heart Equiv.", fontsize=7, color=(0.2, 0.5, 0.8), fontname="helv")
+
+        # Col 2: Epicardial Adipose Tissue (EAT) Burden
+        page.draw_rect(fitz.Rect(220, 330, 386, 508), color=(0.85, 0.88, 0.92), fill=(1.0, 1.0, 1.0))
+        page.insert_text(fitz.Point(228, 346), "TOTAL EAT VOLUME BURDEN", fontsize=8, color=(0.1, 0.45, 0.65), fontname="helv")
+        page.insert_text(fitz.Point(228, 359), "Population Percentiles", fontsize=9, color=(0.1, 0.15, 0.25), fontname="helv")
+        page.insert_text(fitz.Point(228, 372), "Whole-Heart Envelope", fontsize=7.5, color=(0.3, 0.35, 0.4), fontname="helv")
+        page.insert_text(fitz.Point(228, 390), "- Normal: < 100 cm3", fontsize=7.5, color=(0.1, 0.6, 0.3), fontname="helv")
+        page.insert_text(fitz.Point(228, 404), "  Low MACE incidence", fontsize=7, color=(0.4, 0.45, 0.5), fontname="helv")
+        page.insert_text(fitz.Point(228, 422), "- Moderate: 100 - 125 cm3", fontsize=7.5, color=(0.85, 0.55, 0.1), fontname="helv")
+        page.insert_text(fitz.Point(228, 436), "  Intermediate adiposity", fontsize=7, color=(0.4, 0.45, 0.5), fontname="helv")
+        page.insert_text(fitz.Point(228, 454), "- Elevated: > 125 cm3", fontsize=7.5, color=(0.8, 0.1, 0.1), fontname="helv")
+        page.insert_text(fitz.Point(228, 468), "  High adverse event risk", fontsize=7, color=(0.4, 0.45, 0.5), fontname="helv")
+        page.insert_text(fitz.Point(228, 492), "Framingham Heart Study Ref", fontsize=7, color=(0.2, 0.5, 0.8), fontname="helv")
+
+        # Col 3: Agatston Coronary Calcium (CAC) Tiers
+        page.draw_rect(fitz.Rect(394, 330, 566, 508), color=(0.85, 0.88, 0.92), fill=(1.0, 1.0, 1.0))
+        page.insert_text(fitz.Point(402, 346), "AGATSTON CAC PLAQUE TIERS", fontsize=8, color=(0.55, 0.3, 0.8), fontname="helv")
+        page.insert_text(fitz.Point(402, 359), "Plaque Burden Scale", fontsize=9, color=(0.1, 0.15, 0.25), fontname="helv")
+        page.insert_text(fitz.Point(402, 372), "ACC/AHA Guidelines", fontsize=7.5, color=(0.3, 0.35, 0.4), fontname="helv")
+        page.insert_text(fitz.Point(402, 390), "- Zero Plaque: CAC = 0", fontsize=7.5, color=(0.1, 0.6, 0.3), fontname="helv")
+        page.insert_text(fitz.Point(402, 404), "- Mild Plaque: 1 - 99", fontsize=7.5, color=(0.2, 0.5, 0.7), fontname="helv")
+        page.insert_text(fitz.Point(402, 418), "- Moderate: 100 - 399", fontsize=7.5, color=(0.85, 0.55, 0.1), fontname="helv")
+        page.insert_text(fitz.Point(402, 432), "- Severe Plaque: 400 - 999", fontsize=7.5, color=(0.85, 0.3, 0.1), fontname="helv")
+        page.insert_text(fitz.Point(402, 446), "- Extensive: >= 1000", fontsize=7.5, color=(0.8, 0.1, 0.1), fontname="helv")
+        page.insert_text(fitz.Point(402, 468), "3D Seg & OHIF MPR Workstation", fontsize=7, color=(0.3, 0.35, 0.4), fontname="helv")
+        page.insert_text(fitz.Point(402, 480), "Multi-frame DICOM-SEG (.66.4)", fontsize=7, color=(0.3, 0.35, 0.4), fontname="helv")
+        page.insert_text(fitz.Point(402, 492), "Structured Report TID 1500 (.88.34)", fontsize=7, color=(0.2, 0.5, 0.8), fontname="helv")
 
     # 5. Structured Radiologist Impression Text Box
     page.draw_rect(fitz.Rect(36, 530, 576, 730), color=(0.8, 0.85, 0.9), fill=(0.97, 0.98, 0.99))
@@ -699,7 +744,7 @@ def generate_clinical_report_pdf(
         y_imp += 12
 
     # 6. Regulatory Footer
-    page.insert_text(fitz.Point(120, 755), "monai-cardiac-fat-fl • DICOM-SEG (1.2.840.10008.5.1.4.1.1.66.4) • DICOM-SR TID 1500 • Encapsulated PDF", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
+    page.insert_text(fitz.Point(120, 755), "monai-cardiac-fat-fl | DICOM-SEG (1.2.840.10008.5.1.4.1.1.66.4) | DICOM-SR TID 1500 | Encapsulated PDF", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
     page.insert_text(fitz.Point(160, 765), "For Investigational / Research Use Only (RUO). Clinical verification required by board-certified physician.", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
 
     # Page 2: NV-Reason-CT AI Narrative (if available)
@@ -724,7 +769,7 @@ def generate_clinical_report_pdf(
             fontname="helv",
         )
 
-        page2.insert_text(fitz.Point(120, 755), "monai-cardiac-fat-fl • NVIDIA NV-Reason-CT (3D ViT + Qwen3.5-4B) • Page 2 of 2", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
+        page2.insert_text(fitz.Point(120, 755), "monai-cardiac-fat-fl | NVIDIA NV-Reason-CT (3D ViT + Qwen3.5-4B) | Page 2 of 2", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
         page2.insert_text(fitz.Point(160, 765), "For Investigational / Research Use Only (RUO). Clinical verification required by board-certified physician.", fontsize=6.5, color=(0.5, 0.55, 0.6), fontname="helv")
 
     pdf_bytes = doc.tobytes()
@@ -755,8 +800,6 @@ def encapsulate_pdf_to_dicom(
 
     ds = Dataset()
     ds.file_meta = file_meta
-    ds.is_little_endian = True
-    ds.is_implicit_VR = False
 
     # Standard Identifiers
     ds.SOPClassUID = EncapsulatedPDFStorage
@@ -764,9 +807,13 @@ def encapsulate_pdf_to_dicom(
 
     # Copy parent study relationships if available
     if source_ct_dcm is not None:
-        ds.StudyInstanceUID = getattr(source_ct_dcm, "StudyInstanceUID", generate_uid())
-        ds.PatientID = getattr(source_ct_dcm, "PatientID", participant_id)
-        ds.PatientName = getattr(source_ct_dcm, "PatientName", participant_id)
+        source_study_uid = getattr(source_ct_dcm, "StudyInstanceUID", None)
+        if source_study_uid and pydicom.uid.UID(str(source_study_uid)).is_valid:
+            ds.StudyInstanceUID = str(source_study_uid)
+        else:
+            ds.StudyInstanceUID = study_instance_uid or generate_uid()
+        ds.PatientID = getattr(source_ct_dcm, "PatientID", participant_id) or participant_id
+        ds.PatientName = getattr(source_ct_dcm, "PatientName", participant_id) or participant_id
         ds.PatientBirthDate = getattr(source_ct_dcm, "PatientBirthDate", "")
         ds.PatientSex = getattr(source_ct_dcm, "PatientSex", "O")
         ds.AccessionNumber = getattr(source_ct_dcm, "AccessionNumber", "")

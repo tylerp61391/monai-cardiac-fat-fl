@@ -210,7 +210,11 @@ To generate a Cleerly/HeartFlow-style clinical diagnostic report with 3-view ort
 1. **CLI Execution**:
 
    ```bash
+   # Single study execution
    cardiac-fat-fl report "path/to/study_dir" --output-dir "path/to/study_dir/report"
+
+   # Full cohort batch mode (e.g. Stanford COCA, 998 participants in ~60s)
+   cardiac-fat-fl report "path/to/cohort_dir" --limit 100 --overwrite
    ```
 
 2. **Generated Deliverables**:

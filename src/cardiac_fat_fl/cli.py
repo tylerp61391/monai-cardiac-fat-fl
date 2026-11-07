@@ -1428,6 +1428,17 @@ def report_cmd(
         "--vlm-model-dir",
         help="Custom path to NV-Reason-CT model directory (defaults to E:\\models\\NV-Reason-CT or NV_REASON_MODEL_DIR).",
     ),
+    limit: Optional[int] = typer.Option(
+        None,
+        "--limit",
+        "-l",
+        help="Maximum participants to process when generating reports across a cohort directory.",
+    ),
+    overwrite: bool = typer.Option(
+        False,
+        "--overwrite",
+        help="Re-generate reports even if cardiac_fat_report.pdf already exists on disk.",
+    ),
 ) -> None:
     """Generate a SOTA clinical-grade cardiovascular imaging report (Cleerly / HeartFlow style).
 
@@ -1471,12 +1482,16 @@ def report_cmd(
             except Exception:
                 pass
 
+    is_cohort_csv = False
     if not metrics:
         for cc in csv_candidates:
             if cc.exists():
                 try:
                     df = pd.read_csv(cc)
-                    if not df.empty:
+                    if len(df) > 1:
+                        is_cohort_csv = True
+                        break
+                    elif not df.empty:
                         row = df.iloc[0].to_dict()
                         metrics = {k: float(v) for k, v in row.items() if k != "participant_id" and pd.notna(v)}
                         break
@@ -1494,6 +1509,46 @@ def report_cmd(
         resolved_input / f"{resolved_input.name}_eat_pvat.seg.nrrd",
     ]
     found_seg = next((s for s in seg_candidates if s.exists()), None)
+
+    # Check if input path is a cohort directory with multiple participants
+    if (is_cohort_csv or (not metrics and not found_seg)) and resolved_input.is_dir():
+        from cardiac_fat_fl.cohort_research import CohortDataset
+
+        ds = CohortDataset(resolved_input)
+        if len(ds.participants) > 1:
+            console.print("[bold cyan]================================================================[/bold cyan]")
+            console.print("[bold cyan]       Batch Cohort Clinical Imaging Report Generation          [/bold cyan]")
+            console.print("[bold cyan]================================================================[/bold cyan]")
+            console.print(f"  [bold]Cohort Directory:[/bold] {resolved_input}")
+            console.print(f"  [bold]Discovered Cases:[/bold] {len(ds.participants)}")
+
+            eligible = [p for p in ds.participants.values() if p.metrics and len(p.metrics) > 0]
+            if limit and limit > 0:
+                eligible = eligible[:limit]
+            console.print(f"  [bold]Eligible Cases:[/bold]   {len(eligible)}")
+
+            gen_count = 0
+            skip_count = 0
+            err_count = 0
+            for p in eligible:
+                pdf_f = p.study_dir / "cardiac_fat_report.pdf"
+                if not overwrite and pdf_f.exists():
+                    skip_count += 1
+                    continue
+                try:
+                    export_clinical_imaging_report(
+                        output_dir=p.study_dir,
+                        metrics=p.metrics,
+                        participant_id=p.participant_id,
+                        ohif_viewer_url=f"http://127.0.0.1:8000/patient/{p.participant_id}/",
+                    )
+                    gen_count += 1
+                except Exception as ex:
+                    console.print(f"[yellow]Failed for {p.participant_id}: {ex}[/yellow]")
+                    err_count += 1
+            console.print(f"\n[bold green]Cohort reports complete:[/bold green] {gen_count} generated, {skip_count} skipped, {err_count} errors.")
+            return
+
     if found_seg:
         try:
             mask_meta = read_nrrd_as_metatensor(found_seg)

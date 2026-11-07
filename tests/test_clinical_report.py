@@ -234,7 +234,7 @@ def test_clinical_report_with_nv_reason_ai_narrative(tmp_path: Path) -> None:
     assert "NVIDIA NV-Reason-CT Generative Radiology Findings" in html_content
     assert "Active LCX coronary vascular inflammation" in html_content
 
-    import fitz  # pyright: ignore[reportMissingImports]
+    import pymupdf as fitz  # pyright: ignore[reportMissingImports]
     doc = fitz.open(str(artifacts["report_pdf"]))
     assert len(doc) == 2  # Page 1 standard report, Page 2 NV-Reason-CT AI report
     p2_text = doc[1].get_text()
@@ -275,7 +275,7 @@ def test_clinical_report_sanitizes_raw_vlm_tags(tmp_path: Path) -> None:
     assert "KEY FINDINGS: Coronary artery wall calcification, Emphysema" in html_content
 
     # PDF verification
-    import fitz  # pyright: ignore[reportMissingImports]
+    import pymupdf as fitz  # pyright: ignore[reportMissingImports]
     doc = fitz.open(str(artifacts["report_pdf"]))
     assert len(doc) == 2
     p2_text = doc[1].get_text()
@@ -283,4 +283,17 @@ def test_clinical_report_sanitizes_raw_vlm_tags(tmp_path: Path) -> None:
     assert "</answer>" not in p2_text
     assert "KEY FINDINGS: Coronary artery wall calcification, Emphysema" in p2_text
     doc.close()
+
+
+def test_cohort_batch_report_cli(synthetic_cohort_dir: Path) -> None:
+    """Verify CLI batch cohort report generation across multiple participants."""
+    from typer.testing import CliRunner
+    from cardiac_fat_fl.cli import app
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["report", str(synthetic_cohort_dir), "--no-browser", "--limit", "2"])
+    assert result.exit_code == 0
+    assert "Batch Cohort Clinical Imaging Report Generation" in result.output
+    assert "Cohort reports complete" in result.output
+
 
