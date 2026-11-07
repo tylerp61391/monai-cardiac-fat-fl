@@ -10,8 +10,8 @@
     
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #090d16;
-      color: #e2e8f0;
+      background-color: #f8fafc;
+      color: #0f172a;
     }
     .serif-title {
       font-family: 'Crimson Pro', Georgia, serif;
@@ -23,46 +23,49 @@
 </head>
 <body class="p-4 md:p-8 max-w-[1780px] mx-auto antialiased">
 
-  <!-- Header Banner -->
-  <div class="border-b border-slate-700/80 pb-5 mb-8">
+  <!-- Header Banner (Clinical Navy) -->
+  <div class="bg-slate-900 text-white rounded-2xl p-6 md:p-8 mb-8 shadow-xl border border-slate-800">
     <div class="flex flex-wrap justify-between items-center text-xs text-sky-400 font-mono tracking-wider uppercase mb-2 gap-2">
       <span class="font-bold flex items-center gap-2">
-        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        SYSTEM ARCHITECTURE &bull; REGULATORY SaMD BLUEPRINT
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        CLINICAL ARCHITECTURE BLUEPRINT &bull; REGULATORY SaMD SPECIFICATION
       </span>
       <div class="flex flex-wrap items-center gap-2">
-        <span class="bg-sky-950 text-sky-300 px-2.5 py-0.5 rounded border border-sky-700">FDA Class II 510(k)</span>
-        <span class="bg-teal-950 text-teal-300 px-2.5 py-0.5 rounded border border-teal-700">IEC 62304 Class B</span>
-        <span class="bg-amber-950 text-amber-300 px-2.5 py-0.5 rounded border border-amber-700">ISO 14971 FMEA</span>
-        <span class="bg-emerald-950 text-emerald-300 px-2.5 py-0.5 rounded border border-emerald-700">NVIDIA FLARE 2.5+</span>
-        <span class="bg-purple-950 text-purple-300 px-2.5 py-0.5 rounded border border-purple-700">OHIF v3.13 Next</span>
+        <span class="bg-sky-900/80 text-sky-200 px-2.5 py-0.5 rounded border border-sky-700">FDA Class II 510(k)</span>
+        <span class="bg-teal-900/80 text-teal-200 px-2.5 py-0.5 rounded border border-teal-700">IEC 62304 Class B</span>
+        <span class="bg-amber-900/80 text-amber-200 px-2.5 py-0.5 rounded border border-amber-700">ISO 14971 FMEA</span>
+        <span class="bg-emerald-900/80 text-emerald-200 px-2.5 py-0.5 rounded border border-emerald-700">NVIDIA FLARE 2.5+</span>
+        <span class="bg-purple-900/80 text-purple-200 px-2.5 py-0.5 rounded border border-purple-700">OHIF v3.13 Next</span>
       </div>
     </div>
     <h1 class="serif-title text-3xl md:text-5xl font-bold text-white tracking-tight">
       End-to-End Clinical &amp; Federated SaMD Architecture
     </h1>
-    <p class="text-slate-300 text-sm md:text-base mt-2 max-w-5xl">
-      Multi-vendor CT ingestion &rarr; Dual-Mode Privacy Gateway (Clinical vs. Research / RSNA V19) &rarr; Multi-Model 3D Segmentation (MONAI / TotalSeg / NV-Segment) &rarr; Local Hospital EHR &amp; PACS Archive and (World) Privacy-Preserving Federated Learning.
+    <p class="text-slate-300 text-sm md:text-base mt-2 max-w-5xl leading-relaxed">
+      From Multi-Vendor CT Ingestion &amp; Dual-Mode Privacy Gate to 3D Foundation Segmentation, Local EHR/PACS Deployment &amp; Privacy-Preserving Federated Learning Consortium.
     </p>
   </div>
 
-  <!-- Main Pipeline Grid -->
+  <!-- Main Pipeline Grid (Clinical Light Mode) -->
   <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
 
     <!-- 1. CT Ingestion -->
-    <div class="bg-slate-900/90 border border-sky-500/50 rounded-xl p-5 flex flex-col justify-between shadow-lg shadow-sky-950/20">
+    <div class="bg-white border-2 border-sky-300 rounded-2xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
       <div>
-        <div class="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
-          <span class="text-xs font-mono font-bold text-sky-400 uppercase tracking-wider">Step 1 &bull; Ingestion</span>
-          <span class="text-[11px] bg-sky-950 text-sky-300 px-2 py-0.5 rounded border border-sky-800">MetaTensor</span>
+        <div class="flex items-center justify-between pb-3 border-b border-sky-100 mb-4">
+          <span class="text-xs font-mono font-bold text-sky-700 uppercase tracking-wider">Step 1 &bull; Ingestion</span>
+          <span class="text-[11px] bg-sky-100 text-sky-800 font-semibold px-2 py-0.5 rounded border border-sky-200">MetaTensor</span>
         </div>
-        <h2 class="text-lg font-bold text-white mb-1">Volumetric CT Scans</h2>
-        <p class="text-xs text-slate-400 mb-4">Multi-vendor calibrated series with coordinate preservation.</p>
+        <h2 class="text-xl font-bold text-slate-900 mb-1">Volumetric CT Scans</h2>
+        <p class="text-xs text-slate-500 mb-4 font-medium">Multi-vendor calibrated series with physical coordinate preservation.</p>
 
         <div class="space-y-3">
-          <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs">
-            <div class="font-bold text-sky-300 mb-1">Supported Scanner Vendors</div>
-            <ul class="text-slate-300 space-y-0.5 pl-2 border-l border-sky-500/40">
+          <div class="bg-sky-50/70 p-3.5 rounded-xl border border-sky-200/80 text-xs">
+            <div class="font-bold text-sky-900 mb-1.5 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-sky-600"></span>
+              Supported Scanner Vendors
+            </div>
+            <ul class="text-slate-700 space-y-1 pl-2 border-l-2 border-sky-400">
               <li>&bull; Siemens Healthineers (Force, Flash)</li>
               <li>&bull; GE Healthcare (Revolution, HD)</li>
               <li>&bull; Philips Healthcare (Brilliance, iCT)</li>
@@ -71,246 +74,270 @@
             </ul>
           </div>
 
-          <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs">
-            <div class="font-bold text-sky-300 mb-1">Header-Preserving I/O</div>
-            <ul class="text-slate-300 space-y-0.5 pl-2 border-l border-sky-500/40">
+          <div class="bg-sky-50/70 p-3.5 rounded-xl border border-sky-200/80 text-xs">
+            <div class="font-bold text-sky-900 mb-1.5 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-sky-600"></span>
+              Header-Preserving I/O
+            </div>
+            <ul class="text-slate-700 space-y-1 pl-2 border-l-2 border-sky-400">
               <li>&bull; DICOM Series (natural IPP Z-sorting)</li>
-              <li>&bull; NRRD (<code class="mono-code text-[11px] text-sky-200">scan.nrrd</code>) &amp; NIfTI (<code class="mono-code text-[11px] text-sky-200">.nii.gz</code>)</li>
+              <li>&bull; NRRD (<code class="mono-code text-[11px] text-sky-900 font-bold">scan.nrrd</code>) &amp; NIfTI (<code class="mono-code text-[11px] text-sky-900 font-bold">.nii.gz</code>)</li>
               <li>&bull; Multi-series scout collision safe</li>
-              <li>&bull; Fast <code class="mono-code text-[11px] text-sky-200">os.scandir</code> cohort discovery</li>
+              <li>&bull; Fast <code class="mono-code text-[11px] text-sky-900 font-bold">os.scandir</code> cohort discovery</li>
             </ul>
           </div>
 
-          <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs">
-            <div class="font-bold text-sky-300 mb-1">Spatial Geometry Invariant</div>
-            <p class="text-slate-300 text-[11px]">
-              Origin, pixel spacing <code class="mono-code text-cyan-300">(dx, dy)</code>, slice thickness <code class="mono-code text-cyan-300">(dz)</code>, and direction cosines preserved in 4&times;4 affine.
+          <div class="bg-sky-50/70 p-3.5 rounded-xl border border-sky-200/80 text-xs">
+            <div class="font-bold text-sky-900 mb-1 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-sky-600"></span>
+              Spatial Geometry Invariants
+            </div>
+            <p class="text-slate-700 text-[11px] leading-relaxed">
+              Origin, pixel spacing <code class="mono-code text-sky-800 font-bold">(dx, dy mm)</code>, slice thickness <code class="mono-code text-sky-800 font-bold">(dz)</code>, and direction cosines locked in 4&times;4 affine.
             </p>
           </div>
         </div>
       </div>
-      <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-sky-400 font-mono">
-        &rarr; Universal 3D Coordinate Space
+      <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-sky-700 font-mono font-bold flex items-center justify-between">
+        <span>&rarr; Universal 3D Physical Space</span>
+        <span class="text-slate-400 font-normal">REQ-005</span>
       </div>
     </div>
 
     <!-- 2. Dual-Mode Privacy Gate -->
-    <div class="bg-slate-900/90 border border-emerald-500/50 rounded-xl p-5 flex flex-col justify-between shadow-lg shadow-emerald-950/20">
+    <div class="bg-white border-2 border-emerald-300 rounded-2xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
       <div>
-        <div class="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
-          <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Step 2 &bull; Privacy Gate</span>
-          <span class="text-[11px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">Dual-Mode</span>
+        <div class="flex items-center justify-between pb-3 border-b border-emerald-100 mb-4">
+          <span class="text-xs font-mono font-bold text-emerald-700 uppercase tracking-wider">Step 2 &bull; Privacy Gate</span>
+          <span class="text-[11px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded border border-emerald-200">Dual-Mode</span>
         </div>
-        <h2 class="text-lg font-bold text-white mb-1">Identity &amp; Trust Boundary</h2>
-        <p class="text-xs text-slate-400 mb-4">Strict separation between clinical care and research consortia.</p>
+        <h2 class="text-xl font-bold text-slate-900 mb-1">Identity &amp; Trust Boundary</h2>
+        <p class="text-xs text-slate-500 mb-4 font-medium">Strict separation between clinical care and research consortia.</p>
 
         <div class="space-y-3">
           <!-- Clinical Track -->
-          <div class="bg-sky-950/40 p-3 rounded-lg border border-sky-800/60 text-xs">
-            <div class="flex items-center justify-between mb-1">
-              <span class="font-bold text-sky-300">CLINICAL MODE</span>
-              <span class="text-[10px] bg-sky-900/80 text-sky-200 px-1.5 py-0.2 rounded font-mono">--mode clinical</span>
+          <div class="bg-sky-50 p-3.5 rounded-xl border border-sky-300 text-xs">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-bold text-sky-900 text-[12px]">CLINICAL MODE</span>
+              <span class="text-[10px] bg-sky-200 text-sky-900 px-1.5 py-0.5 rounded font-mono font-bold">--mode clinical</span>
             </div>
-            <p class="text-slate-300 text-[11px] mb-1.5">Local Hospital Intranet Trust Zone.</p>
-            <ul class="text-slate-300 space-y-0.5 text-[11px]">
+            <p class="text-slate-700 text-[11px] mb-2 font-medium">Hospital Intranet Local Trust Zone:</p>
+            <ul class="text-slate-700 space-y-1 text-[11px]">
               <li>&bull; Retains PatientName, MRN (PatientID)</li>
               <li>&bull; Retains AccessionNumber, StudyDate</li>
-              <li>&bull; Files directly into patient EHR chart</li>
-              <li class="text-rose-400 font-medium">&bull; Hard Firewall: Blocked from external FL</li>
+              <li>&bull; Files directly to Hospital PACS archive</li>
+              <li>&bull; Links into Patient EHR Chart (Epic)</li>
+              <li class="text-rose-700 font-bold bg-rose-50 px-1 py-0.5 rounded border border-rose-200">&bull; Hard Firewall: Blocked from external FL</li>
             </ul>
           </div>
 
           <!-- Research Track -->
-          <div class="bg-emerald-950/40 p-3 rounded-lg border border-emerald-800/60 text-xs">
-            <div class="flex items-center justify-between mb-1">
-              <span class="font-bold text-emerald-300">RESEARCH MODE</span>
-              <span class="text-[10px] bg-emerald-900/80 text-emerald-200 px-1.5 py-0.2 rounded font-mono">--mode research</span>
+          <div class="bg-emerald-50 p-3.5 rounded-xl border border-emerald-300 text-xs">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-bold text-emerald-900 text-[12px]">RESEARCH MODE</span>
+              <span class="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-mono font-bold">--mode research</span>
             </div>
-            <p class="text-slate-300 text-[11px] mb-1.5">HIPAA Safe Harbor &amp; RSNA V19 Profile.</p>
-            <ul class="text-slate-300 space-y-0.5 text-[11px]">
-              <li>&bull; RSNA V19 via <code class="mono-code text-[10px] text-emerald-200">uv tool run</code></li>
-              <li>&bull; Native CLI: <code class="mono-code text-[10px] text-emerald-200">cardiac-fat-fl anonymize</code></li>
+            <p class="text-slate-700 text-[11px] mb-2 font-medium">HIPAA Safe Harbor &amp; RSNA V19 Profile:</p>
+            <ul class="text-slate-700 space-y-1 text-[11px]">
+              <li>&bull; RSNA V19 via <code class="mono-code text-[10px] text-emerald-800 font-bold">uv tool run</code> (isolated)</li>
+              <li>&bull; Native CLI: <code class="mono-code text-[10px] text-emerald-800 font-bold">cardiac-fat-fl anonymize</code></li>
               <li>&bull; 18 Safe Harbor statutory PHI scrubbed</li>
-              <li>&bull; Deterministic pseudonyms &amp; SHA-256 UIDs</li>
-              <li>&bull; Pre-flight audit gate: <code class="mono-code text-[10px] text-amber-300">deid-audit</code></li>
-              <li class="text-amber-300 font-medium">&bull; 100% Geometry &amp; HU Invariants Preserved</li>
+              <li>&bull; Pseudonyms: <code class="mono-code text-[10px]">Participant {pid}</code>, <code class="mono-code text-[10px]">ACC_{pid}</code></li>
+              <li>&bull; SHA-256 HMAC UIDs &amp; date shifting</li>
+              <li>&bull; Pre-flight audit gate: <code class="mono-code text-[10px] text-amber-800 font-bold">deid-audit</code></li>
+              <li class="text-amber-800 font-bold bg-amber-50 px-1 py-0.5 rounded border border-amber-200">&bull; 100% Geometry &amp; HU Invariants Preserved</li>
             </ul>
           </div>
         </div>
       </div>
-      <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-emerald-400 font-mono">
-        &rarr; Safe Harbor Conformance
+      <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-emerald-700 font-mono font-bold flex items-center justify-between">
+        <span>&rarr; Safe Harbor 45 CFR &sect; 164.514</span>
+        <span class="text-slate-400 font-normal">PS 3.15 Annex E</span>
       </div>
     </div>
 
     <!-- 3. Multi-Model 3D Segmentation Engine -->
-    <div class="bg-slate-900/90 border border-purple-500/50 rounded-xl p-5 flex flex-col justify-between shadow-lg shadow-purple-950/20">
+    <div class="bg-white border-2 border-purple-300 rounded-2xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
       <div>
-        <div class="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
-          <span class="text-xs font-mono font-bold text-purple-400 uppercase tracking-wider">Step 3 &bull; AI Engine</span>
-          <span class="text-[11px] bg-purple-950 text-purple-300 px-2 py-0.5 rounded border border-purple-800">Multi-Model</span>
+        <div class="flex items-center justify-between pb-3 border-b border-purple-100 mb-4">
+          <span class="text-xs font-mono font-bold text-purple-700 uppercase tracking-wider">Step 3 &bull; AI Engine</span>
+          <span class="text-[11px] bg-purple-100 text-purple-800 font-semibold px-2 py-0.5 rounded border border-purple-200">Multi-Model</span>
         </div>
-        <h2 class="text-lg font-bold text-white mb-1">3D Anatomy &amp; Fat Engine</h2>
-        <p class="text-xs text-slate-400 mb-4">Selectable foundation tracks with DeepHeartSeg invariance.</p>
+        <h2 class="text-xl font-bold text-slate-900 mb-1">3D Anatomy &amp; Fat Engine</h2>
+        <p class="text-xs text-slate-500 mb-4 font-medium">Selectable foundation tracks with DeepHeartSeg invariance.</p>
 
         <div class="space-y-3">
-          <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs">
-            <div class="font-bold text-purple-300 mb-1">Chamber Backend Options</div>
-            <ul class="text-slate-300 space-y-1 text-[11px]">
-              <li><span class="text-sky-300 font-mono font-bold">monai</span>: NGC SegResNet 1.5mm (104 classes)</li>
-              <li><span class="text-emerald-300 font-mono font-bold">totalsegmentator</span>: nnU-Net Task253 (bit-exact)</li>
-              <li><span class="text-amber-300 font-mono font-bold">nvsegment</span>: NVIDIA-MedTech VISTA-3D (346 cls)</li>
-              <li><span class="text-pink-300 font-mono font-bold">DeepHeartSeg ONNX</span>: Pericardium envelope</li>
+          <div class="bg-purple-50/70 p-3.5 rounded-xl border border-purple-200/80 text-xs">
+            <div class="font-bold text-purple-900 mb-1.5 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+              Chamber Backend Options
+            </div>
+            <ul class="text-slate-700 space-y-1.5 text-[11px]">
+              <li><strong class="text-sky-800 font-mono">monai</strong>: NGC SegResNet 1.5mm (104 classes)</li>
+              <li><strong class="text-emerald-800 font-mono">totalsegmentator</strong>: nnU-Net Task253 (bit-exact)</li>
+              <li><strong class="text-amber-800 font-mono">nvsegment</strong>: NVIDIA-MedTech VISTA-3D</li>
+              <li><strong class="text-pink-800 font-mono">DeepHeartSeg ONNX</strong>: Pericardium envelope</li>
             </ul>
           </div>
 
-          <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs">
-            <div class="font-bold text-purple-300 mb-1">Clinical Invariants &amp; Transforms</div>
-            <ul class="text-slate-300 space-y-0.5 text-[11px]">
-              <li>&bull; Adipose Window: strictly [-190, -30] HU</li>
-              <li>&bull; Geometric Sulci Derivation (LAD, LCX, RCA)</li>
-              <li>&bull; 10 mm Anisotropic Radial EDT Dilation</li>
+          <div class="bg-purple-50/70 p-3.5 rounded-xl border border-purple-200/80 text-xs">
+            <div class="font-bold text-purple-900 mb-1 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+              Clinical Invariants &amp; Transforms
+            </div>
+            <ul class="text-slate-700 space-y-1 text-[11px]">
+              <li>&bull; Strict Adipose Window: <strong class="text-purple-900">[-190.0, -30.0] HU</strong></li>
+              <li>&bull; Geometric Sulci Grooves (LAD, LCX, RCA)</li>
+              <li>&bull; 10.0 mm Anisotropic Radial EDT Dilation</li>
               <li>&bull; CRISP-CT Inflammation Cutoff: &gt; -70.1 HU</li>
             </ul>
           </div>
 
-          <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs">
-            <div class="font-bold text-purple-300 mb-1.5">8 Compartments &bull; Canonical Palette</div>
-            <div class="grid grid-cols-4 gap-1 text-[10px] text-center font-bold">
-              <span class="bg-blue-600 text-white rounded py-0.5">EAT LA</span>
-              <span class="bg-cyan-500 text-white rounded py-0.5">EAT LV</span>
-              <span class="bg-emerald-600 text-white rounded py-0.5">EAT RA</span>
-              <span class="bg-yellow-500 text-slate-950 rounded py-0.5">EAT RV</span>
-              <span class="bg-orange-500 text-white rounded py-0.5">PVAT LAD</span>
-              <span class="bg-red-500 text-white rounded py-0.5">PVAT LCX</span>
-              <span class="bg-pink-500 text-white rounded py-0.5">PVAT RCA</span>
-              <span class="bg-purple-600 text-white rounded py-0.5">EAT Total</span>
+          <div class="bg-purple-50/70 p-3.5 rounded-xl border border-purple-200/80 text-xs">
+            <div class="font-bold text-purple-900 mb-1.5">8 Compartments &bull; Canonical Palette</div>
+            <div class="grid grid-cols-4 gap-1.5 text-[10px] text-center font-bold">
+              <span class="bg-blue-600 text-white rounded py-1 shadow-sm">EAT LA</span>
+              <span class="bg-cyan-500 text-white rounded py-1 shadow-sm">EAT LV</span>
+              <span class="bg-emerald-600 text-white rounded py-1 shadow-sm">EAT RA</span>
+              <span class="bg-yellow-500 text-slate-950 rounded py-1 shadow-sm">EAT RV</span>
+              <span class="bg-orange-500 text-white rounded py-1 shadow-sm">PVAT LAD</span>
+              <span class="bg-red-500 text-white rounded py-1 shadow-sm">PVAT LCX</span>
+              <span class="bg-pink-500 text-white rounded py-1 shadow-sm">PVAT RCA</span>
+              <span class="bg-purple-600 text-white rounded py-1 shadow-sm">EAT Total</span>
             </div>
           </div>
         </div>
       </div>
-      <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-purple-400 font-mono">
-        &rarr; 19-Column Schema &amp; DICOM-SEG
+      <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-purple-700 font-mono font-bold flex items-center justify-between">
+        <span>&rarr; 19-Column Schema &bull; DICOM-SEG</span>
+        <span class="text-slate-400 font-normal">REQ-001/002</span>
       </div>
     </div>
 
     <!-- 4. Downstream Destinations -->
-    <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-5 flex flex-col justify-between shadow-lg shadow-amber-950/20">
+    <div class="bg-white border-2 border-amber-300 rounded-2xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
       <div>
-        <div class="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
-          <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Step 4 &bull; Destinations</span>
-          <span class="text-[11px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded border border-amber-800">Dual Export</span>
+        <div class="flex items-center justify-between pb-3 border-b border-amber-100 mb-4">
+          <span class="text-xs font-mono font-bold text-amber-700 uppercase tracking-wider">Step 4 &bull; Destinations</span>
+          <span class="text-[11px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded border border-amber-200">Dual Export</span>
         </div>
-        <h2 class="text-lg font-bold text-white mb-1">Local Care &amp; Global FL</h2>
-        <p class="text-xs text-slate-400 mb-4">Simultaneous clinical filing and collaborative learning.</p>
+        <h2 class="text-xl font-bold text-slate-900 mb-1">Local Care &amp; Global FL</h2>
+        <p class="text-xs text-slate-500 mb-4 font-medium">Simultaneous institutional clinical care and collaborative research.</p>
 
         <div class="space-y-3">
           <!-- Local Track -->
-          <div class="bg-slate-950/80 p-3 rounded-lg border border-sky-800/60 text-xs">
-            <div class="font-bold text-sky-300 mb-1">LOCAL EHR, PACS &amp; OHIF</div>
-            <ul class="text-slate-300 space-y-0.5 text-[11px]">
-              <li>&bull; PACS: DICOMweb STOW-RS &amp; DIMSE C-STORE</li>
+          <div class="bg-sky-50 p-3.5 rounded-xl border border-sky-300 text-xs">
+            <div class="font-bold text-sky-900 mb-1.5 flex items-center justify-between">
+              <span>LOCAL EHR, PACS &amp; OHIF</span>
+              <span class="text-[10px] bg-sky-200 text-sky-900 px-1 py-0.2 rounded font-mono">Clinical</span>
+            </div>
+            <ul class="text-slate-700 space-y-1 text-[11px]">
+              <li>&bull; Enterprise PACS: STOW-RS &amp; C-STORE</li>
               <li>&bull; Multi-frame DICOM-SEG (SOP .66.4)</li>
               <li>&bull; Comprehensive DICOM-SR TID 1500 (SOP .88.34)</li>
               <li>&bull; DICOM Encapsulated PDF (SOP .104.1)</li>
               <li>&bull; HL7 FHIR: DiagnosticReport, LOINC 84245-0</li>
-              <li>&bull; OHIF v3.13 2&times;2 3D Slicer Workstation</li>
+              <li>&bull; Embedded OHIF v3.13 2&times;2 Slicer Workstation</li>
             </ul>
           </div>
 
           <!-- World Track -->
-          <div class="bg-slate-950/80 p-3 rounded-lg border border-amber-800/60 text-xs">
-            <div class="font-bold text-amber-300 mb-1">(WORLD) FEDERATED LEARNING</div>
-            <ul class="text-slate-300 space-y-0.5 text-[11px]">
+          <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-300 text-xs">
+            <div class="font-bold text-amber-900 mb-1.5 flex items-center justify-between">
+              <span>(WORLD) FEDERATED LEARNING</span>
+              <span class="text-[10px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-mono">Research</span>
+            </div>
+            <ul class="text-slate-700 space-y-1 text-[11px]">
               <li>&bull; NVIDIA FLARE 2.5+ Consortium</li>
-              <li class="text-emerald-300 font-medium">&bull; ZERO DICOM / Patient Image Transfer</li>
+              <li class="text-emerald-700 font-bold bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">&bull; ZERO DICOM / Patient Image Transfer</li>
               <li>&bull; FedProx Proximal Regularization</li>
               <li>&bull; FedBN: Local Norm Retention (BatchNorm3d)</li>
-              <li>&bull; Welford Summary Moments (exact analytics)</li>
+              <li>&bull; Welford Summary Moments (Exact multi-site stats)</li>
               <li>&bull; CrossSiteModelEval Consensus</li>
             </ul>
           </div>
         </div>
       </div>
-      <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-amber-400 font-mono">
-        &rarr; Interoperable &amp; Multi-Site
+      <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-amber-700 font-mono font-bold flex items-center justify-between">
+        <span>&rarr; Interoperable &bull; Multi-Site</span>
+        <span class="text-slate-400 font-normal">REQ-010/013</span>
       </div>
     </div>
 
   </div>
 
-  <!-- Foundational SaMD Regulatory Bottom Banner -->
-  <div class="bg-slate-900/95 border-2 border-indigo-500/60 rounded-xl p-6 shadow-2xl shadow-indigo-950/40">
-    <div class="flex flex-wrap items-center justify-between pb-3 border-b border-indigo-500/30 mb-5 gap-2">
+  <!-- Foundational SaMD Regulatory Bottom Banner (Clinical Light Card) -->
+  <div class="bg-white border-2 border-indigo-400 rounded-2xl p-6 md:p-8 shadow-md">
+    <div class="flex flex-wrap items-center justify-between pb-4 border-b border-indigo-100 mb-6 gap-2">
       <div>
-        <span class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider block">Foundational Underpinning</span>
-        <h3 class="text-xl font-bold text-white tracking-tight">
+        <span class="text-xs font-mono font-bold text-indigo-700 uppercase tracking-wider block">Foundational Underpinning</span>
+        <h3 class="text-2xl font-bold text-slate-900 tracking-tight">
           Foundation for Regulatory Filing: FDA Class II 510(k) Software as a Medical Device (SaMD)
         </h3>
       </div>
       <div class="flex flex-wrap gap-2 text-xs font-mono">
-        <span class="bg-indigo-950 text-indigo-300 border border-indigo-700 px-2.5 py-1 rounded">21 CFR &sect; 892.2050</span>
-        <span class="bg-indigo-950 text-indigo-300 border border-indigo-700 px-2.5 py-1 rounded">Product Codes: LLZ / QIH</span>
-        <span class="bg-indigo-950 text-indigo-300 border border-indigo-700 px-2.5 py-1 rounded">ISO 13485 QMS</span>
+        <span class="bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold px-3 py-1 rounded-lg">21 CFR &sect; 892.2050</span>
+        <span class="bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold px-3 py-1 rounded-lg">Product Codes: LLZ / QIH</span>
+        <span class="bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold px-3 py-1 rounded-lg">ISO 13485 QMS</span>
       </div>
     </div>
 
     <!-- 4 Regulatory Pillars -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
       
       <!-- Pillar 1 -->
-      <div class="bg-indigo-950/40 border border-indigo-800/60 rounded-lg p-4">
-        <h4 class="font-bold text-indigo-300 text-sm mb-2 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+      <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4.5">
+        <h4 class="font-bold text-indigo-950 text-sm mb-2.5 flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
           1. FDA 510(k) Device Profile
         </h4>
-        <ul class="text-slate-300 text-xs space-y-1">
-          <li>&bull; <strong class="text-slate-200">Regulation</strong>: 21 CFR &sect; 892.2050</li>
-          <li>&bull; <strong class="text-slate-200">Documentation Level</strong>: Basic (Clinician review)</li>
-          <li>&bull; <strong class="text-slate-200">Predicate Match</strong>: Harvard CardiacFatQuant (<code class="mono-code text-[11px] text-indigo-200">r = 1.000, Dice = 1.000</code>)</li>
-          <li>&bull; <strong class="text-slate-200">Indications</strong>: 3D EAT &amp; PVAT volumetric and attenuation quantification from cardiac CT</li>
+        <ul class="text-slate-700 text-xs space-y-1.5">
+          <li>&bull; <strong class="text-slate-900">Regulation</strong>: 21 CFR &sect; 892.2050</li>
+          <li>&bull; <strong class="text-slate-900">Documentation Level</strong>: Basic (Clinician review)</li>
+          <li>&bull; <strong class="text-slate-900">Predicate Match</strong>: Harvard CardiacFatQuant (<code class="mono-code text-[11px] text-indigo-900 font-bold">r = 1.000, Dice = 1.000</code>)</li>
+          <li>&bull; <strong class="text-slate-900">Indications</strong>: 3D EAT &amp; PVAT volumetric and attenuation quantification from cardiac CT</li>
         </ul>
       </div>
 
       <!-- Pillar 2 -->
-      <div class="bg-teal-950/40 border border-teal-800/60 rounded-lg p-4">
-        <h4 class="font-bold text-teal-300 text-sm mb-2 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+      <div class="bg-teal-50/70 border border-teal-200 rounded-xl p-4.5">
+        <h4 class="font-bold text-teal-950 text-sm mb-2.5 flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
           2. IEC 62304 Software Safety
         </h4>
-        <ul class="text-slate-300 text-xs space-y-1">
-          <li>&bull; <strong class="text-slate-200">Safety Class</strong>: Class B (Non-serious injury risk)</li>
-          <li>&bull; <strong class="text-slate-200">Traceability Matrix</strong>: REQ-001 &ndash; REQ-013</li>
-          <li>&bull; <strong class="text-slate-200">Verification Suite</strong>: 138 automated pytest tests</li>
-          <li>&bull; <strong class="text-slate-200">Deployment Standard</strong>: Turnkey MONAI Deploy Application Package (MAP) DAG</li>
+        <ul class="text-slate-700 text-xs space-y-1.5">
+          <li>&bull; <strong class="text-slate-900">Safety Class</strong>: Class B (Non-serious injury risk)</li>
+          <li>&bull; <strong class="text-slate-900">Traceability Matrix</strong>: REQ-001 &ndash; REQ-013</li>
+          <li>&bull; <strong class="text-slate-900">Verification Suite</strong>: 138 automated pytest tests</li>
+          <li>&bull; <strong class="text-slate-900">Deployment Standard</strong>: Turnkey MONAI Deploy Application Package (MAP) DAG</li>
         </ul>
       </div>
 
       <!-- Pillar 3 -->
-      <div class="bg-amber-950/40 border border-amber-800/60 rounded-lg p-4">
-        <h4 class="font-bold text-amber-300 text-sm mb-2 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+      <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-4.5">
+        <h4 class="font-bold text-amber-950 text-sm mb-2.5 flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-600"></span>
           3. ISO 14971 Risk Controls
         </h4>
-        <ul class="text-slate-300 text-xs space-y-1">
-          <li>&bull; <strong class="text-slate-200">FMEA Matrix</strong>: HAZ-001 &ndash; HAZ-010</li>
-          <li>&bull; <strong class="text-slate-200">Contrast Blooming</strong>: -30 HU strict ceiling</li>
-          <li>&bull; <strong class="text-slate-200">Boundary Hazard</strong>: Mandatory OHIF 2D/3D review</li>
-          <li>&bull; <strong class="text-slate-200">Model Tampering</strong>: Hardcoded SHA-256 checks</li>
+        <ul class="text-slate-700 text-xs space-y-1.5">
+          <li>&bull; <strong class="text-slate-900">FMEA Matrix</strong>: HAZ-001 &ndash; HAZ-010</li>
+          <li>&bull; <strong class="text-slate-900">Contrast Blooming</strong>: -30 HU strict ceiling</li>
+          <li>&bull; <strong class="text-slate-900">Boundary Hazard</strong>: Mandatory OHIF 2D/3D review</li>
+          <li>&bull; <strong class="text-slate-900">Model Tampering</strong>: Hardcoded SHA-256 checks</li>
         </ul>
       </div>
 
       <!-- Pillar 4 -->
-      <div class="bg-pink-950/40 border border-pink-800/60 rounded-lg p-4">
-        <h4 class="font-bold text-pink-300 text-sm mb-2 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-pink-400"></span>
+      <div class="bg-pink-50/70 border border-pink-200 rounded-xl p-4.5">
+        <h4 class="font-bold text-pink-950 text-sm mb-2.5 flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-pink-600"></span>
           4. FDA AI/ML PCCP Protocol
         </h4>
-        <ul class="text-slate-300 text-xs space-y-1">
-          <li>&bull; <strong class="text-slate-200">PCCP Protocol</strong>: Post-market federated retraining</li>
-          <li>&bull; <strong class="text-slate-200">Frozen Invariants</strong>: 8-ch, [-190, -30] HU, 10mm EDT</li>
-          <li>&bull; <strong class="text-slate-200">Acceptance Gates</strong>: Dice &ge; 0.90, Pearson r &ge; 0.98</li>
-          <li>&bull; <strong class="text-slate-200">Cybersecurity</strong>: Section 524B CycloneDX SBOM &amp; SAST</li>
+        <ul class="text-slate-700 text-xs space-y-1.5">
+          <li>&bull; <strong class="text-slate-900">PCCP Protocol</strong>: Post-market federated retraining</li>
+          <li>&bull; <strong class="text-slate-900">Frozen Invariants</strong>: 8-ch, [-190, -30] HU, 10mm EDT</li>
+          <li>&bull; <strong class="text-slate-900">Acceptance Gates</strong>: Dice &ge; 0.90, Pearson r &ge; 0.98</li>
+          <li>&bull; <strong class="text-slate-900">Cybersecurity</strong>: Section 524B CycloneDX SBOM &amp; SAST</li>
         </ul>
       </div>
 
@@ -318,7 +345,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="mt-8 pt-4 border-t border-slate-800 text-center text-xs text-slate-500 font-mono">
+  <div class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-500 font-mono">
     monai-cardiac-fat-fl &bull; Medical Image Management and Processing System (21 CFR &sect; 892.2050) &bull; Investigational RUO transitioning to Class II SaMD
   </div>
 

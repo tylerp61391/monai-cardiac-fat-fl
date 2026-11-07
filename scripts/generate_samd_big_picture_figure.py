@@ -1,6 +1,6 @@
-"""Generate 300 DPI Publication-Grade Big Picture Architecture Diagram.
+"""Generate 300 DPI Clinical Light-Mode Big Picture Architecture Diagram.
 
-Visualizes the end-to-end SaMD framework:
+Visualizes the end-to-end SaMD framework in pristine medical light theme:
 CT Ingestion -> Dual-Mode Gateway (Clinical vs. Research/RSNA V19) ->
 Multi-Model 3D Segmentation (MONAI / TotalSeg / NV-Segment) ->
 Local EHR / PACS & (World) Federated Learning ->
@@ -18,25 +18,38 @@ import numpy as np
 
 
 def create_big_picture_figure(output_path: Path) -> None:
-    # 16:10 aspect ratio, ultra-high resolution
-    fig = plt.figure(figsize=(24, 15), dpi=300, facecolor="#090d16")
+    # 16:10 aspect ratio, ultra-high resolution (300 DPI)
+    # Clinical Light Mode: clean hospital crisp background
+    fig = plt.figure(figsize=(24, 15), dpi=300, facecolor="#f8fafc")
     ax = fig.add_axes([0, 0, 1, 1])
-    ax.set_facecolor("#090d16")
+    ax.set_facecolor("#f8fafc")
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 100)
     ax.axis("off")
 
-    # Helper for drawing rounded boxes
+    # Helper for drawing rounded boxes with clinical shadows/borders
     def draw_card(
         x: float, y: float, w: float, h: float,
         bg: str, border: str, title: str,
-        title_color: str = "#ffffff",
+        title_color: str = "#0f172a",
         title_size: int = 12,
         subtitle: str = "",
-        subtitle_color: str = "#94a3b8",
-        border_width: float = 1.8,
+        subtitle_color: str = "#64748b",
+        border_width: float = 1.6,
         radius: float = 1.0,
     ) -> None:
+        # Subtle drop shadow
+        shadow = FancyBboxPatch(
+            (x + 0.15, y - 0.25), w, h,
+            boxstyle=f"round,pad=0.3,rounding_size={radius}",
+            linewidth=0,
+            edgecolor="none",
+            facecolor="#e2e8f0",
+            alpha=0.6,
+            zorder=1,
+        )
+        ax.add_patch(shadow)
+
         patch = FancyBboxPatch(
             (x, y), w, h,
             boxstyle=f"round,pad=0.3,rounding_size={radius}",
@@ -66,10 +79,10 @@ def create_big_picture_figure(output_path: Path) -> None:
     # Helper for connector arrows
     def draw_arrow(
         x1: float, y1: float, x2: float, y2: float,
-        color: str = "#38bdf8",
+        color: str = "#0284c7",
         width: float = 2.0,
         label: str = "",
-        label_color: str = "#38bdf8",
+        label_color: str = "#0369a1",
         label_y_offset: float = 1.0,
         dashed: bool = False,
     ) -> None:
@@ -92,28 +105,27 @@ def create_big_picture_figure(output_path: Path) -> None:
                 ha="center", va="center",
                 color=label_color, fontsize=8.5,
                 fontweight="bold", fontfamily="sans-serif",
-                bbox=dict(boxstyle="round,pad=0.2", facecolor="#090d16", edgecolor=color, alpha=0.9, lw=0.8),
+                bbox=dict(boxstyle="round,pad=0.25", facecolor="#ffffff", edgecolor=color, alpha=0.95, lw=1.0),
                 zorder=5,
             )
 
     # ==========================================
     # 0. HEADER & BANNER
     # ==========================================
-    # Top banner bar
     banner = Rectangle((0, 93), 100, 7, facecolor="#0f172a", edgecolor="#1e293b", linewidth=1.5, zorder=1)
     ax.add_patch(banner)
 
     ax.text(
-        3.0, 97.5,
+        3.0, 97.4,
         "MONAI-CARDIAC-FAT-FL  |  END-TO-END CLINICAL & FEDERATED SaMD PIPELINE ARCHITECTURE",
         ha="left", va="center",
-        color="#38bdf8", fontsize=16, fontweight="bold", fontfamily="sans-serif",
+        color="#38bdf8", fontsize=15.5, fontweight="bold", fontfamily="sans-serif",
     )
     ax.text(
         3.0, 94.6,
-        "From Multi-Vendor CT Ingestion & Dual-Mode Privacy Gate to 3D Foundation Segmentation, Institutional EHR/PACS & Multi-Center Federated Learning",
+        "From Multi-Vendor CT Ingestion & Dual-Mode Privacy Gate to 3D Foundation Segmentation, Local EHR/PACS Deployment & Federated Learning Consortium",
         ha="left", va="center",
-        color="#cbd5e1", fontsize=11, fontfamily="sans-serif",
+        color="#e2e8f0", fontsize=10.5, fontfamily="sans-serif",
     )
 
     # Badges on top right
@@ -145,20 +157,19 @@ def create_big_picture_figure(output_path: Path) -> None:
     # ==========================================
     draw_card(
         x=2.5, y=36.0, w=16.0, h=54.0,
-        bg="#0b172a", border="#38bdf8",
+        bg="#ffffff", border="#0284c7",
         title="1. CT INGESTION",
-        title_color="#38bdf8", title_size=13,
+        title_color="#0369a1", title_size=13,
         subtitle="Universal 3D MetaTensor Loader",
         border_width=2.0, radius=1.2,
     )
 
-    # Inner CT sub-cards
     # Subcard 1: Modalities & Scanners
     draw_card(
         x=3.8, y=72.0, w=13.4, h=14.0,
-        bg="#0f213e", border="#1e3a5f",
+        bg="#f0f9ff", border="#bae6fd",
         title="Multi-Vendor Scanners",
-        title_color="#93c5fd", title_size=10,
+        title_color="#0369a1", title_size=10,
         subtitle="Calibrated Volumetric Series",
     )
     scanner_bullets = [
@@ -169,14 +180,14 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• Non-gated & Gated CCTA / CAC",
     ]
     for idx, b in enumerate(scanner_bullets):
-        ax.text(4.5, 79.5 - idx * 1.5, b, color="#e2e8f0", fontsize=8.0, va="top", zorder=4)
+        ax.text(4.5, 79.5 - idx * 1.5, b, color="#1e293b", fontsize=8.0, va="top", zorder=4)
 
     # Subcard 2: Formats & I/O
     draw_card(
         x=3.8, y=54.5, w=13.4, h=15.5,
-        bg="#0f213e", border="#1e3a5f",
+        bg="#f0f9ff", border="#bae6fd",
         title="Native 3D I/O Formats",
-        title_color="#93c5fd", title_size=10,
+        title_color="#0369a1", title_size=10,
         subtitle="Header & Geometry Preserving",
     )
     format_bullets = [
@@ -188,14 +199,14 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• Fast os.scandir cohort discovery",
     ]
     for idx, b in enumerate(format_bullets):
-        ax.text(4.5, 63.5 - idx * 1.45, b, color="#cbd5e1", fontsize=8.0, va="top", zorder=4)
+        ax.text(4.5, 63.5 - idx * 1.45, b, color="#1e293b", fontsize=8.0, va="top", zorder=4)
 
     # Subcard 3: Spatial Coordinates
     draw_card(
         x=3.8, y=38.0, w=13.4, h=14.5,
-        bg="#0f213e", border="#1e3a5f",
+        bg="#f0f9ff", border="#bae6fd",
         title="Coordinate Preservation",
-        title_color="#93c5fd", title_size=10,
+        title_color="#0369a1", title_size=10,
         subtitle="Physical Patient Space",
     )
     spatial_bullets = [
@@ -206,17 +217,16 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• Affine matrix alignment [4x4]",
     ]
     for idx, b in enumerate(spatial_bullets):
-        ax.text(4.5, 46.0 - idx * 1.5, b, color="#a5f3fc", fontsize=8.0, va="top", zorder=4)
+        ax.text(4.5, 46.0 - idx * 1.5, b, color="#0f766e", fontsize=8.0, fontweight="medium", va="top", zorder=4)
 
     # ==========================================
     # 2. COLUMN 2: DUAL-MODE GATEWAY (X: 22.0 - 41.0)
     # ==========================================
-    # Stage 2 Outer boundary
     draw_card(
         x=22.0, y=36.0, w=19.0, h=54.0,
-        bg="#071822", border="#10b981",
+        bg="#ffffff", border="#059669",
         title="2. DUAL-MODE PRIVACY GATE",
-        title_color="#34d399", title_size=13,
+        title_color="#047857", title_size=13,
         subtitle="Regulatory Trust Boundary Enforcement",
         border_width=2.0, radius=1.2,
     )
@@ -224,9 +234,9 @@ def create_big_picture_figure(output_path: Path) -> None:
     # Track A: CLINICAL MODE (Top branch)
     draw_card(
         x=23.3, y=65.5, w=16.4, h=21.0,
-        bg="#092535", border="#0284c7",
+        bg="#f0f9ff", border="#0284c7",
         title="CLINICAL MODE (--mode clinical)",
-        title_color="#38bdf8", title_size=10.5,
+        title_color="#0369a1", title_size=10.5,
         subtitle="Local Hospital Intranet Trust Zone",
         border_width=1.6,
     )
@@ -240,15 +250,16 @@ def create_big_picture_figure(output_path: Path) -> None:
         "  hospital enterprise firewall or FL",
     ]
     for idx, b in enumerate(clin_bullets):
-        col = "#f87171" if "RESTRICTION" in b else "#e0f2fe"
-        ax.text(24.2, 79.5 - idx * 1.7, b, color=col, fontsize=8.0, va="top", zorder=4)
+        col = "#b91c1c" if "RESTRICTION" in b else "#1e293b"
+        weight = "bold" if "RESTRICTION" in b else "normal"
+        ax.text(24.2, 79.5 - idx * 1.7, b, color=col, fontsize=8.0, fontweight=weight, va="top", zorder=4)
 
     # Track B: RESEARCH MODE / RSNA V19 (Bottom branch)
     draw_card(
         x=23.3, y=38.0, w=16.4, h=25.5,
-        bg="#062e24", border="#059669",
+        bg="#f0fdf4", border="#10b981",
         title="RESEARCH MODE (--mode research)",
-        title_color="#34d399", title_size=10.5,
+        title_color="#047857", title_size=10.5,
         subtitle="HIPAA Safe Harbor & RSNA V19 Profile",
         border_width=1.6,
     )
@@ -265,21 +276,22 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• Invariant: 100% Geometry & HU preserved",
     ]
     for idx, b in enumerate(research_bullets):
-        col = "#fde047" if "Invariant" in b or "Fail-closed" in b else "#d1fae5"
-        ax.text(24.2, 57.5 - idx * 1.7, b, color=col, fontsize=7.8, va="top", zorder=4)
+        col = "#b45309" if "Invariant" in b or "Fail-closed" in b else "#1e293b"
+        weight = "bold" if "Invariant" in b or "Fail-closed" in b else "normal"
+        ax.text(24.2, 57.5 - idx * 1.7, b, color=col, fontsize=7.8, fontweight=weight, va="top", zorder=4)
 
     # Connect Ingestion to Dual-Mode
-    draw_arrow(18.5, 75.0, 23.3, 75.0, color="#38bdf8", width=2.2, label="Clinical", label_color="#38bdf8")
-    draw_arrow(18.5, 50.0, 23.3, 50.0, color="#10b981", width=2.2, label="Research", label_color="#10b981")
+    draw_arrow(18.5, 75.0, 23.3, 75.0, color="#0284c7", width=2.2, label="Clinical", label_color="#0369a1")
+    draw_arrow(18.5, 50.0, 23.3, 50.0, color="#059669", width=2.2, label="Research", label_color="#047857")
 
     # ==========================================
     # 3. COLUMN 3: 3D ANATOMY & SEGMENTATION ENGINE (X: 44.5 - 67.5)
     # ==========================================
     draw_card(
         x=44.5, y=36.0, w=23.0, h=54.0,
-        bg="#180e29", border="#a855f7",
+        bg="#ffffff", border="#9333ea",
         title="3. 3D ANATOMY & FAT QUANTIFICATION",
-        title_color="#c084fc", title_size=13,
+        title_color="#7e22ce", title_size=13,
         subtitle="Unified Multi-Foundation & Geometric Engine",
         border_width=2.0, radius=1.2,
     )
@@ -287,27 +299,27 @@ def create_big_picture_figure(output_path: Path) -> None:
     # Subcard: Model Selection Track
     draw_card(
         x=45.8, y=70.0, w=20.4, h=16.5,
-        bg="#251242", border="#7e22ce",
+        bg="#faf5ff", border="#d8b4fe",
         title="Selectable Chamber Backend (--chamber-backend)",
-        title_color="#e9d5ff", title_size=10,
+        title_color="#7e22ce", title_size=10,
         subtitle="Multi-Foundation Model Options",
     )
     model_tracks = [
-        ("• monai (Default)", "NGC SegResNet 1.5mm isotropic, 104 labels", "#38bdf8"),
-        ("• totalsegmentator", "nnU-Net Task253, Bit-exact Harvard match", "#34d399"),
-        ("• nvsegment / nvsegment_ct", "NVIDIA-MedTech VISTA-3D foundation model", "#fbbf24"),
-        ("• DeepHeartSeg ONNX", "Zero-drift pericardial sac envelope (heart.seg.nrrd)", "#f472b6"),
+        ("• monai (Default)", "NGC SegResNet 1.5mm isotropic, 104 labels", "#0284c7"),
+        ("• totalsegmentator", "nnU-Net Task253, Bit-exact Harvard match", "#059669"),
+        ("• nvsegment / nvsegment_ct", "NVIDIA-MedTech VISTA-3D foundation model", "#d97706"),
+        ("• DeepHeartSeg ONNX", "Zero-drift pericardial sac envelope (heart.seg.nrrd)", "#db2777"),
     ]
     for idx, (m_title, m_desc, m_col) in enumerate(model_tracks):
         ax.text(46.5, 79.5 - idx * 2.3, m_title, color=m_col, fontsize=8.2, fontweight="bold", va="top", zorder=4)
-        ax.text(47.5, 78.3 - idx * 2.3, m_desc, color="#cbd5e1", fontsize=7.5, va="top", zorder=4)
+        ax.text(47.5, 78.3 - idx * 2.3, m_desc, color="#475569", fontsize=7.5, va="top", zorder=4)
 
     # Subcard: Spatial Morphology & Invariants
     draw_card(
         x=45.8, y=51.0, w=20.4, h=17.5,
-        bg="#251242", border="#7e22ce",
+        bg="#faf5ff", border="#d8b4fe",
         title="Clinical Invariants & 3D Spatial Transforms",
-        title_color="#e9d5ff", title_size=10,
+        title_color="#7e22ce", title_size=10,
         subtitle="Standardized Anatomical Taxonomy",
     )
     invariant_bullets = [
@@ -318,14 +330,14 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• Empty Region Guardrail: 0.0 cm3 volume & NaN mean HU",
     ]
     for idx, b in enumerate(invariant_bullets):
-        ax.text(46.5, 62.0 - idx * 1.9, b, color="#f3e8ff", fontsize=7.8, va="top", zorder=4)
+        ax.text(46.5, 62.0 - idx * 1.9, b, color="#1e293b", fontsize=7.8, va="top", zorder=4)
 
     # Subcard: 8 Compartment Palette
     draw_card(
         x=45.8, y=38.0, w=20.4, h=11.5,
-        bg="#251242", border="#7e22ce",
+        bg="#faf5ff", border="#d8b4fe",
         title="8-Compartment Segmentation (eat_pvat.seg.nrrd)",
-        title_color="#e9d5ff", title_size=9.5,
+        title_color="#7e22ce", title_size=9.5,
         subtitle="Canonical 4-Way Synchronized Color Palette",
     )
     compartments = [
@@ -337,13 +349,13 @@ def create_big_picture_figure(output_path: Path) -> None:
         col = idx % 4
         cx = 46.5 + col * 4.9
         cy = 43.5 - row * 2.3
-        p = Rectangle((cx, cy), 1.0, 1.4, facecolor=c_color, edgecolor="#ffffff", linewidth=0.6, zorder=4)
+        p = Rectangle((cx, cy), 1.0, 1.4, facecolor=c_color, edgecolor="#64748b", linewidth=0.5, zorder=4)
         ax.add_patch(p)
-        ax.text(cx + 1.3, cy + 0.7, c_name, color="#ffffff", fontsize=7.2, va="center", zorder=4)
+        ax.text(cx + 1.3, cy + 0.7, c_name, color="#0f172a", fontsize=7.2, fontweight="bold", va="center", zorder=4)
 
     # Connect Dual-Mode to Segmentation
-    draw_arrow(39.7, 75.0, 44.5, 70.0, color="#38bdf8", width=2.0)
-    draw_arrow(39.7, 50.0, 44.5, 55.0, color="#10b981", width=2.0)
+    draw_arrow(39.7, 75.0, 44.5, 70.0, color="#0284c7", width=2.0)
+    draw_arrow(39.7, 50.0, 44.5, 55.0, color="#059669", width=2.0)
 
     # ==========================================
     # 4. COLUMN 4: DUAL DOWNSTREAM DESTINATIONS (X: 71.0 - 97.5)
@@ -351,18 +363,18 @@ def create_big_picture_figure(output_path: Path) -> None:
     # Destination A: LOCAL HOSPITAL PACS & EHR (Top)
     draw_card(
         x=71.0, y=65.5, w=26.5, h=24.5,
-        bg="#0b233a", border="#0284c7",
+        bg="#ffffff", border="#0284c7",
         title="LOCAL EHR, PACS & WORKSTATION",
-        title_color="#38bdf8", title_size=12.5,
+        title_color="#0369a1", title_size=12.5,
         subtitle="Hospital Clinical Production Deployment",
         border_width=2.0, radius=1.2,
     )
     # Sub-item 1: PACS
     draw_card(
         x=72.2, y=67.0, w=11.8, h=17.5,
-        bg="#0f3456", border="#0369a1",
+        bg="#f0f9ff", border="#bae6fd",
         title="Enterprise PACS Archive",
-        title_color="#93c5fd", title_size=9.5,
+        title_color="#0369a1", title_size=9.5,
         subtitle="DICOMweb & DIMSE Services",
     )
     pacs_items = [
@@ -374,14 +386,14 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• Custom Enterprise Root CAs",
     ]
     for idx, b in enumerate(pacs_items):
-        ax.text(72.8, 77.8 - idx * 1.6, b, color="#e0f2fe", fontsize=7.6, va="top", zorder=4)
+        ax.text(72.8, 77.8 - idx * 1.6, b, color="#1e293b", fontsize=7.6, va="top", zorder=4)
 
     # Sub-item 2: EHR & OHIF
     draw_card(
         x=84.5, y=67.0, w=12.0, h=17.5,
-        bg="#0f3456", border="#0369a1",
+        bg="#f0f9ff", border="#bae6fd",
         title="Hospital EHR & OHIF",
-        title_color="#93c5fd", title_size=9.5,
+        title_color="#0369a1", title_size=9.5,
         subtitle="HL7 FHIR & Zero-Footprint UI",
     )
     ehr_items = [
@@ -393,23 +405,23 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• OHIF v3.13 2x2 Slicer Workstation",
     ]
     for idx, b in enumerate(ehr_items):
-        ax.text(85.1, 77.8 - idx * 1.6, b, color="#e0f2fe", fontsize=7.6, va="top", zorder=4)
+        ax.text(85.1, 77.8 - idx * 1.6, b, color="#1e293b", fontsize=7.6, va="top", zorder=4)
 
     # Destination B: (WORLD) FEDERATED LEARNING CONSORTIUM (Bottom)
     draw_card(
         x=71.0, y=36.0, w=26.5, h=26.5,
-        bg="#291a08", border="#d97706",
+        bg="#ffffff", border="#d97706",
         title="(WORLD) FEDERATED LEARNING",
-        title_color="#fbbf24", title_size=12.5,
+        title_color="#b45309", title_size=12.5,
         subtitle="Privacy-Preserving Multi-Hospital AI Consortium",
         border_width=2.0, radius=1.2,
     )
     # FL Subcard 1: FL Framework
     draw_card(
         x=72.2, y=37.5, w=11.8, h=19.5,
-        bg="#3d270c", border="#b45309",
+        bg="#fffbeb", border="#fde68a",
         title="NVIDIA FLARE 2.5+",
-        title_color="#fde68a", title_size=9.5,
+        title_color="#b45309", title_size=9.5,
         subtitle="Zero DICOM Transfer Across Firewalls",
     )
     fl_items = [
@@ -422,15 +434,16 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• Self-healing Windows patching",
     ]
     for idx, b in enumerate(fl_items):
-        col = "#fca5a5" if "Zero" in b else "#fef3c7"
-        ax.text(72.8, 50.5 - idx * 1.65, b, color=col, fontsize=7.6, va="top", zorder=4)
+        col = "#b91c1c" if "Zero" in b else "#1e293b"
+        weight = "bold" if "Zero" in b else "normal"
+        ax.text(72.8, 50.5 - idx * 1.65, b, color=col, fontsize=7.6, fontweight=weight, va="top", zorder=4)
 
     # FL Subcard 2: Federated Analytics
     draw_card(
         x=84.5, y=37.5, w=12.0, h=19.5,
-        bg="#3d270c", border="#b45309",
+        bg="#fffbeb", border="#fde68a",
         title="Federated Analytics",
-        title_color="#fde68a", title_size=9.5,
+        title_color="#b45309", title_size=9.5,
         subtitle="Welford Scalar Moment Aggregation",
     )
     stat_items = [
@@ -443,23 +456,23 @@ def create_big_picture_figure(output_path: Path) -> None:
         "• Automated site loss/DICE curves",
     ]
     for idx, b in enumerate(stat_items):
-        ax.text(85.1, 50.5 - idx * 1.65, b, color="#fef3c7", fontsize=7.6, va="top", zorder=4)
+        ax.text(85.1, 50.5 - idx * 1.65, b, color="#1e293b", fontsize=7.6, va="top", zorder=4)
 
     # Connect Segmentation to Destinations
-    draw_arrow(67.5, 68.0, 71.0, 74.0, color="#38bdf8", width=2.2, label="Clinical Output", label_color="#38bdf8")
-    draw_arrow(67.5, 48.0, 71.0, 48.0, color="#f59e0b", width=2.2, label="De-ID Model Gradients", label_color="#f59e0b")
+    draw_arrow(67.5, 68.0, 71.0, 74.0, color="#0284c7", width=2.2, label="Clinical Output", label_color="#0369a1")
+    draw_arrow(67.5, 48.0, 71.0, 48.0, color="#d97706", width=2.2, label="De-ID Model Gradients", label_color="#b45309")
 
     # Feedback loop from FL to Model selection (Dashed arrow)
-    draw_arrow(84.0, 36.0, 56.0, 36.0, color="#f59e0b", width=1.6, dashed=True, label="PCCP Distilled Global Weights", label_color="#fbbf24", label_y_offset=-1.2)
+    draw_arrow(84.0, 36.0, 56.0, 36.0, color="#d97706", width=1.6, dashed=True, label="PCCP Distilled Global Weights", label_color="#b45309", label_y_offset=-1.2)
 
     # ==========================================
     # 5. FOUNDATION FOR REGULATORY FILING (SaMD) (Bottom Banner: Y: 3.0 - 32.0)
     # ==========================================
     draw_card(
         x=2.5, y=3.0, w=95.0, h=28.5,
-        bg="#111927", border="#6366f1",
+        bg="#ffffff", border="#4f46e5",
         title="FOUNDATION FOR REGULATORY FILING: FDA Class II 510(k) Software as a Medical Device (SaMD)",
-        title_color="#818cf8", title_size=13,
+        title_color="#3730a3", title_size=13,
         subtitle="Comprehensive Quality Management System (QMS), IEC 62304 Life Cycle, ISO 14971 Risk Management & AI/ML PCCP",
         border_width=2.2, radius=1.2,
     )
@@ -468,7 +481,7 @@ def create_big_picture_figure(output_path: Path) -> None:
     pillars = [
         (
             "Pillar 1: FDA 510(k) Device Profile",
-            "#4338ca", "#312e81", "#c7d2fe",
+            "#818cf8", "#eef2ff", "#312e81",
             [
                 "• Pathway: 21 CFR § 892.2050",
                 "• Product Codes: LLZ (Image Proc), QIH (Automated Quant)",
@@ -480,7 +493,7 @@ def create_big_picture_figure(output_path: Path) -> None:
         ),
         (
             "Pillar 2: IEC 62304 Software Safety",
-            "#0f766e", "#134e4a", "#99f6e4",
+            "#2dd4bf", "#f0fdfa", "#115e59",
             [
                 "• Safety Class: Class B (Non-serious injury risk)",
                 "• Traceability Matrix: REQ-001 through REQ-013",
@@ -491,8 +504,8 @@ def create_big_picture_figure(output_path: Path) -> None:
             ],
         ),
         (
-            "Pillar 3: ISO 14971 Risk Management",
-            "#b45309", "#78350f", "#fde68a",
+            "Pillar 3: ISO 14971 Risk Controls",
+            "#fcd34d", "#fffbeb", "#92400e",
             [
                 "• FMEA Hazard Analysis: HAZ-001 through HAZ-010",
                 "• Blooming Mitigation: Strict -30 HU contrast threshold",
@@ -504,7 +517,7 @@ def create_big_picture_figure(output_path: Path) -> None:
         ),
         (
             "Pillar 4: FDA AI/ML PCCP Protocol",
-            "#be185d", "#831843", "#fbcfe8",
+            "#f472b6", "#fdf2f8", "#9d174d",
             [
                 "• Predetermined Change Control Plan (FDA 2024)",
                 "• Post-Market Federated Learning Retraining Bounds",
@@ -528,7 +541,7 @@ def create_big_picture_figure(output_path: Path) -> None:
             border_width=1.4,
         )
         for b_idx, b in enumerate(p_bullets):
-            ax.text(px + 0.8, py + ph - 4.5 - b_idx * 2.5, b, color="#f1f5f9", fontsize=7.6, va="top", zorder=4)
+            ax.text(px + 0.8, py + ph - 4.5 - b_idx * 2.5, b, color="#1e293b", fontsize=7.6, va="top", zorder=4)
 
     # Save high-res figure
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -541,7 +554,7 @@ def create_big_picture_figure(output_path: Path) -> None:
         pad_inches=0.1,
     )
     plt.close(fig)
-    print(f"Successfully generated 300 DPI Big Picture SaMD figure at: {output_path}")
+    print(f"Successfully generated 300 DPI Medical Light-Mode Big Picture figure at: {output_path}")
 
 
 if __name__ == "__main__":
