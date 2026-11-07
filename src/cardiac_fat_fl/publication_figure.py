@@ -91,8 +91,8 @@ def generate_publication_figure(
     font_tick = _get_font(22, bold=False)
     font_small = _get_font(19, bold=False)
     font_stats = _get_font(22, bold=True)
-    font_legend = _get_font(21, bold=False)
-    font_legend_bold = _get_font(21, bold=True)
+    font_legend = _get_font(20, bold=False)
+    font_legend_bold = _get_font(20, bold=True)
 
     # 1. Header Banner
     draw.rectangle([(0, 0), (width, 160)], fill=(15, 23, 42))  # Slate-900
@@ -145,6 +145,7 @@ def generate_publication_figure(
         font_axis=font_axis_label,
         font_tick=font_tick,
         font_small=font_small,
+        font_stats=font_stats,
         accent_color=(147, 51, 234),
     )
 
@@ -164,9 +165,10 @@ def generate_publication_figure(
         font_axis=font_axis_label,
         font_tick=font_tick,
         font_small=font_small,
+        font_stats=font_stats,
         accent_color=(239, 68, 68),
         threshold_val=-70.1,
-        threshold_label="CRISP-CT Active Inflammation Cutoff (-70.1 HU)",
+        threshold_label="CRISP-CT Active Inflammation (> -70.1 HU)",
     )
 
     # ==========================================
@@ -201,6 +203,7 @@ def generate_publication_figure(
         font_axis=font_axis_label,
         font_tick=font_tick,
         font_small=font_small,
+        font_stats=font_stats,
     )
 
     # 5. Footer Metadata
@@ -237,6 +240,7 @@ def _draw_tier_boxplot(
     font_axis: ImageFont.ImageFont,
     font_tick: ImageFont.ImageFont,
     font_small: ImageFont.ImageFont,
+    font_stats: ImageFont.ImageFont,
     accent_color: Tuple[int, int, int],
     threshold_val: Optional[float] = None,
     threshold_label: Optional[str] = None,
@@ -270,24 +274,33 @@ def _draw_tier_boxplot(
     plot_y0 = y0 + 175
     plot_y1 = y1 - 95
 
-    # 4. Y-Axis Label (Placed at y0 + 130, safely above plot_y0 without colliding with subtitle)
+    # 4. Y-Axis Label
     draw.text((x0 + 38, y0 + 132), y_label, fill=(15, 23, 42), font=font_axis)
 
-    # Optional threshold shading (e.g. CRISP-CT inflammation zone)
+    # Optional threshold shading & cutoff indicators (CRISP-CT)
     if threshold_val is not None:
         thresh_py = plot_y1 - ((threshold_val - y_min) / (y_max - y_min)) * (plot_y1 - plot_y0)
-        draw.rectangle([(plot_x0, plot_y0), (plot_x1, thresh_py)], fill=(254, 242, 242, 140))  # Rose tint
-        # Dashed red threshold line
+        # Soft rose tint over the active inflammation zone
+        draw.rectangle([(plot_x0, plot_y0), (plot_x1, thresh_py)], fill=(254, 242, 242, 140))
+        # Dashed red cutoff line
         dash_len = 16
         gap = 10
         curr_x = plot_x0
         while curr_x < plot_x1:
             draw.line([(curr_x, thresh_py), (min(curr_x + dash_len, plot_x1), thresh_py)], fill=(225, 29, 72), width=3)
             curr_x += dash_len + gap
+
+        # Dedicated cutoff pill in top-right of the zone (DOES NOT collide with box plots)
         if threshold_label:
-            badge_w = 490
-            draw.rounded_rectangle([(plot_x0 + 12, thresh_py - 30), (plot_x0 + 12 + badge_w, thresh_py - 4)], radius=6, fill=(255, 255, 255, 230), outline=(225, 29, 72), width=1)
-            draw.text((plot_x0 + 20, thresh_py - 27), threshold_label, fill=(190, 18, 60), font=font_small)
+            badge_w = 460
+            badge_h = 42
+            badge_x = plot_x1 - badge_w - 15
+            badge_y = plot_y0 + 15
+            draw.rounded_rectangle([(badge_x, badge_y), (badge_x + badge_w, badge_y + badge_h)], radius=8, fill=(255, 255, 255, 245), outline=(225, 29, 72), width=2)
+            draw.text((badge_x + 18, badge_y + 9), threshold_label, fill=(190, 18, 60), font=font_stats)
+
+        # Explicit red tick & value on right edge of cutoff line
+        draw.text((plot_x1 - 180, thresh_py - 28), "Cutoff: -70.1 HU", fill=(190, 18, 60), font=font_stats)
 
     # Axes
     draw.line([(plot_x0, plot_y0), (plot_x0, plot_y1)], fill=(148, 163, 184), width=3)
@@ -302,6 +315,12 @@ def _draw_tier_boxplot(
         draw.line([(plot_x0, py), (plot_x1, py)], fill=(241, 245, 249), width=1)
         val_str = f"{v:.0f}" if abs(v) >= 10 else f"{v:.1f}"
         draw.text((plot_x0 - 75, py - 13), val_str, fill=(71, 85, 105), font=font_tick)
+
+    # Add red tick mark on Y-axis for CRISP-CT cutoff if applicable
+    if threshold_val is not None:
+        thresh_py = plot_y1 - ((threshold_val - y_min) / (y_max - y_min)) * (plot_y1 - plot_y0)
+        draw.line([(plot_x0 - 14, thresh_py), (plot_x0, thresh_py)], fill=(225, 29, 72), width=3)
+        draw.text((plot_x0 - 82, thresh_py - 13), f"{threshold_val:.1f}", fill=(225, 29, 72), font=font_stats)
 
     # X-axis Tiers
     tiers = tier_data.get("tiers", {})
@@ -388,7 +407,6 @@ def _draw_bivariate_scatter_regression(
     r = bivariate.get("pearson_r", 0.0)
     rho = bivariate.get("spearman_rho", 0.0)
     r2 = bivariate.get("r_squared", 0.0)
-    eq = bivariate.get("equation", "")
     banner = f"Cohort Correlation: N = {n_pts:,}  •  Pearson r = {r:.3f} (p < 10⁻⁴⁰)  •  Spearman ρ = {rho:.3f}  •  R² = {r2:.3f}"
     draw.text((x0 + 38, y0 + 74), banner, fill=(71, 85, 105), font=font_sub)
 
@@ -419,11 +437,16 @@ def _draw_bivariate_scatter_regression(
     # Background CRISP-CT threshold shading
     thresh_py = plot_y1 - ((-70.1 - y_min) / (y_max - y_min)) * (plot_y1 - plot_y0)
     draw.rectangle([(plot_x0, plot_y0), (plot_x1, thresh_py)], fill=(254, 242, 242, 120))
-    draw.line([(plot_x0, thresh_py), (plot_x1, thresh_py)], fill=(225, 29, 72), width=2)
+    # Dashed cutoff line across plot
+    dash_len = 16
+    gap = 10
+    curr_x = plot_x0
+    while curr_x < plot_x1:
+        draw.line([(curr_x, thresh_py), (min(curr_x + dash_len, plot_x1), thresh_py)], fill=(225, 29, 72), width=3)
+        curr_x += dash_len + gap
 
-    # Threshold callout badge
-    draw.rounded_rectangle([(plot_x0 + 12, thresh_py - 28), (plot_x0 + 440, thresh_py - 4)], radius=4, fill=(255, 255, 255, 220), outline=(225, 29, 72), width=1)
-    draw.text((plot_x0 + 18, thresh_py - 25), "CRISP-CT Active Inflammation Cutoff (> -70.1 HU)", fill=(190, 18, 60), font=font_small)
+    # Cutoff label positioned cleanly on the far right (unobstructed by scatter cloud)
+    draw.text((plot_x1 - 180, thresh_py - 28), "Cutoff: -70.1 HU", fill=(190, 18, 60), font=font_stats)
 
     # Axes
     draw.line([(plot_x0, plot_y0), (plot_x0, plot_y1)], fill=(148, 163, 184), width=3)
@@ -435,6 +458,10 @@ def _draw_bivariate_scatter_regression(
         draw.line([(plot_x0 - 8, py), (plot_x0, py)], fill=(148, 163, 184), width=2)
         draw.line([(plot_x0, py), (plot_x1, py)], fill=(241, 245, 249), width=1)
         draw.text((plot_x0 - 75, py - 13), f"{v:.0f}", fill=(71, 85, 105), font=font_tick)
+
+    # Red tick on Y-axis for -70.1 HU cutoff
+    draw.line([(plot_x0 - 14, thresh_py), (plot_x0, thresh_py)], fill=(225, 29, 72), width=3)
+    draw.text((plot_x0 - 82, thresh_py - 13), "-70.1", fill=(225, 29, 72), font=font_stats)
 
     # X Ticks
     for v in np.linspace(x_min, x_max, 7):
@@ -476,30 +503,42 @@ def _draw_bivariate_scatter_regression(
         p1 = to_px(rx1, ry1)
         draw.line([p0, p1], fill=(15, 23, 42), width=5)
 
+    # Format linear fit equation cleanly (avoids '+ -' string bug)
+    if slope != 0.0:
+        sign = "-" if intercept < 0 else "+"
+        eq_clean = f"PVAT HU = {slope:.3f} × EAT Vol {sign} {abs(intercept):.2f}"
+    else:
+        eq_clean = bivariate.get("equation", "").replace("+ -", "- ")
+
     # =========================================================================
-    # SOTA Publication Legend Box (Explains Blue vs. Red Circles & Fit Line)
+    # SOTA Publication Legend Box: 640px wide with ample right margin padding
     # =========================================================================
-    leg_w = 520
-    leg_h = 165
-    leg_x0 = plot_x1 - leg_w - 15
-    leg_y0 = plot_y0 + 15
+    leg_w = 640
+    leg_h = 205
+    leg_x0 = plot_x1 - leg_w - 20
+    leg_y0 = plot_y0 + 20
     leg_x1 = leg_x0 + leg_w
     leg_y1 = leg_y0 + leg_h
 
-    # Card background
+    # Card background with subtle shadow border
     draw.rounded_rectangle([(leg_x0, leg_y0), (leg_x1, leg_y1)], radius=12, fill=(255, 255, 255, 245), outline=(203, 213, 225), width=2)
 
     # Entry 1: Linear Fit Line
     draw.line([(leg_x0 + 20, leg_y0 + 32), (leg_x0 + 55, leg_y0 + 32)], fill=(15, 23, 42), width=4)
-    draw.text((leg_x0 + 68, leg_y0 + 20), f"Linear Fit: {eq}", fill=(15, 23, 42), font=font_legend_bold)
+    draw.text((leg_x0 + 68, leg_y0 + 20), f"Linear Fit: {eq_clean}", fill=(15, 23, 42), font=font_legend_bold)
 
-    # Entry 2: Active Inflammation (Red Circle)
-    draw.ellipse([(leg_x0 + 28, leg_y0 + 68), (leg_x0 + 46, leg_y0 + 86)], fill=(225, 29, 72), outline=(190, 18, 60), width=1)
-    draw.text((leg_x0 + 68, leg_y0 + 66), f"Active Inflammation (PVAT > -70.1 HU, N = {n_inflam})", fill=(190, 18, 60), font=font_legend)
+    # Entry 2: CRISP-CT Threshold Indicator
+    draw.line([(leg_x0 + 20, leg_y0 + 75), (leg_x0 + 35, leg_y0 + 75)], fill=(225, 29, 72), width=3)
+    draw.line([(leg_x0 + 40, leg_y0 + 75), (leg_x0 + 55, leg_y0 + 75)], fill=(225, 29, 72), width=3)
+    draw.text((leg_x0 + 68, leg_y0 + 63), "CRISP-CT Cutoff Threshold: -70.1 HU", fill=(190, 18, 60), font=font_legend_bold)
 
-    # Entry 3: Normal Perivascular Attenuation (Blue Circle)
-    draw.ellipse([(leg_x0 + 28, leg_y0 + 115), (leg_x0 + 46, leg_y0 + 133)], fill=(59, 130, 246), outline=(37, 99, 235), width=1)
-    draw.text((leg_x0 + 68, leg_y0 + 113), f"Normal Perivascular Attenuation (N = {n_normal})", fill=(30, 64, 175), font=font_legend)
+    # Entry 3: Active Inflammation (Red Circle)
+    draw.ellipse([(leg_x0 + 28, leg_y0 + 114), (leg_x0 + 46, leg_y0 + 132)], fill=(225, 29, 72), outline=(190, 18, 60), width=1)
+    draw.text((leg_x0 + 68, leg_y0 + 110), f"Active Inflammation (PVAT > -70.1 HU, N = {n_inflam})", fill=(190, 18, 60), font=font_legend)
+
+    # Entry 4: Normal Perivascular Attenuation (Blue Circle)
+    draw.ellipse([(leg_x0 + 28, leg_y0 + 158), (leg_x0 + 46, leg_y0 + 176)], fill=(59, 130, 246), outline=(37, 99, 235), width=1)
+    draw.text((leg_x0 + 68, leg_y0 + 154), f"Normal Perivascular Attenuation (N = {n_normal})", fill=(30, 64, 175), font=font_legend)
 
 
 def _draw_chamber_bar_chart(
@@ -512,6 +551,7 @@ def _draw_chamber_bar_chart(
     font_axis: ImageFont.ImageFont,
     font_tick: ImageFont.ImageFont,
     font_small: ImageFont.ImageFont,
+    font_stats: ImageFont.ImageFont,
 ) -> None:
     """Render chamber and sulci volumetric breakdown with dynamic ceiling preventing bar clipping."""
     x0, y0, x1, y1 = rect
@@ -582,10 +622,10 @@ def _draw_chamber_bar_chart(
             draw.line([(cx, py_bot), (cx, py_top)], fill=(15, 23, 42), width=3)
             draw.line([(cx - 15, py_top), (cx + 15, py_top)], fill=(15, 23, 42), width=3)
             draw.line([(cx - 15, py_bot), (cx + 15, py_bot)], fill=(15, 23, 42), width=3)
-            # Numeric value above error bar
-            draw.text((cx - 24, py_top - 28), f"{mean_v:.1f}", fill=(15, 23, 42), font=font_small)
+            # Centered numeric value above error bar
+            draw.text((cx - 20, py_top - 28), f"{mean_v:.1f}", fill=(15, 23, 42), font=font_stats)
         else:
-            draw.text((cx - 24, py_bar - 28), f"{mean_v:.1f}", fill=(15, 23, 42), font=font_small)
+            draw.text((cx - 20, py_bar - 28), f"{mean_v:.1f}", fill=(15, 23, 42), font=font_stats)
 
         # X label
         draw.text((cx - 30, plot_y1 + 15), ch_name.replace(" ", "\n"), fill=(15, 23, 42), font=font_small)
