@@ -275,11 +275,32 @@ class CohortDataset:
                     patient_dirs[pid] = matching[0]
 
         # Also inspect direct children of root_dir if they look like participants
+        ignored_root_dirs = {
+            "graphs",
+            "ohif_export",
+            ".venv",
+            "models",
+            "scratch",
+            "fhir_storage",
+            "report",
+            "reports",
+        }
         for entry in self.root_dir.iterdir():
-            if entry.is_dir() and entry.name not in ["graphs", "ohif_export", ".venv", "models", "scratch"]:
+            if (
+                entry.is_dir()
+                and not entry.name.startswith(".")
+                and entry.name not in ignored_root_dirs
+                and not entry.name.startswith("parity_verification")
+            ):
                 if entry.name not in patient_dirs:
                     if not any(entry in p_folder.parents for p_folder in patient_dirs.values()):
-                        patient_dirs[entry.name] = entry
+                        # Only add if it actually contains a scan or segmentation
+                        if (
+                            _find_dicom_series_dir(entry) is not None
+                            or any(entry.glob("*.nrrd"))
+                            or any(entry.glob("*.nii*"))
+                        ):
+                            patient_dirs[entry.name] = entry
 
         # Build records
         for pid, p_dir in patient_dirs.items():
@@ -355,7 +376,12 @@ class CohortDataset:
             if pvat_hu is not None and not math.isnan(pvat_hu):
                 crisp_status = "Active Vascular Inflammation" if pvat_hu > -70.1 else "Normal Attenuation"
 
-            scan_type = "Gated CS" if "gated" in str(p_dir).lower() else "CT"
+            if "nongated" in str(p_dir).lower() or pid.startswith("nongated"):
+                scan_type = "Non-Gated CT"
+            elif "gated" in str(p_dir).lower():
+                scan_type = "Gated CS"
+            else:
+                scan_type = "CT"
 
             self.participants[pid] = CohortParticipant(
                 participant_id=pid,
