@@ -543,16 +543,32 @@ The pipeline modernizes foundational Python 2.7 / TensorFlow 1.14 subprocess scr
 
 ### Official MGH Benchmark Test Data (`example_source_dir`)
 
-To allow users and researchers to immediately run end-to-end quantification, testing, and OHIF visualization out of the box, the repository includes the official [MGH CardiacFatQuant](https://github.com/circ-ml/CardiacFatQuant/tree/main/example_source_dir) test cohort in [`example_source_dir/`](example_source_dir):
+To allow users and researchers to immediately run end-to-end quantification, testing, and OHIF visualization out of the box, the repository includes the official [MGH CardiacFatQuant](https://github.com/circ-ml/CardiacFatQuant/tree/main/example_source_dir) test cohort in [`example_source_dir/`](example_source_dir). The cohort is organized with clean participant roots (`img.nrrd` scan, 8-compartment `eat_pvat.seg.nrrd`, reports, and OHIF assets) and segregated multi-model benchmarks:
 
 ```text
 example_source_dir/
-├── 0506/
-│   └── img.nrrd   # 3D Cardiac CT (512 x 512 x 122, 16-bit signed, [-1024, 1590] HU)
-├── 0909/
-│   └── img.nrrd   # 3D Cardiac CT (512 x 512 x 126, 16-bit signed, [-1024, 1629] HU)
-└── 0987/
-    └── img.nrrd   # 3D Cardiac CT (512 x 512 x 119, 16-bit signed, [-1024, 1840] HU)
+├── 0506/                              # Participant 0506
+│   ├── img.nrrd                       # 3D Cardiac CT (512 x 512 x 122, [-1024, 1590] HU)
+│   ├── heart.seg.nrrd                 # DeepHeartSeg ONNX pericardium envelope
+│   ├── coronary_sulci.seg.nrrd        # Geometric coronary sulci centerlines (LAD, LCX, RCA)
+│   ├── eat_pvat.seg.nrrd              # Primary 8-compartment EAT/PVAT segmentation
+│   ├── cardiac_fat_measurements.csv   # Validated 19-column clinical metrics
+│   ├── cardiac_fat_report.pdf         # 2-Page clinical report with MPR snapshots & VLM
+│   ├── cardiac_fat_report.html        # Interactive responsive report
+│   ├── eat_pvat_report.dcm            # DICOM Encapsulated PDF (SOP .104.1)
+│   ├── cardiac_fat_fhir.json          # HL7 FHIR R4 Bundle (DiagnosticReport, Observations)
+│   ├── mpr_montage.png                # 3-view orthogonal MPR montage
+│   ├── nv_reason_clinical_narrative.txt # NV-Reason-CT generative clinical impression
+│   ├── ohif_export/                   # Embedded OHIF v3.13 workstation slices & DICOM-SEG
+│   │
+│   └── segmentation_models/           # Multi-Model Benchmark Segregations
+│       ├── harvard_cardiacfatquant/   # Harvard / MGH CardiacFatQuant masks & CSV
+│       ├── monai_wholebody/           # NVIDIA NGC 1.5mm SegResNet masks & CSV
+│       ├── totalsegmentator/          # TotalSegmentator Task253 masks & CSV
+│       ├── nvsegment_ctmr/            # NVIDIA NV-Segment-CTMR VISTA-3D masks & CSV
+│       └── nvsegment_ct/              # NVIDIA NV-Segment-CT 133-class masks & CSV
+├── 0909/                              # Participant 0909 (3D CT: 512 x 512 x 126, same clean layout)
+└── 0987/                              # Participant 0987 (3D CT: 512 x 512 x 119, same clean layout)
 ```
 
 **Run quantification immediately on the included test data:**
@@ -824,9 +840,22 @@ monai-cardiac-fat-fl/
 │       └── app/
 │           ├── config/            # Client and server execution configs (FedProx, FedBN)
 │           └── meta.json          # NVFLARE job metadata contract
-├── docs/                          # Architectural specifications, slide deck, and cohort validation reports
+├── docs/                          # Architectural specifications, case studies, regulatory & manuscript
+│   ├── README.md                  # Comprehensive documentation index & sitemap
+│   ├── case_studies/              # 300 DPI publication clinical case studies & VLM spotlights
+│   │   ├── README.md              # Catalog of edge cases (nongated_51, nongated_151, 442)
+│   │   ├── nongated_51_bilateral_lung_masses_case_study.png
+│   │   ├── nongated_151_pacemaker_and_valves_case_study.png
+│   │   └── participant_442_coronary_inflammation_case_study.png
 │   ├── regulatory/
-│   │   └── FDA_SAMD_REGULATORY_DOSSIER.md # FDA 510(k) SaMD dossier, IEC 62304 matrix, ISO 14971 FMEA & PCCP
+│   │   ├── FDA_SAMD_REGULATORY_DOSSIER.md # FDA 510(k) SaMD dossier, IEC 62304 matrix, ISO 14971 FMEA & PCCP
+│   │   └── FDA_510k_SaMD_DHF_Evidence_Dossier.pdf # Generated vector DHF evidence dossier
+│   ├── manuscript/                # Full academic manuscripts, preprints & scoping docs
+│   │   ├── coca_full_manuscript.md
+│   │   ├── coca_cohort_abstract.md
+│   │   └── coca_cohort_abstract.html
+│   ├── figures/                   # Global publication figures & architecture blueprints
+│   ├── benchmarks/                # Parity audit CSVs & stratified pilot metrics
 │   ├── architecture_review/       # Visual architecture walkthrough & slide gallery (15 slides)
 │   ├── EPIC_FHIR_MCP_INTEGRATION.md # Epic on FHIR, SMART on FHIR backend services, and open.epic MCP guide
 │   ├── RESEARCH_DASHBOARD_AND_OHIF_WORKSTATION.md # Research Dashboard, 5-tier CAC analytics & embedded OHIF Workstation
@@ -845,7 +874,11 @@ monai-cardiac-fat-fl/
 │   ├── deepheartseg_heart.onnx
 │   ├── deepheartseg_loc.onnx
 │   └── wholeBody_ct_segmentation/ # 104-class 1.5mm SegResNet (NVIDIA NGC / MONAI Model Zoo)
-├── example_source_dir/            # Official MGH CardiacFatQuant 3-case benchmark CT cohort (0506, 0909, 0987)
+├── example_source_dir/            # Official MGH benchmark cohort (0506, 0909, 0987) with clean participant roots & segmentation_models/
+│   ├── README.md                  # Detailed layout guide for benchmark data
+│   ├── 0506/                      # Clean root (scan, primary 8-ch seg, reports, OHIF) + segmentation_models/
+│   ├── 0909/
+│   └── 0987/
 ├── deploy/                        # MONAI Deploy Application Package (MAP) container & PACS testbed
 │   ├── app.py                     # MAP application entrypoint executing 3-operator DAG
 │   ├── app.yaml                   # MONAI Deploy App SDK v0.6+ declarative manifest
