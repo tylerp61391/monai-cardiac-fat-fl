@@ -1117,6 +1117,19 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; }
     .tab-active { border-bottom: 2px solid #0284c7; color: #0284c7; font-weight: 600; }
+    /* Google Sheets spreadsheet grid styling */
+    .sheet-table th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .sheet-table th, .sheet-table td {
+      border-right: 1px solid rgba(51, 65, 85, 0.6);
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    .sheet-table th:last-child, .sheet-table td:last-child {
+      border-right: none;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
@@ -1624,64 +1637,186 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Search & Filters -->
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3 flex-1 min-w-[280px]">
-          <div class="relative flex-1">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
-            <input type="text" id="caseSearchInput" oninput="applyCaseFilters()" placeholder="Search by participant ID (or comma-separated IDs e.g. nongated_213, 414)..."
-                   class="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-4 py-1.5 text-xs text-white w-full focus:outline-none focus:border-sky-500">
+      <!-- Spreadsheet Toolbar & Search Bar -->
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-md space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <!-- Left: Global Search & Quick Presets -->
+          <div class="flex flex-wrap items-center gap-2 flex-1 min-w-[320px]">
+            <div class="relative flex-1 min-w-[220px]">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+              <input type="text" id="caseSearchInput" oninput="onGlobalSearchInput()" placeholder="Search participant ID (e.g. 442, nongated_51, 151)..."
+                     class="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-8 py-1.5 text-xs text-white w-full focus:outline-none focus:border-sky-500 transition">
+              <button onclick="clearSearchInput()" id="btnClearSearch" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <!-- Quick Category Pill Buttons -->
+            <div class="flex items-center gap-1 text-[11px] bg-slate-900 p-0.5 rounded-lg border border-slate-700">
+              <button onclick="quickFilterCategory('all')" id="pillCat_all" class="px-2.5 py-1 rounded text-white bg-slate-700 font-medium transition">All</button>
+              <button onclick="quickFilterCategory('gated')" id="pillCat_gated" class="px-2.5 py-1 rounded text-slate-300 hover:text-white transition">Gated CS</button>
+              <button onclick="quickFilterCategory('nongated')" id="pillCat_nongated" class="px-2.5 py-1 rounded text-slate-300 hover:text-white transition">Non-Gated CT</button>
+              <button onclick="quickFilterCategory('inflamed')" id="pillCat_inflamed" class="px-2.5 py-1 rounded text-slate-300 hover:text-white transition"><i class="fa-solid fa-fire text-rose-400 text-[10px] mr-1"></i>Inflamed</button>
+              <button onclick="quickFilterCategory('segmented')" id="pillCat_segmented" class="px-2.5 py-1 rounded text-slate-300 hover:text-white transition"><i class="fa-solid fa-cube text-emerald-400 text-[10px] mr-1"></i>Segmented</button>
+            </div>
+          </div>
+
+          <!-- Right: Spreadsheet Actions (Density, Export CSV, Export JSON, Reset Filters) -->
+          <div class="flex items-center gap-2 text-xs">
+            <!-- Row Density Toggle -->
+            <button onclick="toggleTableDensity()" id="btnDensityToggle" class="bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-300 hover:text-white flex items-center gap-1.5 transition" title="Toggle Compact / Standard row height">
+              <i class="fa-solid fa-table-cells text-slate-400 text-[11px]"></i>
+              <span id="densityLabel">Compact View</span>
+            </button>
+            <!-- Export CSV -->
+            <button onclick="exportCasesToCsv()" class="bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-lg px-2.5 py-1.5 text-emerald-300 hover:text-white flex items-center gap-1.5 transition" title="Export currently filtered view to CSV">
+              <i class="fa-solid fa-file-csv text-emerald-400 text-sm"></i>
+              <span>Export CSV</span>
+            </button>
+            <!-- Export JSON -->
+            <button onclick="exportCasesToJson()" class="bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sky-300 hover:text-white flex items-center gap-1.5 transition" title="Export currently filtered view to JSON">
+              <i class="fa-solid fa-file-code text-sky-400 text-sm"></i>
+              <span>JSON</span>
+            </button>
+            <!-- Reset Filters -->
+            <button onclick="resetAllFilters()" id="btnResetAllFilters" class="hidden bg-rose-950/50 hover:bg-rose-900/70 border border-rose-500/40 text-rose-300 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-filter-circle-xmark"></i>
+              <span id="resetFiltersCount">Reset</span>
+            </button>
           </div>
         </div>
-        <div class="flex items-center gap-2 text-xs">
-          <select id="caseTierFilter" onchange="applyCaseFilters()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-300 focus:outline-none">
-            <option value="">All CAC Risk Tiers</option>
-            <option value="Zero (0)">Zero (0)</option>
-            <option value="Minimal (1-10)">Minimal (1-10)</option>
-            <option value="Mild (11-100)">Mild (11-100)</option>
-            <option value="Moderate (101-400)">Moderate (101-400)</option>
-            <option value="Severe (>400)">Severe (>400)</option>
-          </select>
-          <label class="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-300 cursor-pointer">
-            <input type="checkbox" id="caseSegOnly" onchange="applyCaseFilters()" class="rounded bg-slate-800 text-sky-500">
-            <span>Segmented Only</span>
-          </label>
-          <label class="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-300 cursor-pointer">
-            <input type="checkbox" id="caseInflamOnly" onchange="applyCaseFilters()" class="rounded bg-slate-800 text-rose-500">
-            <span>Inflammation Only</span>
-          </label>
+
+        <!-- Active Filter Chips & Live Count Summary -->
+        <div id="activeFiltersContainer" class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-700/60 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-slate-400 text-[11px] font-medium mr-1 flex items-center gap-1">
+              <i class="fa-solid fa-sliders text-slate-500"></i> Active Filters:
+            </span>
+            <div id="activeFilterPillsList" class="flex flex-wrap items-center gap-1.5">
+              <span class="text-slate-500 italic text-[11px]">None (showing full cohort)</span>
+            </div>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono" id="casesFilterSummaryText">
+            Showing <span id="casesFilteredCount" class="text-white font-bold">--</span> of <span id="casesTotalCount" class="text-slate-300 font-bold">--</span> cases
+          </div>
         </div>
       </div>
 
-      <!-- Cases Table -->
-      <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/60 uppercase tracking-wider font-semibold text-slate-400 border-b border-slate-700 select-none">
+      <!-- Cases Spreadsheet Table -->
+      <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto max-h-[720px] custom-scrollbar">
+          <table id="casesSpreadsheetTable" class="sheet-table w-full text-left text-xs text-slate-300 border-collapse">
+            <thead class="bg-slate-900/95 uppercase tracking-wider font-semibold text-slate-400 border-b-2 border-slate-700 select-none sticky top-0 z-10 shadow-sm backdrop-blur-sm">
               <tr>
-                <th class="px-3 py-3 w-12 text-slate-500 font-mono text-center">#</th>
-                <th onclick="sortTableBy('participant_id')" class="px-4 py-3 cursor-pointer hover:text-white transition">
-                  Participant ID <i id="sortIcon_participant_id" class="fa-solid fa-arrow-down-1-9 text-sky-400 ml-1 text-[11px]"></i>
+                <th class="px-3 py-2.5 w-12 text-slate-500 font-mono text-center border-r border-slate-700/70 bg-slate-900/95">#</th>
+
+                <!-- Participant ID -->
+                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                  <div class="flex items-center justify-between gap-1">
+                    <div onclick="sortTableBy('participant_id')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Participant ID">
+                      <span class="text-[11px]">Participant ID</span>
+                      <i id="sortIcon_participant_id" class="fa-solid fa-arrow-down-1-9 text-sky-400 text-[10px]"></i>
+                    </div>
+                    <button onclick="openColMenu(event, 'participant_id')" id="colFilterBtn_participant_id" title="Filter &amp; Sort Participant ID"
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
+                      <i id="filterIcon_participant_id" class="fa-solid fa-filter text-[10px]"></i>
+                    </button>
+                  </div>
                 </th>
-                <th onclick="sortTableBy('scan_type')" class="px-4 py-3 cursor-pointer hover:text-white transition">
-                  Scan Type <i id="sortIcon_scan_type" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+
+                <!-- Scan Type -->
+                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                  <div class="flex items-center justify-between gap-1">
+                    <div onclick="sortTableBy('scan_type')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Scan Type">
+                      <span class="text-[11px]">Scan Type</span>
+                      <i id="sortIcon_scan_type" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                    </div>
+                    <button onclick="openColMenu(event, 'scan_type')" id="colFilterBtn_scan_type" title="Filter &amp; Sort Scan Type (Gated CS vs Non-Gated CT)"
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
+                      <i id="filterIcon_scan_type" class="fa-solid fa-filter text-[10px]"></i>
+                    </button>
+                  </div>
                 </th>
-                <th onclick="sortTableBy('calcium_score')" class="px-4 py-3 cursor-pointer hover:text-white transition">
-                  Agatston CAC <i id="sortIcon_calcium_score" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+
+                <!-- Agatston CAC -->
+                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                  <div class="flex items-center justify-between gap-1">
+                    <div onclick="sortTableBy('calcium_score')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Agatston CAC Score">
+                      <span class="text-[11px]">Agatston CAC</span>
+                      <i id="sortIcon_calcium_score" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                    </div>
+                    <button onclick="openColMenu(event, 'calcium_score')" id="colFilterBtn_calcium_score" title="Filter &amp; Sort by Agatston CAC Tiers &amp; Ranges"
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
+                      <i id="filterIcon_calcium_score" class="fa-solid fa-filter text-[10px]"></i>
+                    </button>
+                  </div>
                 </th>
-                <th onclick="sortTableBy('eat_volume_cm3')" class="px-4 py-3 cursor-pointer hover:text-white transition">
-                  EAT Volume <i id="sortIcon_eat_volume_cm3" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+
+                <!-- EAT Volume -->
+                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                  <div class="flex items-center justify-between gap-1">
+                    <div onclick="sortTableBy('eat_volume_cm3')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1 justify-end" title="Sort by Total EAT Volume">
+                      <span class="text-[11px]">EAT Volume</span>
+                      <i id="sortIcon_eat_volume_cm3" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                    </div>
+                    <button onclick="openColMenu(event, 'eat_volume_cm3')" id="colFilterBtn_eat_volume_cm3" title="Filter &amp; Sort EAT Volume"
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1">
+                      <i id="filterIcon_eat_volume_cm3" class="fa-solid fa-filter text-[10px]"></i>
+                    </button>
+                  </div>
                 </th>
-                <th onclick="sortTableBy('pvat_volume_cm3')" class="px-4 py-3 cursor-pointer hover:text-white transition">
-                  PVAT Volume <i id="sortIcon_pvat_volume_cm3" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+
+                <!-- PVAT Volume -->
+                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                  <div class="flex items-center justify-between gap-1">
+                    <div onclick="sortTableBy('pvat_volume_cm3')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1 justify-end" title="Sort by Total PVAT Volume">
+                      <span class="text-[11px]">PVAT Volume</span>
+                      <i id="sortIcon_pvat_volume_cm3" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                    </div>
+                    <button onclick="openColMenu(event, 'pvat_volume_cm3')" id="colFilterBtn_pvat_volume_cm3" title="Filter &amp; Sort PVAT Volume"
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1">
+                      <i id="filterIcon_pvat_volume_cm3" class="fa-solid fa-filter text-[10px]"></i>
+                    </button>
+                  </div>
                 </th>
-                <th onclick="sortTableBy('pvat_mean_hu')" class="px-4 py-3 cursor-pointer hover:text-white transition">
-                  PVAT Mean HU <i id="sortIcon_pvat_mean_hu" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+
+                <!-- PVAT Mean HU -->
+                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                  <div class="flex items-center justify-between gap-1">
+                    <div onclick="sortTableBy('pvat_mean_hu')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1 justify-end" title="Sort by PVAT Mean Attenuation">
+                      <span class="text-[11px]">PVAT Mean HU</span>
+                      <i id="sortIcon_pvat_mean_hu" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                    </div>
+                    <button onclick="openColMenu(event, 'pvat_mean_hu')" id="colFilterBtn_pvat_mean_hu" title="Filter &amp; Sort PVAT HU (-70.1 Cutoff)"
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1">
+                      <i id="filterIcon_pvat_mean_hu" class="fa-solid fa-filter text-[10px]"></i>
+                    </button>
+                  </div>
                 </th>
-                <th onclick="sortTableBy('crisp_ct_status')" class="px-4 py-3 cursor-pointer hover:text-white transition">
-                  CRISP-CT Status <i id="sortIcon_crisp_ct_status" class="fa-solid fa-sort text-slate-600 ml-1 text-[11px]"></i>
+
+                <!-- CRISP-CT Status -->
+                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                  <div class="flex items-center justify-between gap-1">
+                    <div onclick="sortTableBy('crisp_ct_status')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Vascular Inflammation Status">
+                      <span class="text-[11px]">CRISP-CT Status</span>
+                      <i id="sortIcon_crisp_ct_status" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                    </div>
+                    <button onclick="openColMenu(event, 'crisp_ct_status')" id="colFilterBtn_crisp_ct_status" title="Filter &amp; Sort CRISP-CT Status"
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
+                      <i id="filterIcon_crisp_ct_status" class="fa-solid fa-filter text-[10px]"></i>
+                    </button>
+                  </div>
                 </th>
-                <th class="px-4 py-3 text-right">Actions</th>
+
+                <!-- Actions -->
+                <th class="px-3 py-2 text-right font-semibold bg-slate-900/95">
+                  <div class="flex items-center justify-end gap-1">
+                    <span class="text-[11px]">Actions</span>
+                    <button onclick="openColMenu(event, 'actions')" id="colFilterBtn_actions" title="Filter by Pipeline Status &amp; Deliverables"
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
+                      <i id="filterIcon_actions" class="fa-solid fa-filter text-[10px]"></i>
+                    </button>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody id="casesTableBody" class="divide-y divide-slate-700/60">
@@ -1689,6 +1824,11 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Google Sheets Floating Column Filter Popover Menu -->
+      <div id="colMenuPopover" class="fixed hidden z-50 bg-slate-900 border border-slate-600 rounded-xl shadow-2xl p-3.5 w-72 text-slate-200 text-xs backdrop-blur-md transition-all duration-150">
+        <!-- Populated dynamically by openColMenu() -->
       </div>
 
     </section>
@@ -3260,6 +3400,21 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
     let sortColumn = 'participant_id';
     let sortDirection = 'asc';
+    let currentFilteredCases = [];
+    let tableDensity = 'standard'; // 'standard' or 'compact'
+    let activeOpenColKey = null;
+
+    // Google Sheets Column Filter State
+    const colFilters = {
+      participant_id: { search: '', prefix: 'all' }, // prefix: 'all' | 'gated' | 'nongated'
+      scan_type: { selected: ['Gated CS', 'Non-Gated CT'] },
+      calcium_score: { tiers: [], min: null, max: null, nonZero: false },
+      eat_volume_cm3: { min: null, max: null, preset: 'all' },
+      pvat_volume_cm3: { min: null, max: null, preset: 'all' },
+      pvat_mean_hu: { min: null, max: null, preset: 'all' },
+      crisp_ct_status: { selected: ['Active Vascular Inflammation', 'Normal Attenuation'] },
+      actions: { segOnly: false, reportOnly: false }
+    };
 
     function naturalCompare(a, b) {
       return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
@@ -3276,25 +3431,911 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       applyCaseFilters();
     }
 
+    function setColSort(col, dir) {
+      sortColumn = col;
+      sortDirection = dir;
+      updateSortIcons();
+      applyCaseFilters();
+      closeColMenu();
+    }
+
     function updateSortIcons() {
-      const cols = ['participant_id', 'scan_type', 'calcium_score', 'eat_volume_cm3', 'pvat_volume_cm3', 'pvat_mean_hu', 'crisp_ct_status', 'has_seg'];
+      const cols = ['participant_id', 'scan_type', 'calcium_score', 'eat_volume_cm3', 'pvat_volume_cm3', 'pvat_mean_hu', 'crisp_ct_status'];
       cols.forEach(c => {
         const el = document.getElementById(`sortIcon_${c}`);
         if (!el) return;
         if (c === sortColumn) {
           if (c === 'participant_id') {
             el.className = sortDirection === 'asc'
-              ? 'fa-solid fa-arrow-down-1-9 text-sky-400 ml-1 text-[11px]'
-              : 'fa-solid fa-arrow-up-9-1 text-sky-400 ml-1 text-[11px]';
+              ? 'fa-solid fa-arrow-down-1-9 text-sky-400 ml-1 text-[10px]'
+              : 'fa-solid fa-arrow-up-9-1 text-sky-400 ml-1 text-[10px]';
+          } else if (['scan_type', 'crisp_ct_status'].includes(c)) {
+            el.className = sortDirection === 'asc'
+              ? 'fa-solid fa-arrow-down-a-z text-sky-400 ml-1 text-[10px]'
+              : 'fa-solid fa-arrow-up-z-a text-sky-400 ml-1 text-[10px]';
           } else {
             el.className = sortDirection === 'asc'
-              ? 'fa-solid fa-arrow-down-short-wide text-sky-400 ml-1 text-[11px]'
-              : 'fa-solid fa-arrow-up-wide-short text-sky-400 ml-1 text-[11px]';
+              ? 'fa-solid fa-arrow-down-short-wide text-sky-400 ml-1 text-[10px]'
+              : 'fa-solid fa-arrow-up-wide-short text-sky-400 ml-1 text-[10px]';
           }
         } else {
-          el.className = 'fa-solid fa-sort text-slate-600 ml-1 text-[11px]';
+          el.className = 'fa-solid fa-sort text-slate-600 ml-1 text-[10px]';
         }
       });
+    }
+
+    function isColFiltered(colKey) {
+      if (colKey === 'scan_type') {
+        return colFilters.scan_type.selected.length === 1;
+      }
+      if (colKey === 'calcium_score') {
+        const cf = colFilters.calcium_score;
+        return (cf.tiers && cf.tiers.length > 0) || cf.min !== null || cf.max !== null || cf.nonZero;
+      }
+      if (colKey === 'eat_volume_cm3') {
+        const cf = colFilters.eat_volume_cm3;
+        return cf.preset !== 'all' || cf.min !== null || cf.max !== null;
+      }
+      if (colKey === 'pvat_volume_cm3') {
+        const cf = colFilters.pvat_volume_cm3;
+        return cf.preset !== 'all' || cf.min !== null || cf.max !== null;
+      }
+      if (colKey === 'pvat_mean_hu') {
+        const cf = colFilters.pvat_mean_hu;
+        return cf.preset !== 'all' || cf.min !== null || cf.max !== null;
+      }
+      if (colKey === 'crisp_ct_status') {
+        return colFilters.crisp_ct_status.selected.length === 1;
+      }
+      if (colKey === 'participant_id') {
+        return colFilters.participant_id.search !== '' || colFilters.participant_id.prefix !== 'all';
+      }
+      if (colKey === 'actions') {
+        return colFilters.actions.segOnly || colFilters.actions.reportOnly;
+      }
+      return false;
+    }
+
+    function updateFilterIconsAndPills() {
+      const colKeys = ['participant_id', 'scan_type', 'calcium_score', 'eat_volume_cm3', 'pvat_volume_cm3', 'pvat_mean_hu', 'crisp_ct_status', 'actions'];
+      let activeFilterCount = 0;
+      const pills = [];
+
+      colKeys.forEach(k => {
+        const btn = document.getElementById(`colFilterBtn_${k}`);
+        const icon = document.getElementById(`filterIcon_${k}`);
+        const filtered = isColFiltered(k);
+
+        if (btn && icon) {
+          if (filtered) {
+            btn.className = 'p-1 rounded bg-sky-500/20 text-sky-400 border border-sky-500/40 transition shadow-sm';
+            icon.className = 'fa-solid fa-filter text-[10px] text-sky-400';
+          } else {
+            btn.className = 'p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition';
+            icon.className = 'fa-solid fa-filter text-[10px]';
+          }
+        }
+      });
+
+      // Build active pills list
+      if (colFilters.scan_type.selected.length === 1) {
+        activeFilterCount++;
+        pills.push({ key: 'scan_type', label: `Scan: ${colFilters.scan_type.selected[0]}` });
+      }
+      if (colFilters.calcium_score.tiers.length > 0) {
+        activeFilterCount++;
+        pills.push({ key: 'calcium_score', label: `CAC: ${colFilters.calcium_score.tiers.join(', ')}` });
+      }
+      if (colFilters.calcium_score.min !== null || colFilters.calcium_score.max !== null) {
+        activeFilterCount++;
+        const minStr = colFilters.calcium_score.min !== null ? colFilters.calcium_score.min : '0';
+        const maxStr = colFilters.calcium_score.max !== null ? colFilters.calcium_score.max : '∞';
+        pills.push({ key: 'calcium_score_range', label: `CAC Range: ${minStr}–${maxStr}` });
+      }
+      if (colFilters.calcium_score.nonZero) {
+        activeFilterCount++;
+        pills.push({ key: 'calcium_score_nonzero', label: 'CAC > 0 (Calcified)' });
+      }
+      if (colFilters.eat_volume_cm3.preset !== 'all') {
+        activeFilterCount++;
+        const lbl = colFilters.eat_volume_cm3.preset === 'low' ? 'EAT < 50 cm³' : (colFilters.eat_volume_cm3.preset === 'normal' ? 'EAT 50–125 cm³' : 'EAT > 125 cm³');
+        pills.push({ key: 'eat_volume_cm3', label: lbl });
+      } else if (colFilters.eat_volume_cm3.min !== null || colFilters.eat_volume_cm3.max !== null) {
+        activeFilterCount++;
+        pills.push({ key: 'eat_volume_cm3', label: `EAT: ${colFilters.eat_volume_cm3.min || 0}–${colFilters.eat_volume_cm3.max || '∞'} cm³` });
+      }
+      if (colFilters.pvat_volume_cm3.preset !== 'all') {
+        activeFilterCount++;
+        const lbl = colFilters.pvat_volume_cm3.preset === 'low' ? 'PVAT < 10 cm³' : (colFilters.pvat_volume_cm3.preset === 'normal' ? 'PVAT 10–20 cm³' : 'PVAT > 20 cm³');
+        pills.push({ key: 'pvat_volume_cm3', label: lbl });
+      } else if (colFilters.pvat_volume_cm3.min !== null || colFilters.pvat_volume_cm3.max !== null) {
+        activeFilterCount++;
+        pills.push({ key: 'pvat_volume_cm3', label: `PVAT Vol: ${colFilters.pvat_volume_cm3.min || 0}–${colFilters.pvat_volume_cm3.max || '∞'} cm³` });
+      }
+      if (colFilters.pvat_mean_hu.preset !== 'all') {
+        activeFilterCount++;
+        const lbl = colFilters.pvat_mean_hu.preset === 'inflamed' ? 'PVAT Inflamed (> -70.1 HU)' : 'PVAT Quiescent (≤ -70.1 HU)';
+        pills.push({ key: 'pvat_mean_hu', label: lbl });
+      } else if (colFilters.pvat_mean_hu.min !== null || colFilters.pvat_mean_hu.max !== null) {
+        activeFilterCount++;
+        pills.push({ key: 'pvat_mean_hu', label: `PVAT HU: ${colFilters.pvat_mean_hu.min || '-∞'} to ${colFilters.pvat_mean_hu.max || '∞'}` });
+      }
+      if (colFilters.crisp_ct_status.selected.length === 1) {
+        activeFilterCount++;
+        const statusLbl = colFilters.crisp_ct_status.selected[0].includes('Active') ? 'Active Inflammation' : 'Normal Attenuation';
+        pills.push({ key: 'crisp_ct_status', label: `Status: ${statusLbl}` });
+      }
+      if (colFilters.participant_id.prefix !== 'all') {
+        activeFilterCount++;
+        pills.push({ key: 'participant_id_prefix', label: colFilters.participant_id.prefix === 'gated' ? 'Type: Gated CS Only' : 'Type: Non-Gated CT Only' });
+      }
+      if (colFilters.participant_id.search) {
+        activeFilterCount++;
+        pills.push({ key: 'participant_id_search', label: `Search: "${colFilters.participant_id.search}"` });
+      }
+      if (colFilters.actions.segOnly) {
+        activeFilterCount++;
+        pills.push({ key: 'actions_seg', label: 'Segmented Only' });
+      }
+      if (colFilters.actions.reportOnly) {
+        activeFilterCount++;
+        pills.push({ key: 'actions_report', label: 'Reports Available' });
+      }
+
+      // Update pills container
+      const pillsContainer = document.getElementById('activeFilterPillsList');
+      if (pillsContainer) {
+        if (pills.length === 0) {
+          pillsContainer.innerHTML = '<span class="text-slate-500 italic text-[11px]">None (showing full cohort)</span>';
+        } else {
+          pillsContainer.innerHTML = pills.map(p => `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] bg-sky-950/80 text-sky-300 border border-sky-500/40 shadow-sm">
+              <span>${p.label}</span>
+              <button onclick="removeFilterPill('${p.key}')" class="hover:text-white transition" title="Remove filter"><i class="fa-solid fa-xmark text-[9px]"></i></button>
+            </span>
+          `).join('');
+        }
+      }
+
+      // Reset button visibility
+      const btnReset = document.getElementById('btnResetAllFilters');
+      if (btnReset) {
+        if (activeFilterCount > 0) {
+          btnReset.classList.remove('hidden');
+          document.getElementById('resetFiltersCount').innerText = `Clear All (${activeFilterCount})`;
+        } else {
+          btnReset.classList.add('hidden');
+        }
+      }
+
+      // Sync Category Pills at top
+      updateCategoryPillStyles();
+    }
+
+    function removeFilterPill(key) {
+      if (key === 'scan_type') colFilters.scan_type.selected = ['Gated CS', 'Non-Gated CT'];
+      else if (key === 'calcium_score') colFilters.calcium_score.tiers = [];
+      else if (key === 'calcium_score_range') { colFilters.calcium_score.min = null; colFilters.calcium_score.max = null; }
+      else if (key === 'calcium_score_nonzero') colFilters.calcium_score.nonZero = false;
+      else if (key === 'eat_volume_cm3') { colFilters.eat_volume_cm3.preset = 'all'; colFilters.eat_volume_cm3.min = null; colFilters.eat_volume_cm3.max = null; }
+      else if (key === 'pvat_volume_cm3') { colFilters.pvat_volume_cm3.preset = 'all'; colFilters.pvat_volume_cm3.min = null; colFilters.pvat_volume_cm3.max = null; }
+      else if (key === 'pvat_mean_hu') { colFilters.pvat_mean_hu.preset = 'all'; colFilters.pvat_mean_hu.min = null; colFilters.pvat_mean_hu.max = null; }
+      else if (key === 'crisp_ct_status') colFilters.crisp_ct_status.selected = ['Active Vascular Inflammation', 'Normal Attenuation'];
+      else if (key === 'participant_id_prefix') colFilters.participant_id.prefix = 'all';
+      else if (key === 'participant_id_search') {
+        colFilters.participant_id.search = '';
+        const searchInput = document.getElementById('caseSearchInput');
+        if (searchInput) searchInput.value = '';
+        const btnClear = document.getElementById('btnClearSearch');
+        if (btnClear) btnClear.classList.add('hidden');
+      }
+      else if (key === 'actions_seg') colFilters.actions.segOnly = false;
+      else if (key === 'actions_report') colFilters.actions.reportOnly = false;
+
+      applyCaseFilters();
+    }
+
+    function updateCategoryPillStyles() {
+      const isGatedOnly = colFilters.scan_type.selected.length === 1 && colFilters.scan_type.selected[0] === 'Gated CS';
+      const isNonGatedOnly = colFilters.scan_type.selected.length === 1 && colFilters.scan_type.selected[0] === 'Non-Gated CT';
+      const isInflamedOnly = colFilters.crisp_ct_status.selected.length === 1 && colFilters.crisp_ct_status.selected[0] === 'Active Vascular Inflammation';
+      const isSegOnly = colFilters.actions.segOnly;
+      const isAll = !isGatedOnly && !isNonGatedOnly && !isInflamedOnly && !isSegOnly;
+
+      const setActive = (id, active) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (active) {
+          el.className = 'px-2.5 py-1 rounded text-white bg-sky-600 font-semibold shadow-sm transition';
+        } else {
+          el.className = 'px-2.5 py-1 rounded text-slate-300 hover:text-white transition';
+        }
+      };
+
+      setActive('pillCat_all', isAll);
+      setActive('pillCat_gated', isGatedOnly);
+      setActive('pillCat_nongated', isNonGatedOnly);
+      setActive('pillCat_inflamed', isInflamedOnly);
+      setActive('pillCat_segmented', isSegOnly);
+    }
+
+    function quickFilterCategory(cat) {
+      if (cat === 'all') {
+        colFilters.scan_type.selected = ['Gated CS', 'Non-Gated CT'];
+        colFilters.crisp_ct_status.selected = ['Active Vascular Inflammation', 'Normal Attenuation'];
+        colFilters.actions.segOnly = false;
+      } else if (cat === 'gated') {
+        colFilters.scan_type.selected = ['Gated CS'];
+      } else if (cat === 'nongated') {
+        colFilters.scan_type.selected = ['Non-Gated CT'];
+      } else if (cat === 'inflamed') {
+        colFilters.crisp_ct_status.selected = ['Active Vascular Inflammation'];
+      } else if (cat === 'segmented') {
+        colFilters.actions.segOnly = true;
+      }
+      applyCaseFilters();
+    }
+
+    // Google Sheets Column Popover Menu Logic
+    function openColMenu(event, colKey) {
+      event.stopPropagation();
+      activeOpenColKey = colKey;
+      const btn = event.currentTarget;
+      const rect = btn.getBoundingClientRect();
+      const popover = document.getElementById('colMenuPopover');
+      if (!popover) return;
+
+      popover.innerHTML = buildColMenuHtml(colKey);
+
+      // Positioning
+      popover.classList.remove('hidden');
+      const popWidth = 288; // w-72 = 18rem = 288px
+      let left = rect.right - popWidth;
+      if (left < 10) left = 10;
+      if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+      let top = rect.bottom + 6;
+      if (top + 400 > window.innerHeight && rect.top > 400) {
+        top = rect.top - 400;
+      }
+      popover.style.top = `${top}px`;
+      popover.style.left = `${left}px`;
+    }
+
+    function closeColMenu() {
+      const popover = document.getElementById('colMenuPopover');
+      if (popover) popover.classList.add('hidden');
+      activeOpenColKey = null;
+    }
+
+    // Global click listener to close popover when clicking outside
+    document.addEventListener('click', (e) => {
+      const popover = document.getElementById('colMenuPopover');
+      if (!popover || popover.classList.contains('hidden')) return;
+      if (!popover.contains(e.target) && !e.target.closest('[id^="colFilterBtn_"]')) {
+        closeColMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeColMenu();
+    });
+
+    function buildColMenuHtml(colKey) {
+      if (colKey === 'scan_type') {
+        const isGated = colFilters.scan_type.selected.includes('Gated CS');
+        const isNonGated = colFilters.scan_type.selected.includes('Non-Gated CT');
+        const countGated = rawCases.filter(c => c.scan_type === 'Gated CS').length;
+        const countNonGated = rawCases.filter(c => c.scan_type === 'Non-Gated CT').length;
+
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+              <span class="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <i class="fa-solid fa-layer-group text-sky-400"></i> Scan Type Filter &amp; Sort
+              </span>
+              <button onclick="closeColMenu()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-1">
+              <div class="text-[10px] text-slate-400 font-semibold uppercase">Sort Column</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="setColSort('scan_type', 'asc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-down-a-z text-sky-400"></i> Sort A &rarr; Z
+                </button>
+                <button onclick="setColSort('scan_type', 'desc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-up-z-a text-sky-400"></i> Sort Z &rarr; A
+                </button>
+              </div>
+            </div>
+            <div class="border-t border-slate-700/80 pt-2 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] text-slate-400 font-semibold uppercase">Filter by Scan Type</span>
+                <div class="space-x-1.5 text-[10px]">
+                  <button onclick="quickSetScanTypeInMenu('all')" class="text-sky-400 hover:underline">Select All</button>
+                  <span class="text-slate-600">&bull;</span>
+                  <button onclick="quickSetScanTypeInMenu('none')" class="text-slate-400 hover:underline">Clear</button>
+                </div>
+              </div>
+              <div class="space-y-1.5 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+                <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer hover:text-white">
+                  <span class="flex items-center gap-2">
+                    <input type="checkbox" id="colChk_scan_gated" ${isGated ? 'checked' : ''} class="rounded bg-slate-800 text-sky-500">
+                    <span class="font-medium text-indigo-300">Gated CS</span>
+                  </span>
+                  <span class="text-[10px] font-mono text-slate-400">(${countGated})</span>
+                </label>
+                <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer hover:text-white">
+                  <span class="flex items-center gap-2">
+                    <input type="checkbox" id="colChk_scan_nongated" ${isNonGated ? 'checked' : ''} class="rounded bg-slate-800 text-sky-500">
+                    <span class="font-medium text-amber-300">Non-Gated CT</span>
+                  </span>
+                  <span class="text-[10px] font-mono text-slate-400">(${countNonGated})</span>
+                </label>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+              <button onclick="resetColFilter('scan_type')" class="text-slate-400 hover:text-white text-xs">Reset</button>
+              <button onclick="applyColMenuFilter('scan_type')" class="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg text-xs shadow">Apply</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (colKey === 'calcium_score') {
+        const tiers = ['Zero (0)', 'Minimal (1-10)', 'Mild (11-100)', 'Moderate (101-400)', 'Severe (>400)'];
+        const selectedTiers = colFilters.calcium_score.tiers || [];
+        const tierBoxes = tiers.map(t => {
+          const chk = selectedTiers.length === 0 || selectedTiers.includes(t);
+          const count = rawCases.filter(c => c.calcium_risk_tier === t).length;
+          return `
+            <label class="flex items-center justify-between text-[11px] text-slate-200 cursor-pointer hover:text-white py-0.5">
+              <span class="flex items-center gap-1.5">
+                <input type="checkbox" class="colCacTierChk rounded bg-slate-800 text-amber-500" value="${t}" ${chk ? 'checked' : ''}>
+                <span>${t}</span>
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">(${count})</span>
+            </label>
+          `;
+        }).join('');
+
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+              <span class="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <i class="fa-solid fa-bone text-amber-400"></i> Agatston CAC Filter &amp; Sort
+              </span>
+              <button onclick="closeColMenu()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-1">
+              <div class="text-[10px] text-slate-400 font-semibold uppercase">Sort Column</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="setColSort('calcium_score', 'asc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-down-1-9 text-amber-400"></i> Smallest &rarr; Largest
+                </button>
+                <button onclick="setColSort('calcium_score', 'desc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-up-9-1 text-amber-400"></i> Largest &rarr; Smallest
+                </button>
+              </div>
+            </div>
+            <div class="border-t border-slate-700/80 pt-2 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] text-slate-400 font-semibold uppercase">Filter by Risk Tier</span>
+                <div class="space-x-1.5 text-[10px]">
+                  <button onclick="quickSetCacTiers('all')" class="text-amber-400 hover:underline">All</button>
+                  <span class="text-slate-600">&bull;</span>
+                  <button onclick="quickSetCacTiers('severe')" class="text-amber-400 hover:underline">Severe Only</button>
+                </div>
+              </div>
+              <div class="space-y-1 bg-slate-950/70 p-2 rounded-lg border border-slate-800 max-h-36 overflow-y-auto">
+                ${tierBoxes}
+              </div>
+              <div class="text-[10px] text-slate-400 font-semibold uppercase pt-1">Numeric Score Range</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="text-[10px] text-slate-400">Min Score</span>
+                  <input type="number" id="colInput_cac_min" value="${colFilters.calcium_score.min !== null ? colFilters.calcium_score.min : ''}" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400">Max Score</span>
+                  <input type="number" id="colInput_cac_max" value="${colFilters.calcium_score.max !== null ? colFilters.calcium_score.max : ''}" placeholder="∞" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+              <button onclick="resetColFilter('calcium_score')" class="text-slate-400 hover:text-white text-xs">Reset</button>
+              <button onclick="applyColMenuFilter('calcium_score')" class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg text-xs shadow">Apply</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (colKey === 'eat_volume_cm3') {
+        const preset = colFilters.eat_volume_cm3.preset;
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+              <span class="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <i class="fa-solid fa-chart-pie text-sky-400"></i> Total EAT Volume (cm³)
+              </span>
+              <button onclick="closeColMenu()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-1">
+              <div class="text-[10px] text-slate-400 font-semibold uppercase">Sort Column</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="setColSort('eat_volume_cm3', 'asc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-down-1-9 text-sky-400"></i> Smallest &rarr; Largest
+                </button>
+                <button onclick="setColSort('eat_volume_cm3', 'desc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-up-9-1 text-sky-400"></i> Largest &rarr; Smallest
+                </button>
+              </div>
+            </div>
+            <div class="border-t border-slate-700/80 pt-2 space-y-2">
+              <span class="text-[10px] text-slate-400 font-semibold uppercase">Volume Burden Presets</span>
+              <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                <button onclick="setEatPresetInMenu('all')" class="px-2 py-1 rounded ${preset==='all'?'bg-sky-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">All Volumes</button>
+                <button onclick="setEatPresetInMenu('low')" class="px-2 py-1 rounded ${preset==='low'?'bg-sky-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">&lt; 50 cm³ (Low)</button>
+                <button onclick="setEatPresetInMenu('normal')" class="px-2 py-1 rounded ${preset==='normal'?'bg-sky-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">50–125 cm³</button>
+                <button onclick="setEatPresetInMenu('high')" class="px-2 py-1 rounded ${preset==='high'?'bg-sky-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">&gt; 125 cm³ (High)</button>
+              </div>
+              <div class="text-[10px] text-slate-400 font-semibold uppercase pt-1">Custom cm³ Range</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="text-[10px] text-slate-400">Min cm³</span>
+                  <input type="number" id="colInput_eat_min" value="${colFilters.eat_volume_cm3.min !== null ? colFilters.eat_volume_cm3.min : ''}" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400">Max cm³</span>
+                  <input type="number" id="colInput_eat_max" value="${colFilters.eat_volume_cm3.max !== null ? colFilters.eat_volume_cm3.max : ''}" placeholder="∞" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+              <button onclick="resetColFilter('eat_volume_cm3')" class="text-slate-400 hover:text-white text-xs">Reset</button>
+              <button onclick="applyColMenuFilter('eat_volume_cm3')" class="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg text-xs shadow">Apply</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (colKey === 'pvat_volume_cm3') {
+        const preset = colFilters.pvat_volume_cm3.preset;
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+              <span class="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <i class="fa-solid fa-chart-simple text-indigo-400"></i> Total PVAT Volume (cm³)
+              </span>
+              <button onclick="closeColMenu()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-1">
+              <div class="text-[10px] text-slate-400 font-semibold uppercase">Sort Column</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="setColSort('pvat_volume_cm3', 'asc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-down-1-9 text-indigo-400"></i> Smallest &rarr; Largest
+                </button>
+                <button onclick="setColSort('pvat_volume_cm3', 'desc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-up-9-1 text-indigo-400"></i> Largest &rarr; Smallest
+                </button>
+              </div>
+            </div>
+            <div class="border-t border-slate-700/80 pt-2 space-y-2">
+              <span class="text-[10px] text-slate-400 font-semibold uppercase">Volume Presets</span>
+              <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                <button onclick="setPvatPresetInMenu('all')" class="px-2 py-1 rounded ${preset==='all'?'bg-indigo-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">All Volumes</button>
+                <button onclick="setPvatPresetInMenu('low')" class="px-2 py-1 rounded ${preset==='low'?'bg-indigo-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">&lt; 10 cm³</button>
+                <button onclick="setPvatPresetInMenu('normal')" class="px-2 py-1 rounded ${preset==='normal'?'bg-indigo-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">10–20 cm³</button>
+                <button onclick="setPvatPresetInMenu('high')" class="px-2 py-1 rounded ${preset==='high'?'bg-indigo-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">&gt; 20 cm³</button>
+              </div>
+              <div class="text-[10px] text-slate-400 font-semibold uppercase pt-1">Custom cm³ Range</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="text-[10px] text-slate-400">Min cm³</span>
+                  <input type="number" id="colInput_pvat_min" value="${colFilters.pvat_volume_cm3.min !== null ? colFilters.pvat_volume_cm3.min : ''}" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400">Max cm³</span>
+                  <input type="number" id="colInput_pvat_max" value="${colFilters.pvat_volume_cm3.max !== null ? colFilters.pvat_volume_cm3.max : ''}" placeholder="∞" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+              <button onclick="resetColFilter('pvat_volume_cm3')" class="text-slate-400 hover:text-white text-xs">Reset</button>
+              <button onclick="applyColMenuFilter('pvat_volume_cm3')" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-xs shadow">Apply</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (colKey === 'pvat_mean_hu') {
+        const preset = colFilters.pvat_mean_hu.preset;
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+              <span class="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <i class="fa-solid fa-fire text-rose-400"></i> PVAT Mean Attenuation (HU)
+              </span>
+              <button onclick="closeColMenu()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-1">
+              <div class="text-[10px] text-slate-400 font-semibold uppercase">Sort Column</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="setColSort('pvat_mean_hu', 'asc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-down-1-9 text-rose-400"></i> Low &rarr; High (Quiescent)
+                </button>
+                <button onclick="setColSort('pvat_mean_hu', 'desc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-up-9-1 text-rose-400"></i> High &rarr; Low (Inflamed)
+                </button>
+              </div>
+            </div>
+            <div class="border-t border-slate-700/80 pt-2 space-y-2">
+              <span class="text-[10px] text-slate-400 font-semibold uppercase">CRISP-CT Cutoff (-70.1 HU)</span>
+              <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                <button onclick="setPvatHuPresetInMenu('all')" class="px-2 py-1 rounded ${preset==='all'?'bg-rose-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">All Attenuations</button>
+                <button onclick="setPvatHuPresetInMenu('inflamed')" class="px-2 py-1 rounded ${preset==='inflamed'?'bg-rose-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">&gt; -70.1 HU (Inflamed)</button>
+                <button onclick="setPvatHuPresetInMenu('quiescent')" class="px-2 py-1 rounded col-span-2 ${preset==='quiescent'?'bg-rose-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">&le; -70.1 HU (Quiescent/Normal)</button>
+              </div>
+              <div class="text-[10px] text-slate-400 font-semibold uppercase pt-1">Custom HU Range</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="text-[10px] text-slate-400">Min HU</span>
+                  <input type="number" id="colInput_hu_min" value="${colFilters.pvat_mean_hu.min !== null ? colFilters.pvat_mean_hu.min : ''}" placeholder="-190" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400">Max HU</span>
+                  <input type="number" id="colInput_hu_max" value="${colFilters.pvat_mean_hu.max !== null ? colFilters.pvat_mean_hu.max : ''}" placeholder="-30" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+              <button onclick="resetColFilter('pvat_mean_hu')" class="text-slate-400 hover:text-white text-xs">Reset</button>
+              <button onclick="applyColMenuFilter('pvat_mean_hu')" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-lg text-xs shadow">Apply</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (colKey === 'crisp_ct_status') {
+        const isInflam = colFilters.crisp_ct_status.selected.includes('Active Vascular Inflammation');
+        const isNormal = colFilters.crisp_ct_status.selected.includes('Normal Attenuation');
+        const countInflam = rawCases.filter(c => c.crisp_ct_status === 'Active Vascular Inflammation').length;
+        const countNormal = rawCases.filter(c => c.crisp_ct_status !== 'Active Vascular Inflammation').length;
+
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+              <span class="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <i class="fa-solid fa-heart-circle-bolt text-rose-400"></i> CRISP-CT Status
+              </span>
+              <button onclick="closeColMenu()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-1">
+              <div class="text-[10px] text-slate-400 font-semibold uppercase">Sort Column</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="setColSort('crisp_ct_status', 'asc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-down-a-z text-rose-400"></i> Sort A &rarr; Z
+                </button>
+                <button onclick="setColSort('crisp_ct_status', 'desc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-up-z-a text-rose-400"></i> Sort Z &rarr; A
+                </button>
+              </div>
+            </div>
+            <div class="border-t border-slate-700/80 pt-2 space-y-2">
+              <span class="text-[10px] text-slate-400 font-semibold uppercase">Filter by Clinical Status</span>
+              <div class="space-y-1.5 bg-slate-950/70 p-2 rounded-lg border border-slate-800">
+                <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer hover:text-white">
+                  <span class="flex items-center gap-2">
+                    <input type="checkbox" id="colChk_status_inflam" ${isInflam ? 'checked' : ''} class="rounded bg-slate-800 text-rose-500">
+                    <span class="text-rose-300 font-medium">Active Vascular Inflammation</span>
+                  </span>
+                  <span class="text-[10px] font-mono text-slate-400">(${countInflam})</span>
+                </label>
+                <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer hover:text-white">
+                  <span class="flex items-center gap-2">
+                    <input type="checkbox" id="colChk_status_normal" ${isNormal ? 'checked' : ''} class="rounded bg-slate-800 text-sky-500">
+                    <span class="text-slate-300">Normal Attenuation</span>
+                  </span>
+                  <span class="text-[10px] font-mono text-slate-400">(${countNormal})</span>
+                </label>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+              <button onclick="resetColFilter('crisp_ct_status')" class="text-slate-400 hover:text-white text-xs">Reset</button>
+              <button onclick="applyColMenuFilter('crisp_ct_status')" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-lg text-xs shadow">Apply</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (colKey === 'participant_id') {
+        const prefix = colFilters.participant_id.prefix;
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+              <span class="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <i class="fa-solid fa-id-card text-sky-400"></i> Participant ID Filter &amp; Sort
+              </span>
+              <button onclick="closeColMenu()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-1">
+              <div class="text-[10px] text-slate-400 font-semibold uppercase">Sort Column</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="setColSort('participant_id', 'asc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-down-1-9 text-sky-400"></i> Natural 0 &rarr; 9
+                </button>
+                <button onclick="setColSort('participant_id', 'desc')" class="px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-left flex items-center gap-1.5 text-[11px] text-slate-200">
+                  <i class="fa-solid fa-arrow-up-9-1 text-sky-400"></i> Natural 9 &rarr; 0
+                </button>
+              </div>
+            </div>
+            <div class="border-t border-slate-700/80 pt-2 space-y-2">
+              <span class="text-[10px] text-slate-400 font-semibold uppercase">Participant ID Prefix</span>
+              <div class="grid grid-cols-3 gap-1 text-[11px]">
+                <button onclick="setPidPrefixInMenu('all')" class="px-2 py-1 rounded ${prefix==='all'?'bg-sky-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">All</button>
+                <button onclick="setPidPrefixInMenu('gated')" class="px-2 py-1 rounded ${prefix==='gated'?'bg-sky-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">Digits Only</button>
+                <button onclick="setPidPrefixInMenu('nongated')" class="px-2 py-1 rounded ${prefix==='nongated'?'bg-sky-600 text-white':'bg-slate-800 text-slate-300 hover:text-white'}">nongated_*</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+              <button onclick="resetColFilter('participant_id')" class="text-slate-400 hover:text-white text-xs">Reset</button>
+              <button onclick="applyColMenuFilter('participant_id')" class="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg text-xs shadow">Apply</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (colKey === 'actions') {
+        const segOnly = colFilters.actions.segOnly;
+        const reportOnly = colFilters.actions.reportOnly;
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+              <span class="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <i class="fa-solid fa-cube text-emerald-400"></i> Pipeline Status &amp; Deliverables
+              </span>
+              <button onclick="closeColMenu()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-2 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
+              <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer hover:text-white">
+                <input type="checkbox" id="colChk_action_seg" ${segOnly ? 'checked' : ''} class="rounded bg-slate-800 text-emerald-500">
+                <span class="text-emerald-300 font-medium"><i class="fa-solid fa-cube text-[10px] mr-1"></i>3D Segmentations Generated</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer hover:text-white">
+                <input type="checkbox" id="colChk_action_report" ${reportOnly ? 'checked' : ''} class="rounded bg-slate-800 text-rose-500">
+                <span class="text-rose-300 font-medium"><i class="fa-solid fa-file-pdf text-[10px] mr-1"></i>Clinical Diagnostic Report Ready</span>
+              </label>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+              <button onclick="resetColFilter('actions')" class="text-slate-400 hover:text-white text-xs">Reset</button>
+              <button onclick="applyColMenuFilter('actions')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs shadow">Apply</button>
+            </div>
+          </div>
+        `;
+      }
+
+      return '<div class="p-3 text-slate-400">No filter controls for this column.</div>';
+    }
+
+    // Menu Helper Actions
+    function quickSetScanTypeInMenu(mode) {
+      const g = document.getElementById('colChk_scan_gated');
+      const ng = document.getElementById('colChk_scan_nongated');
+      if (g) g.checked = (mode === 'all');
+      if (ng) ng.checked = (mode === 'all');
+    }
+
+    function quickSetCacTiers(mode) {
+      document.querySelectorAll('.colCacTierChk').forEach(el => {
+        if (mode === 'all') el.checked = true;
+        else if (mode === 'severe') el.checked = (el.value === 'Severe (>400)');
+      });
+    }
+
+    function setEatPresetInMenu(preset) {
+      colFilters.eat_volume_cm3.preset = preset;
+      colFilters.eat_volume_cm3.min = null;
+      colFilters.eat_volume_cm3.max = null;
+      applyCaseFilters();
+      closeColMenu();
+    }
+
+    function setPvatPresetInMenu(preset) {
+      colFilters.pvat_volume_cm3.preset = preset;
+      colFilters.pvat_volume_cm3.min = null;
+      colFilters.pvat_volume_cm3.max = null;
+      applyCaseFilters();
+      closeColMenu();
+    }
+
+    function setPvatHuPresetInMenu(preset) {
+      colFilters.pvat_mean_hu.preset = preset;
+      colFilters.pvat_mean_hu.min = null;
+      colFilters.pvat_mean_hu.max = null;
+      applyCaseFilters();
+      closeColMenu();
+    }
+
+    function setPidPrefixInMenu(pfx) {
+      colFilters.participant_id.prefix = pfx;
+      applyCaseFilters();
+      closeColMenu();
+    }
+
+    function applyColMenuFilter(colKey) {
+      if (colKey === 'scan_type') {
+        const sel = [];
+        const g = document.getElementById('colChk_scan_gated');
+        const ng = document.getElementById('colChk_scan_nongated');
+        if (g && g.checked) sel.push('Gated CS');
+        if (ng && ng.checked) sel.push('Non-Gated CT');
+        colFilters.scan_type.selected = sel.length > 0 ? sel : ['Gated CS', 'Non-Gated CT'];
+      } else if (colKey === 'calcium_score') {
+        const selTiers = [];
+        document.querySelectorAll('.colCacTierChk:checked').forEach(el => selTiers.push(el.value));
+        colFilters.calcium_score.tiers = selTiers.length === 5 ? [] : selTiers;
+        const minVal = document.getElementById('colInput_cac_min').value;
+        const maxVal = document.getElementById('colInput_cac_max').value;
+        colFilters.calcium_score.min = minVal !== '' ? Number(minVal) : null;
+        colFilters.calcium_score.max = maxVal !== '' ? Number(maxVal) : null;
+      } else if (colKey === 'eat_volume_cm3') {
+        const minVal = document.getElementById('colInput_eat_min').value;
+        const maxVal = document.getElementById('colInput_eat_max').value;
+        colFilters.eat_volume_cm3.min = minVal !== '' ? Number(minVal) : null;
+        colFilters.eat_volume_cm3.max = maxVal !== '' ? Number(maxVal) : null;
+        if (minVal !== '' || maxVal !== '') colFilters.eat_volume_cm3.preset = 'all';
+      } else if (colKey === 'pvat_volume_cm3') {
+        const minVal = document.getElementById('colInput_pvat_min').value;
+        const maxVal = document.getElementById('colInput_pvat_max').value;
+        colFilters.pvat_volume_cm3.min = minVal !== '' ? Number(minVal) : null;
+        colFilters.pvat_volume_cm3.max = maxVal !== '' ? Number(maxVal) : null;
+        if (minVal !== '' || maxVal !== '') colFilters.pvat_volume_cm3.preset = 'all';
+      } else if (colKey === 'pvat_mean_hu') {
+        const minVal = document.getElementById('colInput_hu_min').value;
+        const maxVal = document.getElementById('colInput_hu_max').value;
+        colFilters.pvat_mean_hu.min = minVal !== '' ? Number(minVal) : null;
+        colFilters.pvat_mean_hu.max = maxVal !== '' ? Number(maxVal) : null;
+        if (minVal !== '' || maxVal !== '') colFilters.pvat_mean_hu.preset = 'all';
+      } else if (colKey === 'crisp_ct_status') {
+        const sel = [];
+        const inflam = document.getElementById('colChk_status_inflam');
+        const normal = document.getElementById('colChk_status_normal');
+        if (inflam && inflam.checked) sel.push('Active Vascular Inflammation');
+        if (normal && normal.checked) sel.push('Normal Attenuation');
+        colFilters.crisp_ct_status.selected = sel.length > 0 ? sel : ['Active Vascular Inflammation', 'Normal Attenuation'];
+      } else if (colKey === 'actions') {
+        const seg = document.getElementById('colChk_action_seg');
+        const report = document.getElementById('colChk_action_report');
+        colFilters.actions.segOnly = seg ? seg.checked : false;
+        colFilters.actions.reportOnly = report ? report.checked : false;
+      }
+
+      applyCaseFilters();
+      closeColMenu();
+    }
+
+    function resetColFilter(colKey) {
+      if (colKey === 'scan_type') colFilters.scan_type.selected = ['Gated CS', 'Non-Gated CT'];
+      else if (colKey === 'calcium_score') { colFilters.calcium_score.tiers = []; colFilters.calcium_score.min = null; colFilters.calcium_score.max = null; colFilters.calcium_score.nonZero = false; }
+      else if (colKey === 'eat_volume_cm3') { colFilters.eat_volume_cm3.preset = 'all'; colFilters.eat_volume_cm3.min = null; colFilters.eat_volume_cm3.max = null; }
+      else if (colKey === 'pvat_volume_cm3') { colFilters.pvat_volume_cm3.preset = 'all'; colFilters.pvat_volume_cm3.min = null; colFilters.pvat_volume_cm3.max = null; }
+      else if (colKey === 'pvat_mean_hu') { colFilters.pvat_mean_hu.preset = 'all'; colFilters.pvat_mean_hu.min = null; colFilters.pvat_mean_hu.max = null; }
+      else if (colKey === 'crisp_ct_status') colFilters.crisp_ct_status.selected = ['Active Vascular Inflammation', 'Normal Attenuation'];
+      else if (colKey === 'participant_id') { colFilters.participant_id.prefix = 'all'; colFilters.participant_id.search = ''; }
+      else if (colKey === 'actions') { colFilters.actions.segOnly = false; colFilters.actions.reportOnly = false; }
+
+      applyCaseFilters();
+      closeColMenu();
+    }
+
+    function resetAllFilters() {
+      colFilters.participant_id = { search: '', prefix: 'all' };
+      colFilters.scan_type.selected = ['Gated CS', 'Non-Gated CT'];
+      colFilters.calcium_score = { tiers: [], min: null, max: null, nonZero: false };
+      colFilters.eat_volume_cm3 = { min: null, max: null, preset: 'all' };
+      colFilters.pvat_volume_cm3 = { min: null, max: null, preset: 'all' };
+      colFilters.pvat_mean_hu = { min: null, max: null, preset: 'all' };
+      colFilters.crisp_ct_status.selected = ['Active Vascular Inflammation', 'Normal Attenuation'];
+      colFilters.actions = { segOnly: false, reportOnly: false };
+
+      const searchInput = document.getElementById('caseSearchInput');
+      if (searchInput) searchInput.value = '';
+      const btnClear = document.getElementById('btnClearSearch');
+      if (btnClear) btnClear.classList.add('hidden');
+
+      applyCaseFilters();
+      closeColMenu();
+    }
+
+    function onGlobalSearchInput() {
+      const val = document.getElementById('caseSearchInput').value.trim();
+      colFilters.participant_id.search = val;
+      const btnClear = document.getElementById('btnClearSearch');
+      if (btnClear) {
+        if (val) btnClear.classList.remove('hidden');
+        else btnClear.classList.add('hidden');
+      }
+      applyCaseFilters();
+    }
+
+    function clearSearchInput() {
+      const searchInput = document.getElementById('caseSearchInput');
+      if (searchInput) searchInput.value = '';
+      colFilters.participant_id.search = '';
+      const btnClear = document.getElementById('btnClearSearch');
+      if (btnClear) btnClear.classList.add('hidden');
+      applyCaseFilters();
+    }
+
+    function toggleTableDensity() {
+      tableDensity = tableDensity === 'standard' ? 'compact' : 'standard';
+      const label = document.getElementById('densityLabel');
+      if (label) label.innerText = tableDensity === 'compact' ? 'Standard View' : 'Compact View';
+      const tbl = document.getElementById('casesSpreadsheetTable');
+      if (tbl) {
+        if (tableDensity === 'compact') tbl.classList.add('sheet-compact');
+        else tbl.classList.remove('sheet-compact');
+      }
+      renderCasesTable(currentFilteredCases);
+    }
+
+    function exportCasesToCsv() {
+      if (!currentFilteredCases || currentFilteredCases.length === 0) {
+        alert("No cases to export with the currently active filters.");
+        return;
+      }
+      const headers = [
+        "Index",
+        "Participant ID",
+        "Scan Type",
+        "Segmented",
+        "Agatston CAC",
+        "CAC Risk Tier",
+        "EAT Total Volume (cm3)",
+        "PVAT Total Volume (cm3)",
+        "PVAT Total Mean Attenuation (HU)",
+        "CRISP-CT Status",
+        "Has Report PDF",
+        "Has Report HTML"
+      ];
+      const rows = currentFilteredCases.map((c, idx) => [
+        idx + 1,
+        `"${c.participant_id}"`,
+        `"${c.scan_type || ''}"`,
+        c.has_seg ? "Yes" : "No",
+        c.calcium_score !== null && c.calcium_score !== undefined ? c.calcium_score : "",
+        `"${c.calcium_risk_tier || ''}"`,
+        c.eat_volume_cm3 !== null && c.eat_volume_cm3 !== undefined ? c.eat_volume_cm3.toFixed(2) : "",
+        c.pvat_volume_cm3 !== null && c.pvat_volume_cm3 !== undefined ? c.pvat_volume_cm3.toFixed(2) : "",
+        c.pvat_mean_hu !== null && c.pvat_mean_hu !== undefined ? c.pvat_mean_hu.toFixed(1) : "",
+        `"${c.crisp_ct_status || ''}"`,
+        c.has_report_pdf ? "Yes" : "No",
+        c.has_report_html ? "Yes" : "No"
+      ]);
+      const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cardiac_fat_cohort_filtered_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportCasesToJson() {
+      if (!currentFilteredCases || currentFilteredCases.length === 0) {
+        alert("No cases to export with the currently active filters.");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(currentFilteredCases, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cardiac_fat_cohort_filtered_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     async function fetchCases() {
@@ -3302,7 +4343,10 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         const res = await fetch('/api/cohort/cases');
         if (!res.ok) return;
         rawCases = await res.json();
-        document.getElementById('casesCountPill').innerText = rawCases.length;
+        const countPill = document.getElementById('casesCountPill');
+        if (countPill) countPill.innerText = rawCases.length;
+        const totalPill = document.getElementById('casesTotalCount');
+        if (totalPill) totalPill.innerText = rawCases.length.toLocaleString();
         applyCaseFilters();
       } catch (err) {
         console.error("fetchCases error:", err);
@@ -3310,29 +4354,91 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     }
 
     function filterEdgeCases(queryStr) {
-      document.getElementById('caseSearchInput').value = queryStr;
-      document.getElementById('caseTierFilter').value = '';
-      document.getElementById('caseSegOnly').checked = false;
-      document.getElementById('caseInflamOnly').checked = false;
+      resetAllFilters();
+      const searchInput = document.getElementById('caseSearchInput');
+      if (searchInput) searchInput.value = queryStr;
+      colFilters.participant_id.search = queryStr;
+      const btnClear = document.getElementById('btnClearSearch');
+      if (btnClear) btnClear.classList.remove('hidden');
       applyCaseFilters();
     }
 
     function applyCaseFilters() {
-      const q = document.getElementById('caseSearchInput').value.toLowerCase().trim();
+      const q = (colFilters.participant_id.search || '').toLowerCase().trim();
       const qTokens = q ? q.split(',').map(s => s.trim()).filter(Boolean) : [];
-      const tier = document.getElementById('caseTierFilter').value;
-      const segOnly = document.getElementById('caseSegOnly').checked;
-      const inflamOnly = document.getElementById('caseInflamOnly').checked;
+      const pidPrefix = colFilters.participant_id.prefix;
+      const allowedScanTypes = colFilters.scan_type.selected;
+      const allowedTiers = colFilters.calcium_score.tiers || [];
+      const cacMin = colFilters.calcium_score.min;
+      const cacMax = colFilters.calcium_score.max;
+      const cacNonZero = colFilters.calcium_score.nonZero;
+
+      const eatPreset = colFilters.eat_volume_cm3.preset;
+      const eatMin = colFilters.eat_volume_cm3.min;
+      const eatMax = colFilters.eat_volume_cm3.max;
+
+      const pvatPreset = colFilters.pvat_volume_cm3.preset;
+      const pvatMin = colFilters.pvat_volume_cm3.min;
+      const pvatMax = colFilters.pvat_volume_cm3.max;
+
+      const huPreset = colFilters.pvat_mean_hu.preset;
+      const huMin = colFilters.pvat_mean_hu.min;
+      const huMax = colFilters.pvat_mean_hu.max;
+
+      const allowedStatuses = colFilters.crisp_ct_status.selected;
+      const segOnly = colFilters.actions.segOnly;
+      const reportOnly = colFilters.actions.reportOnly;
 
       let filtered = rawCases.filter(c => {
-        if (qTokens.length === 1 && !c.participant_id.toLowerCase().includes(qTokens[0])) return false;
-        if (qTokens.length > 1 && !qTokens.includes(c.participant_id.toLowerCase())) return false;
-        if (tier && c.calcium_risk_tier !== tier) return false;
+        // Participant ID Search
+        const pidLower = String(c.participant_id || '').toLowerCase();
+        if (qTokens.length === 1 && !pidLower.includes(qTokens[0])) return false;
+        if (qTokens.length > 1 && !qTokens.includes(pidLower)) return false;
+
+        // Participant ID Prefix
+        if (pidPrefix === 'gated' && !/^[0-9]+$/.test(String(c.participant_id || ''))) return false;
+        if (pidPrefix === 'nongated' && !String(c.participant_id || '').toLowerCase().startsWith('nongated')) return false;
+
+        // Scan Type
+        if (allowedScanTypes.length > 0 && !allowedScanTypes.includes(c.scan_type)) return false;
+
+        // Agatston CAC Tiers & Range
+        if (allowedTiers.length > 0 && !allowedTiers.includes(c.calcium_risk_tier)) return false;
+        if (cacNonZero && (c.calcium_score === null || c.calcium_score <= 0)) return false;
+        if (cacMin !== null && (c.calcium_score === null || c.calcium_score < cacMin)) return false;
+        if (cacMax !== null && (c.calcium_score === null || c.calcium_score > cacMax)) return false;
+
+        // EAT Volume Presets & Range
+        if (eatPreset === 'low' && (c.eat_volume_cm3 === null || c.eat_volume_cm3 >= 50)) return false;
+        if (eatPreset === 'normal' && (c.eat_volume_cm3 === null || c.eat_volume_cm3 < 50 || c.eat_volume_cm3 > 125)) return false;
+        if (eatPreset === 'high' && (c.eat_volume_cm3 === null || c.eat_volume_cm3 <= 125)) return false;
+        if (eatMin !== null && (c.eat_volume_cm3 === null || c.eat_volume_cm3 < eatMin)) return false;
+        if (eatMax !== null && (c.eat_volume_cm3 === null || c.eat_volume_cm3 > eatMax)) return false;
+
+        // PVAT Volume Presets & Range
+        if (pvatPreset === 'low' && (c.pvat_volume_cm3 === null || c.pvat_volume_cm3 >= 10)) return false;
+        if (pvatPreset === 'normal' && (c.pvat_volume_cm3 === null || c.pvat_volume_cm3 < 10 || c.pvat_volume_cm3 > 20)) return false;
+        if (pvatPreset === 'high' && (c.pvat_volume_cm3 === null || c.pvat_volume_cm3 <= 20)) return false;
+        if (pvatMin !== null && (c.pvat_volume_cm3 === null || c.pvat_volume_cm3 < pvatMin)) return false;
+        if (pvatMax !== null && (c.pvat_volume_cm3 === null || c.pvat_volume_cm3 > pvatMax)) return false;
+
+        // PVAT Attenuation Presets & Range
+        if (huPreset === 'inflamed' && (c.pvat_mean_hu === null || c.pvat_mean_hu <= -70.1)) return false;
+        if (huPreset === 'quiescent' && (c.pvat_mean_hu === null || c.pvat_mean_hu > -70.1)) return false;
+        if (huMin !== null && (c.pvat_mean_hu === null || c.pvat_mean_hu < huMin)) return false;
+        if (huMax !== null && (c.pvat_mean_hu === null || c.pvat_mean_hu > huMax)) return false;
+
+        // CRISP-CT Status
+        if (allowedStatuses.length > 0 && !allowedStatuses.includes(c.crisp_ct_status)) return false;
+
+        // Pipeline Actions
         if (segOnly && !c.has_seg) return false;
-        if (inflamOnly && c.crisp_ct_status !== 'Active Vascular Inflammation') return false;
+        if (reportOnly && !c.has_report_pdf && !c.has_report_html) return false;
+
         return true;
       });
 
+      // Sort
       filtered.sort((a, b) => {
         let valA = a[sortColumn];
         let valB = b[sortColumn];
@@ -3355,53 +4461,79 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         return sortDirection === 'asc' ? comp : -comp;
       });
 
+      currentFilteredCases = filtered;
+
+      // Update counters
+      const filteredPill = document.getElementById('casesFilteredCount');
+      if (filteredPill) filteredPill.innerText = filtered.length.toLocaleString();
+      const totalPill = document.getElementById('casesTotalCount');
+      if (totalPill) totalPill.innerText = rawCases.length.toLocaleString();
+
+      updateFilterIconsAndPills();
       renderCasesTable(filtered);
     }
 
     function renderCasesTable(cases) {
       const tbody = document.getElementById('casesTableBody');
+      if (!tbody) return;
       if (cases.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-8 text-slate-400">No matching cases found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-12 text-slate-400 bg-slate-900/40 font-medium">No matching participants found matching current filters. <button onclick="resetAllFilters()" class="text-sky-400 underline ml-2">Reset all filters</button></td></tr>';
         return;
       }
 
+      const isCompact = tableDensity === 'compact';
+      const rowPad = isCompact ? 'py-1.5 px-3 text-[11px]' : 'py-2.5 px-3 text-xs';
+
       tbody.innerHTML = cases.map((c, idx) => {
         const inflamBadge = c.crisp_ct_status === 'Active Vascular Inflammation'
-          ? '<span class="px-2 py-0.5 rounded bg-rose-900/60 text-rose-400 border border-rose-500/40 text-[10px]"><i class="fa-solid fa-fire text-[9px] mr-1"></i>Active</span>'
-          : `<span class="text-slate-400 text-[11px]">${c.crisp_ct_status}</span>`;
+          ? '<span class="inline-flex items-center px-2 py-0.5 rounded bg-rose-900/60 text-rose-300 border border-rose-500/40 text-[10px] font-medium"><i class="fa-solid fa-fire text-[9px] mr-1 text-rose-400"></i>Active</span>'
+          : `<span class="text-slate-400 text-[11px]">${c.crisp_ct_status || '--'}</span>`;
+
+        const scanBadge = c.scan_type === 'Gated CS'
+          ? '<span class="px-2 py-0.5 rounded bg-indigo-950/70 text-indigo-300 border border-indigo-500/30 text-[10px] font-medium font-mono">Gated CS</span>'
+          : '<span class="px-2 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-500/30 text-[10px] font-medium font-mono">Non-Gated CT</span>';
 
         return `
-          <tr class="hover:bg-slate-700/40 transition">
-            <td class="px-3 py-2.5 font-mono text-slate-500 text-center text-[11px]">${idx + 1}</td>
-            <td class="px-4 py-2.5 font-mono font-medium text-white">${c.participant_id}</td>
-            <td class="px-4 py-2.5 text-slate-400">${c.scan_type}</td>
-            <td class="px-4 py-2.5 font-mono text-amber-300">${c.calcium_score !== null ? c.calcium_score : '--'} <span class="text-[10px] text-slate-400 ml-1">(${c.calcium_risk_tier})</span></td>
-            <td class="px-4 py-2.5 font-mono text-sky-300">${c.eat_volume_cm3 !== null && c.eat_volume_cm3 !== undefined ? c.eat_volume_cm3.toFixed(2) + ' cm³' : '--'}</td>
-            <td class="px-4 py-2.5 font-mono text-slate-300">${c.pvat_volume_cm3 !== null && c.pvat_volume_cm3 !== undefined ? c.pvat_volume_cm3.toFixed(2) + ' cm³' : '--'}</td>
-            <td class="px-4 py-2.5 font-mono text-indigo-300">${c.pvat_mean_hu !== null && c.pvat_mean_hu !== undefined ? c.pvat_mean_hu.toFixed(1) + ' HU' : '--'}</td>
-            <td class="px-4 py-2.5">${inflamBadge}</td>
-            <td class="px-4 py-2.5 text-right space-x-1.5 whitespace-nowrap">
+          <tr class="hover:bg-sky-950/30 odd:bg-slate-800/40 even:bg-slate-800/80 transition border-b border-slate-700/60">
+            <td class="${rowPad} font-mono text-slate-500 text-center border-r border-slate-700/60">${idx + 1}</td>
+            <td class="${rowPad} font-mono font-medium text-white border-r border-slate-700/60 whitespace-nowrap">${c.participant_id}</td>
+            <td class="${rowPad} border-r border-slate-700/60 whitespace-nowrap">${scanBadge}</td>
+            <td class="${rowPad} font-mono text-amber-300 border-r border-slate-700/60 whitespace-nowrap">
+              ${c.calcium_score !== null && c.calcium_score !== undefined ? c.calcium_score : '--'}
+              <span class="text-[10px] text-slate-400 ml-1">(${c.calcium_risk_tier || '--'})</span>
+            </td>
+            <td class="${rowPad} font-mono text-sky-300 text-right border-r border-slate-700/60 whitespace-nowrap">
+              ${c.eat_volume_cm3 !== null && c.eat_volume_cm3 !== undefined ? c.eat_volume_cm3.toFixed(2) + ' cm³' : '--'}
+            </td>
+            <td class="${rowPad} font-mono text-slate-300 text-right border-r border-slate-700/60 whitespace-nowrap">
+              ${c.pvat_volume_cm3 !== null && c.pvat_volume_cm3 !== undefined ? c.pvat_volume_cm3.toFixed(2) + ' cm³' : '--'}
+            </td>
+            <td class="${rowPad} font-mono text-indigo-300 text-right border-r border-slate-700/60 whitespace-nowrap">
+              ${c.pvat_mean_hu !== null && c.pvat_mean_hu !== undefined ? c.pvat_mean_hu.toFixed(1) + ' HU' : '--'}
+            </td>
+            <td class="${rowPad} border-r border-slate-700/60 whitespace-nowrap">${inflamBadge}</td>
+            <td class="${rowPad} text-right space-x-1 whitespace-nowrap">
               ${c.has_report_pdf ? `
                 <a href="/report/${encodeURIComponent(c.participant_id)}/pdf" target="_blank"
-                   class="inline-flex items-center gap-1 text-rose-300 hover:text-white text-xs font-medium px-2 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 transition shadow-sm"
+                   class="inline-flex items-center gap-1 text-rose-300 hover:text-white text-[11px] font-medium px-2 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 transition shadow-sm"
                    title="View 2-Page Clinical Diagnostic PDF for Patient ${c.participant_id}">
                   <i class="fa-solid fa-file-pdf text-[10px] text-rose-400"></i> Report
                 </a>
               ` : (c.has_report_html ? `
                 <a href="/report/${encodeURIComponent(c.participant_id)}/html" target="_blank"
-                   class="inline-flex items-center gap-1 text-amber-300 hover:text-white text-xs font-medium px-2 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 transition shadow-sm"
+                   class="inline-flex items-center gap-1 text-amber-300 hover:text-white text-[11px] font-medium px-2 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 transition shadow-sm"
                    title="View Clinical HTML Report for Patient ${c.participant_id}">
                   <i class="fa-solid fa-file-lines text-[10px] text-amber-400"></i> HTML
                 </a>
               ` : '')}
               ${c.has_seg ? `
                 <a href="/patient/${encodeURIComponent(c.participant_id)}/" target="_blank"
-                   class="inline-flex items-center gap-1 text-emerald-300 hover:text-white text-xs font-medium px-2.5 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-800 border border-emerald-500/40 transition shadow-sm"
+                   class="inline-flex items-center gap-1 text-emerald-300 hover:text-white text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-800 border border-emerald-500/40 transition shadow-sm"
                    title="Open interactive OHIF v3.13 Viewer for Patient ${c.participant_id}">
                   <i class="fa-solid fa-cube text-[10px] text-emerald-400"></i> View OHIF
                 </a>
               ` : '<span class="px-2 py-0.5 rounded bg-slate-800/80 text-slate-500 text-[10px] border border-slate-700/50">Unsegmented</span>'}
-              <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-400 hover:text-sky-300 text-xs font-medium px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">Deep Dive</button>
+              <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-400 hover:text-sky-300 text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">Deep Dive</button>
             </td>
           </tr>
         `;
