@@ -886,11 +886,11 @@ def main():
     generate_figure3_analytics(fig3_path)
 
     print("Generating HTML Manuscript...")
-    html_path = Path("docs/coca_cohort_abstract.html")
+    html_path = Path("docs/manuscript/coca_cohort_abstract.html")
     generate_html_abstract(html_path)
 
     print("Generating Vector PDF Preprint...")
-    pdf_path = Path("docs/coca_cohort_abstract.pdf")
+    pdf_path = Path("docs/manuscript/coca_cohort_abstract.pdf")
     generate_pdf_abstract(pdf_path)
 
     print("ALL DELIVERABLES COMPLETED SUCCESSFULLY!")

@@ -490,7 +490,7 @@ def generate_nongated_151_figure(study_dir: Path, output_dir: Path) -> tuple[Pat
 if __name__ == "__main__":
     repo_root = Path(__file__).resolve().parents[1]
     study_path = Path(r"E:\CT\Stanford_COCA\cocacoronarycalciumandchestcts-2\deidentified_nongated\151\151")
-    out_dir = repo_root / "docs" / "figures"
+    out_dir = repo_root / "docs" / "case_studies"
     png_path, pdf_path = generate_nongated_151_figure(study_path, out_dir)
     print(f"Saved PNG: {png_path}")
     print(f"Saved PDF: {pdf_path}")

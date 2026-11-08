@@ -2093,7 +2093,7 @@ def ci_check(
 @app.command("regulatory-export")
 def regulatory_export(
     output_pdf: Path = typer.Option(
-        Path("docs/FDA_510k_SaMD_DHF_Evidence_Dossier.pdf"),
+        Path("docs/regulatory/FDA_510k_SaMD_DHF_Evidence_Dossier.pdf"),
         "--output-pdf",
         "-o",
         help="Destination path for the vector PDF FDA 510(k) DHF Evidence Dossier.",

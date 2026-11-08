@@ -493,7 +493,7 @@ if __name__ == "__main__":
     repo_root = Path(__file__).resolve().parents[1]
     study_path = Path(r"E:\CT\Stanford_COCA\cocacoronarycalciumandchestcts-2\Gated_release_final\patient\442")
     scan_path = study_path / "Pro_Gated_Calcium_Score_(CS)_3.0_Qr36_2_BestDiast_70_%"
-    out_dir = repo_root / "docs" / "figures"
+    out_dir = repo_root / "docs" / "case_studies"
     png_path, pdf_path = generate_participant_442_figure(study_path, scan_path, out_dir)
     print(f"Saved PNG: {png_path}")
     print(f"Saved PDF: {pdf_path}")

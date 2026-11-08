@@ -359,7 +359,7 @@ def generate_case_study(
 
 if __name__ == "__main__":
     repo_root = Path(__file__).resolve().parents[1]
-    out_dir = repo_root / "docs" / "figures"
+    out_dir = repo_root / "docs" / "case_studies"
     rll_src = out_dir / "assets" / "nongated_51_rll_mass_z28.jpg"
     lll_src = out_dir / "assets" / "nongated_51_lll_mass_z25.jpg"
     png_path, pdf_path = generate_case_study(rll_src, lll_src, out_dir)
