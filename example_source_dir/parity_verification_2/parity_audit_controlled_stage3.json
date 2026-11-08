@@ -3,7 +3,7 @@
   "candidate_name": "monai-cardiac-fat-fl (CardiacFatQuant Parity)",
   "reference_name": "circ-ml/CardiacFatQuant (Stage-3 Reference)",
   "participant_count": 2,
-  "elapsed_seconds": 12.2,
+  "elapsed_seconds": 39.09,
   "mean_overall_dice": 1.0,
   "median_overall_dice": 1.0,
   "compartment_summary": {
@@ -79,7 +79,7 @@
       "mean_abs_volume_diff_cm3": 0.0,
       "mean_relative_volume_error_pct": 0.0
     },
-    "PVAT Total": {
+    "PVAT_Total": {
       "mean_dice": 1.0,
       "std_dice": 0.0,
       "median_dice": 1.0,
@@ -109,11 +109,11 @@
     ],
     "cases_inspected": [
       {
-        "participant_id": "0909",
+        "participant_id": "0506",
         "native_shape": [
           512,
           512,
-          126
+          122
         ],
         "native_spacing_mm": [
           0.68,
@@ -123,7 +123,7 @@
         "curated_shape_xyz": [
           512,
           512,
-          126
+          122
         ],
         "curated_spacing_mm": [
           0.68,
@@ -141,11 +141,11 @@
           128
         ],
         "step2_min_norm": -1.0,
-        "step2_max_norm": 0.2361,
+        "step2_max_norm": 0.1678,
         "step1_bbox_center": [
-          43,
-          222,
-          280
+          50,
+          209,
+          300
         ],
         "affine_aligned": true
       }
@@ -157,10 +157,10 @@
     "mean_cosine_similarity": 1.0,
     "cases_inspected": [
       {
-        "participant_id": "0909",
-        "step1_fg_voxels_gt_0_9": 28708,
-        "step2_fg_voxels_gt_0_5": 71609,
-        "step2_prob_mae": 1.0408858497346074e-10,
+        "participant_id": "0506",
+        "step1_fg_voxels_gt_0_9": 35859,
+        "step2_fg_voxels_gt_0_5": 92759,
+        "step2_prob_mae": 1.0365462654871038e-10,
         "step2_prob_cosine_sim": 1.0
       }
     ]
@@ -242,7 +242,7 @@
         "mean_abs_volume_diff_cm3": 0.0,
         "mean_relative_volume_error_pct": 0.0
       },
-      "PVAT Total": {
+      "PVAT_Total": {
         "mean_dice": 1.0,
         "std_dice": 0.0,
         "median_dice": 1.0,

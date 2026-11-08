@@ -3,7 +3,7 @@
   "candidate_name": "monai-cardiac-fat-fl (CardiacFatQuant Parity)",
   "reference_name": "circ-ml/CardiacFatQuant (Stage-3 Reference)",
   "participant_count": 1,
-  "elapsed_seconds": 0.28,
+  "elapsed_seconds": 0.24,
   "mean_overall_dice": 1.0,
   "median_overall_dice": 1.0,
   "compartment_summary": {
