@@ -136,7 +136,7 @@ def test_dashboard_api_publication_figure(test_app):
 
 
 def test_dashboard_federated_html_elements(test_app):
-    """Verify federated learning UI tab, section, and controls are rendered in HTML."""
+    """Verify federated learning UI tab, section, controls, and JS callbacks are rendered in HTML."""
     client = test_app.test_client()
     res = client.get("/")
     assert res.status_code == 200
@@ -147,6 +147,12 @@ def test_dashboard_federated_html_elements(test_app):
     assert 'id="flSitesGrid"' in html
     assert 'id="flModelsTableBody"' in html
     assert 'id="flConsoleLog"' in html
+    assert "function initFlChart()" in html
+    assert "async function launchFlSimulation()" in html
+    assert "async function resetFlSimulation()" in html
+    assert "async function fetchFlStatus()" in html
+    assert "async function fetchFlModels()" in html
+    assert "function clearFlConsole()" in html
 
 
 def test_dashboard_federated_status_api(test_app):

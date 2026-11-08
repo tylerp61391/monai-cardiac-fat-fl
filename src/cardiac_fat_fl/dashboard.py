@@ -2552,6 +2552,8 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     let chartPvatCac = null;
     let chartComps = null;
     let chartTiers = null;
+    let chartFlConvergence = null;
+    let flPollingTimer = null;
 
     function switchTab(tab) {
       activeTab = tab;
@@ -5276,6 +5278,332 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    }
+
+    // ================= TAB 4: FEDERATED LEARNING LOGIC =================
+    function initFlChart() {
+      const canvas = document.getElementById('flConvergenceChart');
+      if (!canvas) return;
+      if (chartFlConvergence) {
+        try { chartFlConvergence.destroy(); } catch (e) {}
+        chartFlConvergence = null;
+      }
+      const ctx = canvas.getContext('2d');
+      chartFlConvergence = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Validation DICE',
+              data: [],
+              borderColor: '#34d399',
+              backgroundColor: 'rgba(52, 211, 153, 0.15)',
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: '#34d399',
+              fill: true,
+              tension: 0.3,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Validation Loss',
+              data: [],
+              borderColor: '#fbbf24',
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              pointRadius: 4,
+              pointBackgroundColor: '#fbbf24',
+              fill: false,
+              tension: 0.3,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(51, 65, 85, 0.4)' },
+              ticks: { color: '#94a3b8', font: { family: 'monospace', size: 11 } }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              min: 0.0,
+              max: 1.0,
+              grid: { color: 'rgba(51, 65, 85, 0.4)' },
+              ticks: {
+                color: '#34d399',
+                font: { family: 'monospace', size: 10 },
+                callback: function(val) { return Number(val).toFixed(2); }
+              },
+              title: { display: true, text: 'Validation DICE', color: '#34d399', font: { size: 11, weight: 'bold' } }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: '#fbbf24',
+                font: { family: 'monospace', size: 10 },
+                callback: function(val) { return Number(val).toFixed(2); }
+              },
+              title: { display: true, text: 'Validation Loss', color: '#fbbf24', font: { size: 11, weight: 'bold' } }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              borderColor: '#334155',
+              borderWidth: 1,
+              titleColor: '#fff',
+              bodyColor: '#cbd5e1'
+            }
+          }
+        }
+      });
+    }
+
+    async function launchFlSimulation() {
+      const btnLaunch = document.getElementById('btnLaunchFl');
+      const nClients = parseInt(document.getElementById('flInputClients')?.value || '2', 10);
+      const numRounds = parseInt(document.getElementById('flInputRounds')?.value || '2', 10);
+      const threads = parseInt(document.getElementById('flInputThreads')?.value || '2', 10);
+      const fedproxMu = parseFloat(document.getElementById('flInputFedproxMu')?.value || '0.01');
+      const fedBn = document.getElementById('flInputFedBn')?.checked ?? true;
+
+      if (btnLaunch) {
+        btnLaunch.disabled = true;
+        btnLaunch.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Initializing...';
+      }
+
+      try {
+        const res = await fetch('/api/federated/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            n_clients: nClients,
+            num_rounds: numRounds,
+            threads: threads,
+            fedprox_mu: fedproxMu,
+            fed_bn: fedBn
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to start federated simulation');
+          if (btnLaunch) {
+            btnLaunch.disabled = false;
+            btnLaunch.innerHTML = '<i class="fa-solid fa-play"></i> Launch Simulation';
+          }
+          return;
+        }
+
+        // Start polling immediately
+        await fetchFlStatus();
+        if (!flPollingTimer) {
+          flPollingTimer = setInterval(fetchFlStatus, 1500);
+        }
+      } catch (err) {
+        console.error('Failed to launch FL simulation:', err);
+        alert('Network error launching federated simulation: ' + err);
+        if (btnLaunch) {
+          btnLaunch.disabled = false;
+          btnLaunch.innerHTML = '<i class="fa-solid fa-play"></i> Launch Simulation';
+        }
+      }
+    }
+
+    async function resetFlSimulation() {
+      const btnReset = document.getElementById('btnResetFl');
+      if (btnReset) {
+        btnReset.disabled = true;
+      }
+      try {
+        const res = await fetch('/api/federated/reset', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Cannot reset simulation');
+        }
+        if (chartFlConvergence) {
+          chartFlConvergence.data.labels = [];
+          chartFlConvergence.data.datasets[0].data = [];
+          chartFlConvergence.data.datasets[1].data = [];
+          chartFlConvergence.update();
+        }
+        await fetchFlStatus();
+        await fetchFlModels();
+      } catch (err) {
+        console.error('Reset error:', err);
+      } finally {
+        if (btnReset) btnReset.disabled = false;
+      }
+    }
+
+    async function fetchFlStatus() {
+      try {
+        const res = await fetch('/api/federated/status');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const statusBadge = document.getElementById('flStatusBadge');
+        const btnLaunch = document.getElementById('btnLaunchFl');
+        const flSpinner = document.getElementById('flSpinner');
+        const roundText = document.getElementById('flProgressRoundText');
+        const pctText = document.getElementById('flProgressPctText');
+        const bar = document.getElementById('flProgressBar');
+        const sitesGrid = document.getElementById('flSitesGrid');
+        const consoleLog = document.getElementById('flConsoleLog');
+
+        const status = (data.status || 'idle').toUpperCase();
+
+        // Update Badge
+        if (statusBadge) {
+          statusBadge.innerText = status;
+          if (status === 'RUNNING') {
+            statusBadge.className = 'ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-900/80 text-indigo-300 border border-indigo-500 animate-pulse';
+          } else if (status === 'COMPLETED') {
+            statusBadge.className = 'ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-600';
+          } else if (status === 'FAILED') {
+            statusBadge.className = 'ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-950 text-rose-300 border border-rose-600';
+          } else {
+            statusBadge.className = 'ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 border border-slate-600';
+          }
+        }
+
+        // Update Launch Button & Spinner
+        if (status === 'RUNNING') {
+          if (btnLaunch) {
+            btnLaunch.disabled = true;
+            btnLaunch.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Simulation Running...';
+          }
+          if (flSpinner) flSpinner.classList.remove('hidden');
+        } else {
+          if (btnLaunch) {
+            btnLaunch.disabled = false;
+            btnLaunch.innerHTML = '<i class="fa-solid fa-play"></i> Launch Simulation';
+          }
+          if (flSpinner) flSpinner.classList.add('hidden');
+          if (flPollingTimer && (status === 'COMPLETED' || status === 'FAILED' || status === 'IDLE')) {
+            clearInterval(flPollingTimer);
+            flPollingTimer = null;
+            fetchFlModels();
+          }
+        }
+
+        // Update Progress
+        const curRound = data.current_round || 0;
+        const totRounds = data.total_rounds || (data.config ? data.config.num_rounds : 2) || 2;
+        const pct = Math.min(100, Math.max(0, Math.round(data.progress_pct || 0)));
+        if (roundText) roundText.innerText = `Round ${curRound} of ${totRounds}`;
+        if (pctText) pctText.innerText = `${pct}%`;
+        if (bar) bar.style.width = `${pct}%`;
+
+        // Render Hospital Site Topology Cards
+        if (sitesGrid && data.client_states) {
+          const sites = Object.entries(data.client_states);
+          sitesGrid.innerHTML = sites.map(([siteKey, site]) => {
+            const isOnline = status === 'RUNNING';
+            const diceVal = site.val_dice !== null && site.val_dice !== undefined ? Number(site.val_dice).toFixed(4) : null;
+            const diceText = diceVal !== null ? `Val DICE: <span class="font-bold text-emerald-400 font-mono">${diceVal}</span>` : 'Val DICE: <span class="text-slate-500 font-mono">--</span>';
+            const fedBnBadge = site.fed_bn ? '<span class="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[10px] font-mono">FedBN</span>' : '';
+            return `
+              <div class="bg-slate-900/80 border border-slate-700/80 rounded-lg p-3 hover:border-slate-600 transition">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="font-bold text-white flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}"></span>
+                    ${site.name || siteKey}
+                  </span>
+                  ${fedBnBadge}
+                </div>
+                <div class="text-[11px] text-slate-400 truncate mb-1">
+                  <span class="text-slate-500">Status:</span> ${site.last_activity || site.status || 'Standby'}
+                </div>
+                <div class="text-xs pt-1 border-t border-slate-800 flex items-center justify-between">
+                  <span>${diceText}</span>
+                  <span class="text-[10px] font-mono text-slate-500 uppercase">${siteKey}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Update Convergence Chart
+        if (chartFlConvergence && data.metrics && data.metrics.length > 0) {
+          const labels = data.metrics.map(m => `Round ${m.round}`);
+          const diceData = data.metrics.map(m => m.val_dice !== undefined ? m.val_dice : null);
+          const lossData = data.metrics.map(m => m.val_loss !== undefined ? m.val_loss : null);
+
+          chartFlConvergence.data.labels = labels;
+          chartFlConvergence.data.datasets[0].data = diceData;
+          chartFlConvergence.data.datasets[1].data = lossData;
+          chartFlConvergence.update('none');
+        }
+
+        // Stream Audit Logs
+        if (consoleLog && data.logs && data.logs.length > 0) {
+          const currentScroll = consoleLog.scrollTop;
+          const isScrolledToBottom = consoleLog.scrollHeight - consoleLog.clientHeight <= currentScroll + 30;
+          consoleLog.innerText = data.logs.join(String.fromCharCode(10));
+          if (isScrolledToBottom) {
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch FL status:', err);
+      }
+    }
+
+    async function fetchFlModels() {
+      const tbody = document.getElementById('flModelsTableBody');
+      if (!tbody) return;
+      try {
+        const res = await fetch('/api/federated/models');
+        if (!res.ok) return;
+        const data = await res.json();
+        const models = data.models || [];
+        if (models.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="4" class="px-3 py-4 text-center text-slate-500 font-sans">No checkpoints generated yet. Run a simulation to produce model weights.</td>
+            </tr>
+          `;
+          return;
+        }
+        tbody.innerHTML = models.map(m => `
+          <tr class="hover:bg-slate-700/30 transition">
+            <td class="px-3 py-2 text-white font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-file-shield text-indigo-400"></i> ${m.filename}
+            </td>
+            <td class="px-3 py-2 text-right text-slate-300 font-mono">${m.size_mb} MB</td>
+            <td class="px-3 py-2 text-slate-400 text-[11px]">${m.modified}</td>
+            <td class="px-3 py-2 text-center">
+              <a href="${m.download_url}" download class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold transition inline-flex items-center gap-1 shadow">
+                <i class="fa-solid fa-download"></i> Download
+              </a>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to fetch models:', err);
+      }
+    }
+
+    function clearFlConsole() {
+      const consoleLog = document.getElementById('flConsoleLog');
+      if (consoleLog) {
+        consoleLog.innerText = '[System] Console cleared.' + String.fromCharCode(10);
+      }
     }
 
     // Initial load - execute immediately or on DOM ready
