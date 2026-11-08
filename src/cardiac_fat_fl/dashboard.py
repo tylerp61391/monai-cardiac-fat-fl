@@ -601,14 +601,42 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
 
         all_cohort_pids = list(_ACTIVE_COHORT.participants.keys())
 
-        # Upgrade/generate index.html with SOTA full cohort navigator if missing or older template
+        # Upgrade/generate index.html with SOTA full cohort navigator if missing, older template, or slice count mismatch
+        needs_full_reexport = False
         needs_html_refresh = False
-        if not html_file.exists():
+        slices_dir = export_dir / "slices"
+        if slices_dir.exists() and p.seg_path and p.seg_path.is_file():
+            try:
+                import nrrd
+
+                seg_hdr = nrrd.read_header(str(p.seg_path))
+                sizes = [int(s) for s in seg_hdr.get("sizes", []) if int(s) != 8 and int(s) < 500]
+                rendered_count = len(list(slices_dir.glob("ct_*.png")))
+                if sizes and rendered_count > 0 and rendered_count != sizes[0]:
+                    needs_full_reexport = True
+            except Exception:
+                pass
+
+        if needs_full_reexport:
+            from cardiac_fat_fl.ohif_exporter import export_sample_to_ohif
+
+            export_sample_to_ohif(
+                sample_dir=p.study_dir,
+                summary_metrics=p.metrics or {},
+                available_participants=all_cohort_pids,
+                participant_id=pid,
+            )
+        elif not html_file.exists():
             needs_html_refresh = True
         else:
             try:
                 idx_txt = html_file.read_text(encoding="utf-8", errors="ignore")
-                if "cohortSearchInput" not in idx_txt or "syncCohortCasesFromDashboard" not in idx_txt:
+                if (
+                    "cohortSearchInput" not in idx_txt
+                    or "syncCohortCasesFromDashboard" not in idx_txt
+                    or "fltNongated" not in idx_txt
+                    or f'const currentParticipantId = "{pid}";' not in idx_txt
+                ):
                     needs_html_refresh = True
             except Exception:
                 needs_html_refresh = True
@@ -641,7 +669,9 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
                     try:
                         export_sample_to_ohif(
                             sample_dir=p.study_dir,
+                            summary_metrics=p.metrics or {},
                             available_participants=all_cohort_pids,
+                            participant_id=pid,
                         )
                     except Exception as ex:
                         return (
@@ -652,7 +682,9 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
                 try:
                     export_sample_to_ohif(
                         sample_dir=p.study_dir,
+                        summary_metrics=p.metrics or {},
                         available_participants=all_cohort_pids,
+                        participant_id=pid,
                     )
                 except Exception as e:
                     return (

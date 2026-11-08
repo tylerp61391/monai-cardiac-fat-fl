@@ -789,17 +789,22 @@ def generate_ohif_3pane_viewer_html(
     for p in participants_list:
         p_str = str(p)
         active_cls = " active" if p_str == str(participant_id) else ""
+        is_ng = p_str.lower().startswith("nongated_")
+        short_pill_label = f"NG {p_str[9:]}" if is_ng else f"Pt {p_str}"
+        short_row_label = f"NG {p_str[9:]} ({p_str})" if is_ng else f"Pt {p_str}"
+        ng_attr = ' data-nongated="true"' if is_ng else ' data-gated="true"'
         pill_items.append(
-            f'<button class="cohort-pill{active_cls}" data-pid="{p_str}" onclick="switchParticipant(\'{p_str}\')" title="Participant {p_str}">Pt {p_str}</button>'
+            f'<button class="cohort-pill{active_cls}" data-pid="{p_str}"{ng_attr} onclick="switchParticipant(\'{p_str}\')" title="Participant {p_str}">{short_pill_label}</button>'
         )
         row_items.append(
-            f'<div class="cohort-row-item{active_cls}" data-pid="{p_str}" onclick="switchParticipant(\'{p_str}\')">'
-            f'<span class="cohort-row-id">Pt {p_str}</span>'
-            f'<div class="cohort-row-tags"><span class="cohort-row-meta">Case {p_str}</span></div>'
+            f'<div class="cohort-row-item{active_cls}" data-pid="{p_str}"{ng_attr} onclick="switchParticipant(\'{p_str}\')">'
+            f'<span class="cohort-row-id">{short_row_label}</span>'
+            f'<div class="cohort-row-tags"><span class="cohort-row-meta">{"Non-Gated" if is_ng else "Gated"}</span></div>'
             f'</div>'
         )
     cohort_pills_html = "".join(pill_items)
     cohort_list_rows_html = "".join(row_items)
+    scan_study_label = "COCA Non-Gated CT" if str(participant_id).lower().startswith("nongated_") else "COCA Gated CT"
 
     info = mpr_info or {
         "axial_count": num_slices,
@@ -1137,7 +1142,7 @@ def generate_ohif_3pane_viewer_html(
       </div>
 
       <div class="study-accordion">
-        <div class="study-accordion-title">COCA Gated CT &bull; P{participant_id}</div>
+        <div class="study-accordion-title">{scan_study_label} &bull; {participant_id}</div>
         <div class="study-accordion-meta">22-May-2014 &bull; {sx:.2f} &times; {sy:.2f} &times; {sz:.2f} mm</div>
       </div>
 
@@ -1240,7 +1245,8 @@ def generate_ohif_3pane_viewer_html(
           <button class="filter-pill active" id="fltAll" onclick="setCohortFilter('all')">All (<span id="cntAll">{len(participants_list)}</span>)</button>
           <button class="filter-pill" id="fltSeg" onclick="setCohortFilter('seg')">3D Seg (<span id="cntSeg">...</span>)</button>
           <button class="filter-pill" id="fltGated" onclick="setCohortFilter('gated')">Gated</button>
-          <button class="filter-pill" id="fltInflam" onclick="setCohortFilter('inflam')">Active Inflam</button>
+          <button class="filter-pill" id="fltNongated" onclick="setCohortFilter('nongated')">Non-Gated</button>
+          <button class="filter-pill" id="fltInflam" onclick="setCohortFilter('inflam')">Inflam</button>
         </div>
 
         <!-- Scrollable High-Performance Container -->
@@ -2106,7 +2112,7 @@ def generate_ohif_3pane_viewer_html(
 
   function setCohortFilter(filter) {{
     currentCohortFilter = filter;
-    ['fltAll', 'fltSeg', 'fltGated', 'fltInflam'].forEach(id => {{
+    ['fltAll', 'fltSeg', 'fltGated', 'fltNongated', 'fltInflam'].forEach(id => {{
       const el = $(id);
       if (el) el.classList.remove('active');
     }});
@@ -2114,6 +2120,7 @@ def generate_ohif_3pane_viewer_html(
     if (filter === 'all' && $('fltAll')) $('fltAll').classList.add('active');
     else if (filter === 'seg' && $('fltSeg')) $('fltSeg').classList.add('active');
     else if (filter === 'gated' && $('fltGated')) $('fltGated').classList.add('active');
+    else if (filter === 'nongated' && $('fltNongated')) $('fltNongated').classList.add('active');
     else if (filter === 'inflam' && $('fltInflam')) $('fltInflam').classList.add('active');
 
     onCohortSearch($('cohortSearchInput').value);
@@ -2130,6 +2137,14 @@ def generate_ohif_3pane_viewer_html(
 
   function onCohortSearchKey(e) {{
     if (e.key === 'Enter') {{
+      const q = ($('cohortSearchInput').value || '').trim().toLowerCase();
+      // Prefer exact match first (e.g., nongated_51 or ng 51 -> nongated_51, 51 -> 51)
+      const normQ = q.replace(/^ng\\s*/, 'nongated_');
+      const exactPill = document.querySelector(`.cohort-pill:not(.hidden-by-filter)[data-pid="${{normQ}}"]`);
+      if (exactPill && exactPill.dataset.pid) {{
+        switchParticipant(exactPill.dataset.pid);
+        return;
+      }}
       const firstPill = document.querySelector('.cohort-pill:not(.hidden-by-filter)');
       if (firstPill && firstPill.dataset.pid) {{
         switchParticipant(firstPill.dataset.pid);
@@ -2139,6 +2154,7 @@ def generate_ohif_3pane_viewer_html(
 
   function onCohortSearch(query) {{
     query = (query || '').trim().toLowerCase();
+    const normQuery = query.replace(/^ng\\s*/, 'nongated_');
     const clearBtn = $('cohortClearBtn');
     if (clearBtn) {{
       clearBtn.style.display = query ? 'block' : 'none';
@@ -2150,12 +2166,14 @@ def generate_ohif_3pane_viewer_html(
 
     function matchesFilter(el) {{
       const pid = (el.dataset.pid || '').toLowerCase();
-      if (query && !pid.includes(query)) return false;
+      if (normQuery && !pid.includes(normQuery) && !pid.includes(query)) return false;
 
       if (currentCohortFilter === 'seg') {{
         if (el.dataset.seg !== 'true') return false;
       }} else if (currentCohortFilter === 'gated') {{
         if (el.dataset.gated !== 'true') return false;
+      }} else if (currentCohortFilter === 'nongated') {{
+        if (el.dataset.nongated !== 'true') return false;
       }} else if (currentCohortFilter === 'inflam') {{
         if (el.dataset.inflam !== 'true') return false;
       }}
@@ -2197,13 +2215,17 @@ def generate_ohif_3pane_viewer_html(
     const caseMap = new Map();
     let segCount = 0;
     let gatedCount = 0;
+    let nongatedCount = 0;
     let inflamCount = 0;
 
     cases.forEach(c => {{
-      caseMap.set(String(c.participant_id), c);
+      const pidStr = String(c.participant_id);
+      caseMap.set(pidStr, c);
       if (c.has_seg) segCount++;
-      const isGated = c.scan_type && c.scan_type.toLowerCase().includes('gated');
+      const isNongated = pidStr.toLowerCase().startsWith('nongated_') || (c.scan_type && c.scan_type.toLowerCase().includes('non-gated'));
+      const isGated = !isNongated && c.scan_type && c.scan_type.toLowerCase().includes('gated');
       if (isGated) gatedCount++;
+      if (isNongated) nongatedCount++;
       const isInflam = c.crisp_ct_status && c.crisp_ct_status.toLowerCase().includes('active');
       if (isInflam) inflamCount++;
     }});
@@ -2211,6 +2233,7 @@ def generate_ohif_3pane_viewer_html(
     if ($('cntAll')) $('cntAll').textContent = cases.length;
     if ($('cntSeg')) $('cntSeg').textContent = segCount;
     if ($('fltGated')) $('fltGated').textContent = `Gated (${{gatedCount}})`;
+    if ($('fltNongated')) $('fltNongated').textContent = `Non-Gated (${{nongatedCount}})`;
     if ($('fltInflam')) $('fltInflam').textContent = `Inflam (${{inflamCount}})`;
     if ($('cohortCountBadge')) $('cohortCountBadge').textContent = `${{cases.length}} Cases`;
 
@@ -2218,18 +2241,22 @@ def generate_ohif_3pane_viewer_html(
       const pid = pill.dataset.pid;
       const c = caseMap.get(pid);
       if (c) {{
+        const isNg = String(pid).toLowerCase().startsWith('nongated_') || (c.scan_type && c.scan_type.toLowerCase().includes('non-gated'));
         if (c.has_seg) {{
           pill.dataset.seg = 'true';
           pill.classList.add('has-seg');
         }}
-        if (c.scan_type && c.scan_type.toLowerCase().includes('gated')) {{
+        if (isNg) {{
+          pill.dataset.nongated = 'true';
+          delete pill.dataset.gated;
+        }} else if (c.scan_type && c.scan_type.toLowerCase().includes('gated')) {{
           pill.dataset.gated = 'true';
         }}
         if (c.crisp_ct_status && c.crisp_ct_status.toLowerCase().includes('active')) {{
           pill.dataset.inflam = 'true';
         }}
-        const eatVol = c.metrics && c.metrics['EAT Total Volume (cm3)'] ? c.metrics['EAT Total Volume (cm3)'].toFixed(1) : null;
-        const pvatHu = c.metrics && c.metrics['PVAT Total Mean Attenuation (HU)'] ? c.metrics['PVAT Total Mean Attenuation (HU)'].toFixed(1) : null;
+        const eatVol = c.eat_volume_cm3 != null ? Number(c.eat_volume_cm3).toFixed(1) : null;
+        const pvatHu = c.pvat_mean_hu != null ? Number(c.pvat_mean_hu).toFixed(1) : null;
         let tip = `Patient ${{pid}} | ${{c.scan_type || 'CT'}}`;
         if (eatVol) tip += `\\nEAT: ${{eatVol}} cm3 | PVAT: ${{pvatHu}} HU`;
         if (c.calcium_risk_tier) tip += `\\nCAC: ${{c.calcium_risk_tier}}`;
@@ -2241,15 +2268,21 @@ def generate_ohif_3pane_viewer_html(
       const pid = row.dataset.pid;
       const c = caseMap.get(pid);
       if (c) {{
+        const isNg = String(pid).toLowerCase().startsWith('nongated_') || (c.scan_type && c.scan_type.toLowerCase().includes('non-gated'));
         if (c.has_seg) row.dataset.seg = 'true';
-        if (c.scan_type && c.scan_type.toLowerCase().includes('gated')) row.dataset.gated = 'true';
+        if (isNg) {{
+          row.dataset.nongated = 'true';
+          delete row.dataset.gated;
+        }} else if (c.scan_type && c.scan_type.toLowerCase().includes('gated')) {{
+          row.dataset.gated = 'true';
+        }}
         if (c.crisp_ct_status && c.crisp_ct_status.toLowerCase().includes('active')) row.dataset.inflam = 'true';
 
         const tagWrap = row.querySelector('.cohort-row-tags');
         if (tagWrap) {{
           let tagsHtml = '';
           if (c.scan_type) {{
-            const shortType = c.scan_type.toLowerCase().includes('gated') ? 'Gated' : 'Non-Gated';
+            const shortType = isNg ? 'Non-Gated' : 'Gated';
             tagsHtml += `<span class="tag-gated">${{shortType}}</span>`;
           }}
           if (c.has_seg) {{
@@ -2259,8 +2292,8 @@ def generate_ohif_3pane_viewer_html(
             const tierShort = c.calcium_risk_tier.split(' ')[0];
             tagsHtml += `<span class="tag-cac">${{tierShort}}</span>`;
           }}
-          if (c.metrics && c.metrics['EAT Total Volume (cm3)']) {{
-            tagsHtml += `<span class="cohort-row-meta">${{c.metrics['EAT Total Volume (cm3)'].toFixed(0)}}cm3</span>`;
+          if (c.eat_volume_cm3 != null) {{
+            tagsHtml += `<span class="cohort-row-meta">${{Number(c.eat_volume_cm3).toFixed(0)}}cm3</span>`;
           }}
           tagWrap.innerHTML = tagsHtml;
         }}
@@ -2349,6 +2382,7 @@ def export_sample_to_ohif(
     output_dir: Optional[Path | str] = None,
     summary_metrics: Optional[Dict[str, float]] = None,
     available_participants: Optional[List[str]] = None,
+    participant_id: Optional[str] = None,
 ) -> Path:
     """Exports a sample participant folder to a complete OHIF-compatible study package.
 
@@ -2356,12 +2390,19 @@ def export_sample_to_ohif(
         sample_dir: Directory containing participant scan and segmentation.
         output_dir: Destination directory. Defaults to sample_dir / 'ohif_export'.
         summary_metrics: Optional pre-calculated dictionary of metrics.
+        available_participants: Optional list of cohort participant IDs for switcher.
+        participant_id: Optional explicit participant ID (e.g. 'nongated_51' vs '51').
 
     Returns:
         Path to the generated export directory containing DICOM slices, DICOM-SEG, and viewer.
     """
     sample_path = Path(sample_dir).resolve()
-    participant_id = sample_path.name
+    if not participant_id:
+        raw_name = sample_path.name
+        if "deidentified_nongated" in [pt.lower() for pt in sample_path.parts] and not raw_name.lower().startswith("nongated_"):
+            participant_id = f"nongated_{raw_name}"
+        else:
+            participant_id = raw_name
 
     dest_dir = Path(output_dir).resolve() if output_dir else sample_path / "ohif_export"
     ct_dest_dir = dest_dir / "ct"
@@ -2380,15 +2421,59 @@ def export_sample_to_ohif(
         if not p.name.endswith("_seg.dcm") and not p.name.startswith("eat_pvat")
         and "ohif_export" not in p.parts
     ]
-    # Filter to only Modality == "CT"
-    dcm_candidates = []
+    # Filter to only Modality == "CT" and group by SeriesInstanceUID to prevent interleaving multi-series folders
+    series_groups: Dict[str, List[Tuple[Path, Any]]] = {}
     for p in raw_dcm:
         try:
             hdr = pydicom.dcmread(str(p), stop_before_pixels=True)
             if getattr(hdr, "Modality", None) == "CT":
-                dcm_candidates.append(p)
+                suid = str(getattr(hdr, "SeriesInstanceUID", "default"))
+                series_groups.setdefault(suid, []).append((p, hdr))
         except Exception:
             continue
+
+    dcm_candidates: List[Path] = []
+    if series_groups:
+        # Select the primary 3D series (largest slice count; tie-break by lowest SeriesNumber and filename)
+        def _series_rank_key(item: Tuple[str, List[Tuple[Path, Any]]]) -> Tuple[int, int, str]:
+            _suid, items = item
+            first_p, first_hdr = min(items, key=lambda x: x[0].name)
+            try:
+                snum = int(getattr(first_hdr, "SeriesNumber", 9999))
+            except Exception:
+                snum = 9999
+            return (-len(items), snum, first_p.name)
+
+        best_suid, best_items = sorted(series_groups.items(), key=_series_rank_key)[0]
+
+        # Sort by ImagePositionPatient[2] or InstanceNumber and deduplicate identical Z-positions
+        def _item_z_key(pair: Tuple[Path, Any]) -> Tuple[float, int, str]:
+            fp, ds = pair
+            try:
+                if hasattr(ds, "ImagePositionPatient"):
+                    z_val = float(ds.ImagePositionPatient[2])
+                else:
+                    z_val = float(getattr(ds, "InstanceNumber", 0))
+            except Exception:
+                z_val = 0.0
+            try:
+                inum = int(getattr(ds, "InstanceNumber", 0))
+            except Exception:
+                inum = 0
+            return (z_val, inum, fp.name)
+
+        best_items.sort(key=_item_z_key)
+        seen_z: set[float] = set()
+        for fp, ds in best_items:
+            if hasattr(ds, "ImagePositionPatient"):
+                try:
+                    z_round = round(float(ds.ImagePositionPatient[2]), 3)
+                    if z_round in seen_z:
+                        continue
+                    seen_z.add(z_round)
+                except Exception:
+                    pass
+            dcm_candidates.append(fp)
 
     if dcm_candidates:
         # Clear existing .dcm in ct_dest_dir to avoid mixing old/duplicate exports
@@ -2397,18 +2482,6 @@ def export_sample_to_ohif(
                 old_f.unlink()
             except Exception:
                 pass
-
-        # Sort by ImagePositionPatient[2] or InstanceNumber
-        def _slice_key(p: Path) -> float:
-            try:
-                ds = pydicom.dcmread(str(p), stop_before_pixels=True)
-                if hasattr(ds, "ImagePositionPatient"):
-                    return float(ds.ImagePositionPatient[2])
-                return float(getattr(ds, "InstanceNumber", 0))
-            except Exception:
-                return 0.0
-
-        dcm_candidates.sort(key=_slice_key)
 
         # Unify Study and Series UIDs across all slices of this scan
         ref_ds = pydicom.dcmread(str(dcm_candidates[0]), stop_before_pixels=True)
