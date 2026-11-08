@@ -18,11 +18,13 @@ def test_app():
 
 
 def test_dashboard_index_route(test_app):
-    """Verify dashboard index serves HTML template with 200 OK."""
+    """Verify dashboard index serves HTML template with 200 OK and software version."""
     client = test_app.test_client()
     res = client.get("/")
     assert res.status_code == 200
     assert b"Cardiac Fat Research Dashboard" in res.data
+    assert b"v1.0.0" in res.data
+    assert b"max-w-[2560px]" in res.data
     assert b"Chart.js" in res.data or b"chart.js" in res.data
 
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "monai-cardiac-fat-fl"
-version = "0.1.0"
+version = "1.0.0"
 description = "MONAI, FLARE & OHIF pipeline for Epicardial and Pericoronary Adipose Tissue (EAT/PVAT) quantification from cardiac CT"
 readme = "README.md"
 license = { text = "MIT" }

@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 from flask import Flask, Response, jsonify, redirect, render_template_string, request, send_file, send_from_directory
 
+from cardiac_fat_fl import __version__
 from cardiac_fat_fl.cohort_research import CohortDataset, CohortParticipant
 from cardiac_fat_fl.io_metatensor import read_nrrd_as_metatensor
 from cardiac_fat_fl.measurement_schema import (
@@ -1135,7 +1136,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
 
   <!-- Top Navigation Header -->
-  <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
+  <header class="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
         <i class="fa-solid fa-heart-pulse text-xl"></i>
@@ -1143,7 +1144,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       <div>
         <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
           Cardiac Fat Research Dashboard
-          <span class="text-xs px-2 py-0.5 rounded bg-sky-900/60 border border-sky-500/40 text-sky-300 font-mono">v2.5+</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-500/50 font-mono font-semibold" title="Software Version: v__SOFTWARE_VERSION__">v__SOFTWARE_VERSION__</span>
         </h1>
         <p class="text-xs text-slate-400">Automated EAT/PVAT Quantification, Agatston CAC Risk & DICE Benchmarking</p>
       </div>
@@ -1163,7 +1164,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
   </header>
 
   <!-- Navigation Tabs -->
-  <div class="bg-slate-800/60 border-b border-slate-700/60 px-6">
+  <div class="bg-slate-800/60 border-b border-slate-700/60 px-4 sm:px-6 lg:px-8">
     <nav class="flex gap-8 text-sm">
       <button onclick="switchTab('analytics')" id="tab-analytics" class="py-3 px-1 tab-active transition flex items-center gap-2">
         <i class="fa-solid fa-chart-line"></i> Cohort Research Analytics
@@ -1183,8 +1184,8 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
     </nav>
   </div>
 
-  <!-- Main Container -->
-  <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+  <!-- Main Container (Full-Width Responsive Grid with generous bounds) -->
+  <main class="flex-1 px-4 sm:px-6 lg:px-8 py-5 w-full max-w-[2560px] mx-auto">
 
     <!-- ================= TAB 1: COHORT ANALYTICS ================= -->
     <section id="section-analytics" class="space-y-6">
@@ -1593,46 +1594,46 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             </a>
           </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-2.5 text-xs">
-          <button onclick="filterEdgeCases('nongated_213, nongated_140, nongated_24, nongated_131')" class="text-left bg-rose-950/30 hover:bg-rose-900/40 border border-rose-700/50 rounded-lg p-2.5 transition group">
-            <div class="font-bold text-rose-300 flex items-center justify-between">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3.5 text-xs">
+          <button onclick="filterEdgeCases('nongated_213, nongated_140, nongated_24, nongated_131')" class="text-left bg-rose-950/40 hover:bg-rose-900/50 border border-rose-700/60 rounded-xl p-3.5 transition group shadow-sm">
+            <div class="font-bold text-rose-300 flex items-center justify-between text-xs">
               <span>1. Invisible Risk (CAC = 0)</span>
-              <i class="fa-solid fa-fire text-rose-400 text-[10px]"></i>
+              <i class="fa-solid fa-fire text-rose-400 text-xs"></i>
             </div>
-            <div class="text-[10px] text-slate-300 mt-1 font-mono">nongated_213 (-55.8 HU), 140 (-51.1 HU)</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Zero Agatston calcium but severe active CRISP-CT coronaritis (&gt; -70.1 HU).</div>
+            <div class="text-xs text-slate-200 mt-1.5 font-mono">nongated_213 (-55.8 HU), 140 (-51.1 HU)</div>
+            <div class="text-[11px] text-slate-300 mt-1 leading-relaxed">Zero Agatston calcium but severe active CRISP-CT coronaritis (&gt; -70.1 HU).</div>
           </button>
-          <button onclick="filterEdgeCases('nongated_39, nongated_179, 457')" class="text-left bg-purple-950/30 hover:bg-purple-900/40 border border-purple-700/50 rounded-lg p-2.5 transition group">
-            <div class="font-bold text-purple-300 flex items-center justify-between">
+          <button onclick="filterEdgeCases('nongated_39, nongated_179, 457')" class="text-left bg-purple-950/40 hover:bg-purple-900/50 border border-purple-700/60 rounded-xl p-3.5 transition group shadow-sm">
+            <div class="font-bold text-purple-300 flex items-center justify-between text-xs">
               <span>2. Effusion &amp; Pneumothorax</span>
-              <i class="fa-solid fa-lungs text-purple-400 text-[10px]"></i>
+              <i class="fa-solid fa-lungs text-purple-400 text-xs"></i>
             </div>
-            <div class="text-[10px] text-slate-300 mt-1 font-mono">nongated_39 (-53.1 HU), 179 (-47.7 HU)</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">3D VLM flags hemorrhagic pericardial effusion, phantom tumor &amp; hydropneumothorax.</div>
+            <div class="text-xs text-slate-200 mt-1.5 font-mono">nongated_39 (-53.1 HU), 179 (-47.7 HU)</div>
+            <div class="text-[11px] text-slate-300 mt-1 leading-relaxed">3D VLM flags hemorrhagic pericardial effusion, phantom tumor &amp; hydropneumothorax.</div>
           </button>
-          <button onclick="filterEdgeCases('125, 303, nongated_159')" class="text-left bg-sky-950/30 hover:bg-sky-900/40 border border-sky-700/50 rounded-lg p-2.5 transition group">
-            <div class="font-bold text-sky-300 flex items-center justify-between">
+          <button onclick="filterEdgeCases('125, 303, nongated_159')" class="text-left bg-sky-950/40 hover:bg-sky-900/50 border border-sky-700/60 rounded-xl p-3.5 transition group shadow-sm">
+            <div class="font-bold text-sky-300 flex items-center justify-between text-xs">
               <span>3. Lipomas &amp; Stable Plaque</span>
-              <i class="fa-solid fa-shield-heart text-sky-400 text-[10px]"></i>
+              <i class="fa-solid fa-shield-heart text-sky-400 text-xs"></i>
             </div>
-            <div class="text-[10px] text-slate-300 mt-1 font-mono">125 (CAC 635k), 303 (-89.9 HU), 159</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Massive calcified plaque with quiescent PVAT &amp; VLM-detected epicardial lipomas.</div>
+            <div class="text-xs text-slate-200 mt-1.5 font-mono">125 (CAC 635k), 303 (-89.9 HU), 159</div>
+            <div class="text-[11px] text-slate-300 mt-1 leading-relaxed">Massive calcified plaque with quiescent PVAT &amp; VLM-detected epicardial lipomas.</div>
           </button>
-          <button onclick="filterEdgeCases('414, nongated_2, nongated_85, nongated_195')" class="text-left bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-700/50 rounded-lg p-2.5 transition group">
-            <div class="font-bold text-emerald-300 flex items-center justify-between">
+          <button onclick="filterEdgeCases('414, nongated_2, nongated_85, nongated_195')" class="text-left bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-700/60 rounded-xl p-3.5 transition group shadow-sm">
+            <div class="font-bold text-emerald-300 flex items-center justify-between text-xs">
               <span>4. Extremes &amp; Rescued CT</span>
-              <i class="fa-solid fa-screwdriver-wrench text-emerald-400 text-[10px]"></i>
+              <i class="fa-solid fa-screwdriver-wrench text-emerald-400 text-xs"></i>
             </div>
-            <div class="text-[10px] text-slate-300 mt-1 font-mono">414 (327.6 cm³), 85 (0 cm³), 195</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Max visceral obesity, cachectic NaN guardrail &amp; zero-spacing DICOM header rescue.</div>
+            <div class="text-xs text-slate-200 mt-1.5 font-mono">414 (327.6 cm³), 85 (0 cm³), 195</div>
+            <div class="text-[11px] text-slate-300 mt-1 leading-relaxed">Max visceral obesity, cachectic NaN guardrail &amp; zero-spacing DICOM header rescue.</div>
           </button>
-          <button onclick="filterEdgeCases('442, 276, nongated_151, nongated_51, 632')" class="text-left bg-amber-950/30 hover:bg-amber-900/40 border border-amber-700/50 rounded-lg p-2.5 transition group">
-            <div class="font-bold text-amber-300 flex items-center justify-between">
+          <button onclick="filterEdgeCases('442, 276, nongated_151, nongated_51, 632')" class="text-left bg-amber-950/40 hover:bg-amber-900/50 border border-amber-700/60 rounded-xl p-3.5 transition group shadow-sm">
+            <div class="font-bold text-amber-300 flex items-center justify-between text-xs">
               <span>5. Rare 3D VLM Discoveries</span>
-              <i class="fa-solid fa-microscope text-amber-400 text-[10px]"></i>
+              <i class="fa-solid fa-microscope text-amber-400 text-xs"></i>
             </div>
-            <div class="text-[10px] text-slate-300 mt-1 font-mono">442, 276, nongated_151, 51, 632</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Vasa vasorum neovascularization, LV scar fat, dual valves/pacemaker &amp; lung masses.</div>
+            <div class="text-xs text-slate-200 mt-1.5 font-mono">442, 276, nongated_151, 51, 632</div>
+            <div class="text-[11px] text-slate-300 mt-1 leading-relaxed">Vasa vasorum neovascularization, LV scar fat, dual valves/pacemaker &amp; lung masses.</div>
           </button>
         </div>
       </div>
@@ -1702,118 +1703,118 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
 
       <!-- Cases Spreadsheet Table -->
-      <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg">
-        <div class="overflow-x-auto max-h-[720px] custom-scrollbar">
-          <table id="casesSpreadsheetTable" class="sheet-table w-full text-left text-xs text-slate-300 border-collapse">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto max-h-[calc(100vh-250px)] min-h-[580px] custom-scrollbar">
+          <table id="casesSpreadsheetTable" class="sheet-table w-full text-left text-xs text-slate-300 border-collapse table-auto">
             <thead class="bg-slate-900/95 uppercase tracking-wider font-semibold text-slate-400 border-b-2 border-slate-700 select-none sticky top-0 z-10 shadow-sm backdrop-blur-sm">
               <tr>
-                <th class="px-3 py-2.5 w-12 text-slate-500 font-mono text-center border-r border-slate-700/70 bg-slate-900/95">#</th>
+                <th class="px-3 py-3 w-12 text-slate-500 font-mono text-center border-r border-slate-700/70 bg-slate-900/95">#</th>
 
                 <!-- Participant ID -->
-                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[130px]">
-                  <div class="flex items-center justify-between gap-1">
-                    <div onclick="sortTableBy('participant_id')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Participant ID">
-                      <span class="text-[11px] whitespace-nowrap">Participant ID</span>
-                      <i id="sortIcon_participant_id" class="fa-solid fa-arrow-down-1-9 text-sky-400 text-[10px]"></i>
+                <th class="px-4 py-3 text-left font-bold text-xs border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[140px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <div onclick="sortTableBy('participant_id')" class="flex items-center gap-1.5 cursor-pointer flex-1 truncate py-0.5" title="Sort by Participant ID">
+                      <span class="text-xs font-bold text-slate-300 whitespace-nowrap">Participant ID</span>
+                      <i id="sortIcon_participant_id" class="fa-solid fa-arrow-down-1-9 text-sky-400 text-xs"></i>
                     </div>
                     <button onclick="openColMenu(event, 'participant_id')" id="colFilterBtn_participant_id" title="Filter &amp; Sort Participant ID"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition shrink-0">
-                      <i id="filterIcon_participant_id" class="fa-solid fa-filter text-[10px]"></i>
+                            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/80 transition shrink-0">
+                      <i id="filterIcon_participant_id" class="fa-solid fa-filter text-[11px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- Scan Type -->
-                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[115px]">
-                  <div class="flex items-center justify-between gap-1">
-                    <div onclick="sortTableBy('scan_type')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Scan Type">
-                      <span class="text-[11px] whitespace-nowrap">Scan Type</span>
-                      <i id="sortIcon_scan_type" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                <th class="px-4 py-3 text-left font-bold text-xs border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[130px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <div onclick="sortTableBy('scan_type')" class="flex items-center gap-1.5 cursor-pointer flex-1 truncate py-0.5" title="Sort by Scan Type">
+                      <span class="text-xs font-bold text-slate-300 whitespace-nowrap">Scan Type</span>
+                      <i id="sortIcon_scan_type" class="fa-solid fa-sort text-slate-500 text-xs"></i>
                     </div>
                     <button onclick="openColMenu(event, 'scan_type')" id="colFilterBtn_scan_type" title="Filter &amp; Sort Scan Type (Gated CS vs Non-Gated CT)"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition shrink-0">
-                      <i id="filterIcon_scan_type" class="fa-solid fa-filter text-[10px]"></i>
+                            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/80 transition shrink-0">
+                      <i id="filterIcon_scan_type" class="fa-solid fa-filter text-[11px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- Agatston CAC -->
-                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[130px]">
-                  <div class="flex items-center justify-between gap-1">
-                    <div onclick="sortTableBy('calcium_score')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Agatston CAC Score">
-                      <span class="text-[11px] whitespace-nowrap">Agatston CAC</span>
-                      <i id="sortIcon_calcium_score" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                <th class="px-4 py-3 text-left font-bold text-xs border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[145px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <div onclick="sortTableBy('calcium_score')" class="flex items-center gap-1.5 cursor-pointer flex-1 truncate py-0.5" title="Sort by Agatston CAC Score">
+                      <span class="text-xs font-bold text-slate-300 whitespace-nowrap">Agatston CAC</span>
+                      <i id="sortIcon_calcium_score" class="fa-solid fa-sort text-slate-500 text-xs"></i>
                     </div>
                     <button onclick="openColMenu(event, 'calcium_score')" id="colFilterBtn_calcium_score" title="Filter &amp; Sort by Agatston CAC Tiers &amp; Ranges"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition shrink-0">
-                      <i id="filterIcon_calcium_score" class="fa-solid fa-filter text-[10px]"></i>
+                            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/80 transition shrink-0">
+                      <i id="filterIcon_calcium_score" class="fa-solid fa-filter text-[11px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- EAT Volume -->
-                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[125px]">
-                  <div class="flex items-center justify-between gap-1">
-                    <div onclick="sortTableBy('eat_volume_cm3')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1 justify-end" title="Sort by Total EAT Volume">
-                      <span class="text-[11px] whitespace-nowrap">EAT Volume</span>
-                      <i id="sortIcon_eat_volume_cm3" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                <th class="px-4 py-3 text-right font-bold text-xs border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[135px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <div onclick="sortTableBy('eat_volume_cm3')" class="flex items-center gap-1.5 cursor-pointer flex-1 truncate py-0.5 justify-end" title="Sort by Total EAT Volume">
+                      <span class="text-xs font-bold text-slate-300 whitespace-nowrap">EAT Volume</span>
+                      <i id="sortIcon_eat_volume_cm3" class="fa-solid fa-sort text-slate-500 text-xs"></i>
                     </div>
                     <button onclick="openColMenu(event, 'eat_volume_cm3')" id="colFilterBtn_eat_volume_cm3" title="Filter &amp; Sort EAT Volume"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1 shrink-0">
-                      <i id="filterIcon_eat_volume_cm3" class="fa-solid fa-filter text-[10px]"></i>
+                            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/80 transition ml-1 shrink-0">
+                      <i id="filterIcon_eat_volume_cm3" class="fa-solid fa-filter text-[11px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- PVAT Volume -->
-                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[125px]">
-                  <div class="flex items-center justify-between gap-1">
-                    <div onclick="sortTableBy('pvat_volume_cm3')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1 justify-end" title="Sort by Total PVAT Volume">
-                      <span class="text-[11px] whitespace-nowrap">PVAT Volume</span>
-                      <i id="sortIcon_pvat_volume_cm3" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                <th class="px-4 py-3 text-right font-bold text-xs border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[135px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <div onclick="sortTableBy('pvat_volume_cm3')" class="flex items-center gap-1.5 cursor-pointer flex-1 truncate py-0.5 justify-end" title="Sort by Total PVAT Volume">
+                      <span class="text-xs font-bold text-slate-300 whitespace-nowrap">PVAT Volume</span>
+                      <i id="sortIcon_pvat_volume_cm3" class="fa-solid fa-sort text-slate-500 text-xs"></i>
                     </div>
                     <button onclick="openColMenu(event, 'pvat_volume_cm3')" id="colFilterBtn_pvat_volume_cm3" title="Filter &amp; Sort PVAT Volume"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1 shrink-0">
-                      <i id="filterIcon_pvat_volume_cm3" class="fa-solid fa-filter text-[10px]"></i>
+                            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/80 transition ml-1 shrink-0">
+                      <i id="filterIcon_pvat_volume_cm3" class="fa-solid fa-filter text-[11px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- PVAT Mean HU -->
-                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
-                  <div class="flex items-center justify-between gap-1">
-                    <div onclick="sortTableBy('pvat_mean_hu')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1 justify-end" title="Sort by PVAT Mean Attenuation">
-                      <span class="text-[11px]">PVAT Mean HU</span>
-                      <i id="sortIcon_pvat_mean_hu" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                <th class="px-4 py-3 text-right font-bold text-xs border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[135px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <div onclick="sortTableBy('pvat_mean_hu')" class="flex items-center gap-1.5 cursor-pointer flex-1 truncate py-0.5 justify-end" title="Sort by PVAT Mean Attenuation">
+                      <span class="text-xs font-bold text-slate-300 whitespace-nowrap">PVAT Mean HU</span>
+                      <i id="sortIcon_pvat_mean_hu" class="fa-solid fa-sort text-slate-500 text-xs"></i>
                     </div>
                     <button onclick="openColMenu(event, 'pvat_mean_hu')" id="colFilterBtn_pvat_mean_hu" title="Filter &amp; Sort PVAT HU (-70.1 Cutoff)"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1">
-                      <i id="filterIcon_pvat_mean_hu" class="fa-solid fa-filter text-[10px]"></i>
+                            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/80 transition ml-1">
+                      <i id="filterIcon_pvat_mean_hu" class="fa-solid fa-filter text-[11px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- CRISP-CT Status -->
-                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
-                  <div class="flex items-center justify-between gap-1">
-                    <div onclick="sortTableBy('crisp_ct_status')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Vascular Inflammation Status">
-                      <span class="text-[11px]">CRISP-CT Status</span>
-                      <i id="sortIcon_crisp_ct_status" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
+                <th class="px-4 py-3 text-left font-bold text-xs border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[155px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <div onclick="sortTableBy('crisp_ct_status')" class="flex items-center gap-1.5 cursor-pointer flex-1 truncate py-0.5" title="Sort by Vascular Inflammation Status">
+                      <span class="text-xs font-bold text-slate-300 whitespace-nowrap">CRISP-CT Status</span>
+                      <i id="sortIcon_crisp_ct_status" class="fa-solid fa-sort text-slate-500 text-xs"></i>
                     </div>
                     <button onclick="openColMenu(event, 'crisp_ct_status')" id="colFilterBtn_crisp_ct_status" title="Filter &amp; Sort CRISP-CT Status"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
-                      <i id="filterIcon_crisp_ct_status" class="fa-solid fa-filter text-[10px]"></i>
+                            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/80 transition">
+                      <i id="filterIcon_crisp_ct_status" class="fa-solid fa-filter text-[11px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- Actions -->
-                <th class="px-3 py-2 text-right font-semibold bg-slate-900/95">
-                  <div class="flex items-center justify-end gap-1">
-                    <span class="text-[11px]">Actions</span>
+                <th class="px-4 py-3 text-right font-bold text-xs bg-slate-900/95 min-w-[210px]">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <span class="text-xs font-bold text-slate-300">Actions</span>
                     <button onclick="openColMenu(event, 'actions')" id="colFilterBtn_actions" title="Filter by Pipeline Status &amp; Deliverables"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
-                      <i id="filterIcon_actions" class="fa-solid fa-filter text-[10px]"></i>
+                            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/80 transition">
+                      <i id="filterIcon_actions" class="fa-solid fa-filter text-[11px]"></i>
                     </button>
                   </div>
                 </th>
@@ -4484,58 +4485,58 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       }
 
       const isCompact = tableDensity === 'compact';
-      const rowPad = isCompact ? 'py-1.5 px-3 text-[11px]' : 'py-2.5 px-3 text-xs';
+      const rowPad = isCompact ? 'py-2 px-3.5 text-xs' : 'py-3.5 px-4 text-sm font-medium';
 
       tbody.innerHTML = cases.map((c, idx) => {
         const inflamBadge = c.crisp_ct_status === 'Active Vascular Inflammation'
-          ? '<span class="inline-flex items-center px-2 py-0.5 rounded bg-rose-900/60 text-rose-300 border border-rose-500/40 text-[10px] font-medium"><i class="fa-solid fa-fire text-[9px] mr-1 text-rose-400"></i>Active</span>'
-          : `<span class="text-slate-400 text-[11px]">${c.crisp_ct_status || '--'}</span>`;
+          ? '<span class="inline-flex items-center px-2.5 py-1 rounded-md bg-rose-900/70 text-rose-300 border border-rose-500/50 text-xs font-semibold"><i class="fa-solid fa-fire text-[10px] mr-1.5 text-rose-400"></i>Active</span>'
+          : `<span class="text-slate-400 text-xs">${c.crisp_ct_status || '--'}</span>`;
 
         const scanBadge = c.scan_type === 'Gated CS'
-          ? '<span class="px-2 py-0.5 rounded bg-indigo-950/70 text-indigo-300 border border-indigo-500/30 text-[10px] font-medium font-mono">Gated CS</span>'
-          : '<span class="px-2 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-500/30 text-[10px] font-medium font-mono">Non-Gated CT</span>';
+          ? '<span class="px-2.5 py-1 rounded-md bg-indigo-950/80 text-indigo-300 border border-indigo-500/40 text-xs font-semibold font-mono">Gated CS</span>'
+          : '<span class="px-2.5 py-1 rounded-md bg-amber-950/80 text-amber-300 border border-amber-500/40 text-xs font-semibold font-mono">Non-Gated CT</span>';
 
         return `
           <tr class="hover:bg-sky-950/30 odd:bg-slate-800/40 even:bg-slate-800/80 transition border-b border-slate-700/60">
             <td class="${rowPad} font-mono text-slate-500 text-center border-r border-slate-700/60">${idx + 1}</td>
-            <td class="${rowPad} font-mono font-medium text-white border-r border-slate-700/60 whitespace-nowrap">${c.participant_id}</td>
+            <td class="${rowPad} font-mono font-semibold text-white border-r border-slate-700/60 whitespace-nowrap">${c.participant_id}</td>
             <td class="${rowPad} border-r border-slate-700/60 whitespace-nowrap">${scanBadge}</td>
-            <td class="${rowPad} font-mono text-amber-300 border-r border-slate-700/60 whitespace-nowrap">
+            <td class="${rowPad} font-mono text-amber-300 font-semibold border-r border-slate-700/60 whitespace-nowrap">
               ${c.calcium_score !== null && c.calcium_score !== undefined ? c.calcium_score : '--'}
-              <span class="text-[10px] text-slate-400 ml-1">(${c.calcium_risk_tier || '--'})</span>
+              <span class="text-xs text-slate-400 ml-1.5 font-normal">(${c.calcium_risk_tier || '--'})</span>
             </td>
-            <td class="${rowPad} font-mono text-sky-300 text-right border-r border-slate-700/60 whitespace-nowrap">
+            <td class="${rowPad} font-mono text-sky-300 font-semibold text-right border-r border-slate-700/60 whitespace-nowrap">
               ${c.eat_volume_cm3 !== null && c.eat_volume_cm3 !== undefined ? c.eat_volume_cm3.toFixed(2) + ' cm³' : '--'}
             </td>
-            <td class="${rowPad} font-mono text-slate-300 text-right border-r border-slate-700/60 whitespace-nowrap">
+            <td class="${rowPad} font-mono text-slate-200 font-semibold text-right border-r border-slate-700/60 whitespace-nowrap">
               ${c.pvat_volume_cm3 !== null && c.pvat_volume_cm3 !== undefined ? c.pvat_volume_cm3.toFixed(2) + ' cm³' : '--'}
             </td>
-            <td class="${rowPad} font-mono text-indigo-300 text-right border-r border-slate-700/60 whitespace-nowrap">
+            <td class="${rowPad} font-mono text-indigo-300 font-semibold text-right border-r border-slate-700/60 whitespace-nowrap">
               ${c.pvat_mean_hu !== null && c.pvat_mean_hu !== undefined ? c.pvat_mean_hu.toFixed(1) + ' HU' : '--'}
             </td>
             <td class="${rowPad} border-r border-slate-700/60 whitespace-nowrap">${inflamBadge}</td>
-            <td class="${rowPad} text-right space-x-1 whitespace-nowrap">
+            <td class="${rowPad} text-right space-x-1.5 whitespace-nowrap">
               ${c.has_report_pdf ? `
                 <a href="/report/${encodeURIComponent(c.participant_id)}/pdf" target="_blank"
-                   class="inline-flex items-center gap-1 text-rose-300 hover:text-white text-[11px] font-medium px-2 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 transition shadow-sm"
+                   class="inline-flex items-center gap-1.5 text-rose-300 hover:text-white text-xs font-semibold px-2.5 py-1 rounded-md bg-rose-950/70 hover:bg-rose-900 border border-rose-500/40 transition shadow-sm"
                    title="View 2-Page Clinical Diagnostic PDF for Patient ${c.participant_id}">
-                  <i class="fa-solid fa-file-pdf text-[10px] text-rose-400"></i> Report
+                  <i class="fa-solid fa-file-pdf text-[11px] text-rose-400"></i> Report
                 </a>
               ` : (c.has_report_html ? `
                 <a href="/report/${encodeURIComponent(c.participant_id)}/html" target="_blank"
-                   class="inline-flex items-center gap-1 text-amber-300 hover:text-white text-[11px] font-medium px-2 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 transition shadow-sm"
+                   class="inline-flex items-center gap-1.5 text-amber-300 hover:text-white text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-950/70 hover:bg-amber-900 border border-amber-500/40 transition shadow-sm"
                    title="View Clinical HTML Report for Patient ${c.participant_id}">
-                  <i class="fa-solid fa-file-lines text-[10px] text-amber-400"></i> HTML
+                  <i class="fa-solid fa-file-lines text-[11px] text-amber-400"></i> HTML
                 </a>
               ` : '')}
               ${c.has_seg ? `
                 <a href="/patient/${encodeURIComponent(c.participant_id)}/" target="_blank"
-                   class="inline-flex items-center gap-1 text-emerald-300 hover:text-white text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-800 border border-emerald-500/40 transition shadow-sm"
+                   class="inline-flex items-center gap-1.5 text-emerald-300 hover:text-white text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-950/70 hover:bg-emerald-800 border border-emerald-500/40 transition shadow-sm"
                    title="Open interactive OHIF v3.13 Viewer for Patient ${c.participant_id}">
-                  <i class="fa-solid fa-cube text-[10px] text-emerald-400"></i> View OHIF
+                  <i class="fa-solid fa-cube text-[11px] text-emerald-400"></i> View OHIF
                 </a>
-              ` : '<span class="px-2 py-0.5 rounded bg-slate-800/80 text-slate-500 text-[10px] border border-slate-700/50">Unsegmented</span>'}
-              <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-400 hover:text-sky-300 text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">Deep Dive</button>
+              ` : '<span class="px-2.5 py-1 rounded-md bg-slate-800/80 text-slate-500 text-xs border border-slate-700/50">Unsegmented</span>'}
+              <button onclick="openCaseModal('${c.participant_id}')" class="text-sky-300 hover:text-white text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 transition shadow-sm">Deep Dive</button>
             </td>
           </tr>
         `;
@@ -5616,4 +5617,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 </body>
 </html>
 """
+
+# Dynamically inject software version into dashboard template
+DASHBOARD_HTML_TEMPLATE = DASHBOARD_HTML_TEMPLATE.replace("__SOFTWARE_VERSION__", __version__)
 

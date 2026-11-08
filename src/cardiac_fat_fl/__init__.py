@@ -1,5 +1,7 @@
 """Modernized MONAI & NVIDIA FLARE Cardiac Fat Quantification Package."""
 
+__version__ = "1.0.0"
+
 from cardiac_fat_fl.anatomy_segmenter import AnatomyMasks, UnifiedAnatomySegmenter
 from cardiac_fat_fl.clinical_report import (
     encapsulate_pdf_to_dicom,
@@ -64,7 +66,6 @@ from cardiac_fat_fl.segmentation_evaluator import (
 )
 from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
 
-__version__ = "0.1.0"
 __all__ = [
     "ADIPOSE_HU_MIN",
     "ADIPOSE_HU_MAX",
