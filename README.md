@@ -899,6 +899,9 @@ monai-cardiac-fat-fl/
 │       ├── pacs_client.py         # Institutional PACS archive push via DICOMweb (STOW-RS) and DIMSE (C-STORE)
 │       ├── pacs_daemon.py         # Autonomous PACS watchdog daemon (auto-routing CT -> MAP DAG -> DICOM-SEG/SR -> PACS)
 │       ├── clinical_report.py     # SOTA Cleerly/HeartFlow-style clinical imaging report & 3-view MPR montage
+│       ├── anonymizer.py          # DICOM PS 3.15 Annex E & HIPAA Safe Harbor de-identification and PHI auditing engine
+│       ├── regulatory_dossier.py  # FDA Class II 510(k) SaMD Design History File (DHF) PDF & JSON dossier generator
+│       ├── nv_reason_reporter.py  # NVIDIA NV-Reason-CT 3D Vision-Language AI Radiologist (3D ViT + Qwen3.5-4B)
 │       ├── cohort_research.py     # CohortDataset, 5-tier CAC linking, ANOVA/Kruskal-Wallis omnibus testing & regression
 │       ├── publication_figure.py  # 300 DPI publication-grade composite figure generator for cardiovascular imaging journals
 │       ├── dashboard.py           # Interactive research dashboard & embedded OHIF workstation server
@@ -911,12 +914,14 @@ monai-cardiac-fat-fl/
 │       ├── ohif_viewer.py         # Local CORS-enabled multi-threaded HTTP server and browser launcher
 │       ├── hardware.py            # Dynamic hardware auto-detection (CPU/RAM/GPU) & safe concurrency sizing
 │       ├── coca_parity.py         # 4-checkpoint architectural parity audit & direct Harvard execution engine
-│       └── cli.py                 # Typer CLI (quantify, map-run, daemon, report, view, export-ohif, push, fhir-export, dashboard, benchmark, hardware, parity-audit)
+│       └── cli.py                 # Typer CLI (quantify, map-run, daemon, report, view, export-ohif, push, fhir-export, dashboard, benchmark, hardware, parity-audit, deid-audit, anonymize, regulatory-export)
 └── tests/
     ├── conftest.py                # Synthetic 3D cardiac CT phantom fixtures with known HU values
+    ├── test_anonymizer.py         # HIPAA Safe Harbor 18-element de-identification & PHI leak auditor tests
+    ├── test_nv_reason.py          # NVIDIA NV-Reason-CT 3D Vision-Language prompt builder & tag sanitization tests
     ├── test_ci_workflows.py       # Automated validation of GitHub Actions workflows, Docker specs & dependencies
     ├── test_monai_deploy.py       # Automated unit & CLI tests for MONAI Deploy operators and pipeline
-    ├── test_cli.py                # End-to-end CLI tests (quantify, federated-stats, compare-models, dashboard, benchmark)
+    ├── test_cli.py                # End-to-end CLI tests (quantify, federated-stats, compare-models, dashboard, benchmark, regulatory-export)
     ├── test_dicom_sr.py           # DICOM-SR TID 1500 SOP Class, SNOMED-CT/LOINC/UCUM, and NaN empty-mask tests
     ├── test_fhir_client.py        # HL7 FHIR R4 bundle builder, Observation, DiagnosticReport, and CLI export/push tests
     ├── test_fhir_server.py        # HL7 FHIR R4 mock server & transaction bundle tests
