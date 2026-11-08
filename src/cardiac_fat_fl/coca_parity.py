@@ -1120,10 +1120,10 @@ def _run_cloned_harvard_repo_stage3(
             spacing=spacing,
             pericardium=pericardium,
             la=la,
-            lv=(lv | myocardium) if myocardium is not None else lv,
+            lv=lv,
             ra=ra,
             rv=rv,
-            myocardium=None,
+            myocardium=myocardium,
             aorta=aorta,
         )
 
@@ -1354,9 +1354,28 @@ def run_architectural_parity_audit(
         if pid in cached_case_results_map:
             cr = cached_case_results_map[pid]
             cand_csv_path = p_dir / "cardiac_fat_measurements.csv"
+            if not cand_csv_path.is_file():
+                alt_cand_csv = p_dir / "segmentation_models" / "monai_wholebody" / "monai_cardiac_fat_measurements.csv"
+                if alt_cand_csv.is_file():
+                    cand_csv_path = alt_cand_csv
+
             ref_csv_path = p_dir / "harvard_cfq_measurements.csv"
+            if not ref_csv_path.is_file():
+                alt_ref_csv = p_dir / "segmentation_models" / "harvard_cardiacfatquant" / "harvard_cfq_measurements.csv"
+                if alt_ref_csv.is_file():
+                    ref_csv_path = alt_ref_csv
+
             cand_seg_path = p_dir / "eat_pvat.seg.nrrd"
+            if not cand_seg_path.is_file():
+                alt_cand_seg = p_dir / "segmentation_models" / "monai_wholebody" / "eat_pvat_monai_wholebody.seg.nrrd"
+                if alt_cand_seg.is_file():
+                    cand_seg_path = alt_cand_seg
+
             harvard_seg_path = p_dir / "eat_pvat_harvard_cfq.seg.nrrd"
+            if not harvard_seg_path.is_file():
+                alt_harvard_seg = p_dir / "segmentation_models" / "harvard_cardiacfatquant" / "eat_pvat_harvard_cfq.seg.nrrd"
+                if alt_harvard_seg.is_file():
+                    harvard_seg_path = alt_harvard_seg
 
             if (
                 cand_csv_path.is_file()
@@ -1432,7 +1451,16 @@ def run_architectural_parity_audit(
         heart_path = p_dir / "heart.seg.nrrd"
         wb_path = p_dir / "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
         if not wb_path.is_file():
-            wb_path = p_dir / "totalsegmentator.seg.nrrd"
+            alt_wb = (
+                p_dir
+                / "segmentation_models"
+                / "monai_wholebody"
+                / "monai_wholebody_ct_segmentation_1-5mm_masks.seg.nrrd"
+            )
+            if alt_wb.is_file():
+                wb_path = alt_wb
+            else:
+                wb_path = p_dir / "totalsegmentator.seg.nrrd"
 
         # Checkpoint A & B telemetry on the first case (or when heart.seg.nrrd is missing)
         curated_heart_mask = None
@@ -1573,7 +1601,16 @@ def run_architectural_parity_audit(
 
         # Candidate: monai-cardiac-fat-fl's CardiacFatQuant parity morphological engine
         harvard_seg_path = p_dir / "eat_pvat_harvard_cfq.seg.nrrd"
+        if not harvard_seg_path.is_file():
+            alt_harvard_seg = p_dir / "segmentation_models" / "harvard_cardiacfatquant" / "eat_pvat_harvard_cfq.seg.nrrd"
+            if alt_harvard_seg.is_file():
+                harvard_seg_path = alt_harvard_seg
+
         cand_seg_path = p_dir / "eat_pvat.seg.nrrd"
+        if not cand_seg_path.is_file():
+            alt_cand_seg = p_dir / "segmentation_models" / "monai_wholebody" / "eat_pvat_monai_wholebody.seg.nrrd"
+            if alt_cand_seg.is_file():
+                cand_seg_path = alt_cand_seg
         was_already_saved = harvard_seg_path.is_file() and cand_seg_path.is_file()
         if was_already_saved:
             c_mt = read_nrrd_as_metatensor(cand_seg_path)
@@ -1673,9 +1710,20 @@ def run_architectural_parity_audit(
                         spacing=spacing,
                         origin=origin,
                     )
+                    cfq_dir = p_dir / "segmentation_models" / "harvard_cardiacfatquant"
+                    cfq_seg_out = (
+                        cfq_dir / "eat_pvat_harvard_cfq.seg.nrrd"
+                        if cfq_dir.is_dir()
+                        else (p_dir / "eat_pvat_harvard_cfq.seg.nrrd")
+                    )
+                    cfq_csv_out = (
+                        cfq_dir / "harvard_cfq_measurements.csv"
+                        if cfq_dir.is_dir()
+                        else (p_dir / "harvard_cfq_measurements.csv")
+                    )
                     write_eat_pvat_seg_nrrd(
                         seg_data=ref_8ch.astype(np.uint8),
-                        output_path=p_dir / "eat_pvat_harvard_cfq.seg.nrrd",
+                        output_path=cfq_seg_out,
                         reference_header=ref_header,
                         spacing=spacing,
                         origin=origin,
@@ -1684,7 +1732,7 @@ def run_architectural_parity_audit(
                     writer = csv.DictWriter(f_csv, fieldnames=list(MEASUREMENT_CSV_COLUMNS))
                     writer.writeheader()
                     writer.writerow(cand_row)
-                with open(p_dir / "harvard_cfq_measurements.csv", "w", newline="", encoding="utf-8") as f_csv:
+                with open(cfq_csv_out, "w", newline="", encoding="utf-8") as f_csv:
                     writer = csv.DictWriter(f_csv, fieldnames=list(MEASUREMENT_CSV_COLUMNS))
                     writer.writeheader()
                     writer.writerow(ref_row)

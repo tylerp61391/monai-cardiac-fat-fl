@@ -8,7 +8,7 @@
 [![FDA Class II SaMD](https://img.shields.io/badge/FDA%20510(k)-SaMD%20DHF%20Ready-0A66C2.svg)](docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md)
 [![IEC 62304](https://img.shields.io/badge/IEC%2062304-Class%20B%20Traceable-059669.svg)](docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md)
 [![ISO 14971](https://img.shields.io/badge/ISO%2014971-Risk%20Managed%20FMEA-7C3AED.svg)](docs/regulatory/FDA_SAMD_REGULATORY_DOSSIER.md)
-[![Stanford COCA Validation](https://img.shields.io/badge/Validation-1%2C002%20COCA%20Cases-10B981.svg)](docs/PARITY_BENCHMARK_ROADMAP.md)
+[![Stanford COCA Validation](https://img.shields.io/badge/Validation-1%2C000%20COCA%20Cases-10B981.svg)](docs/PARITY_BENCHMARK_ROADMAP.md)
 [![CI Test Suite](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tylerp61391/monai-cardiac-fat-fl/actions/workflows/ci.yml)
 [![Docker MAP](https://img.shields.io/badge/MONAI%20Deploy-MAP%20Package-76B900.svg?logo=nvidia&logoColor=white)](https://github.com/tylerp61391/monai-cardiac-fat-fl/pkgs/container/monai-cardiac-fat-map)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
