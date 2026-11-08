@@ -1034,6 +1034,19 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             download_name="FDA_510k_SaMD_DHF_Evidence_Dossier.pdf",
         )
 
+    @app.route("/api/cohort/edge-cases-slide", methods=["GET"])
+    def serve_edge_cases_slide():
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        fmt = request.args.get("format", "png").lower()
+        if fmt == "pdf":
+            pdf_path = repo_root / "docs" / "figures" / "coca_edge_cases_and_nv_reason_showcase.pdf"
+            if pdf_path.is_file():
+                return send_file(str(pdf_path), mimetype="application/pdf")
+        png_path = repo_root / "docs" / "figures" / "coca_edge_cases_and_nv_reason_showcase.png"
+        if png_path.is_file():
+            return send_file(str(png_path), mimetype="image/png")
+        return jsonify({"error": "Edge cases showcase slide not found"}), 404
+
     return app
 
 
@@ -1510,12 +1523,81 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
     <!-- ================= TAB 2: CASE EXPLORER ================= -->
     <section id="section-cases" class="hidden space-y-4">
+      <!-- Clinical Edge Cases & NV-Reason-CT 3D VLM Discovery Spotlight -->
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow space-y-3">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i>
+              <h3 class="text-sm font-bold text-white">Clinical Edge Cases, Discordant Phenotypes &amp; NV-Reason-CT 3D VLM Spotlight</h3>
+              <span class="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/60 text-sky-300 text-[10px] font-mono">996 3D VLM Reports Mined</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              Click any phenotype card below to filter the Case Explorer to standout clinical edge cases discovered across the 1,001-scan Stanford COCA cohort, or open the 300 DPI presentation slide.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="filterEdgeCases('')" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-600 text-slate-300 text-[11px] font-semibold transition">
+              <i class="fa-solid fa-rotate-left mr-1"></i>Show All (1,001)
+            </button>
+            <a href="/api/cohort/edge-cases-slide?format=png" target="_blank" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold transition flex items-center gap-1.5 shadow">
+              <i class="fa-solid fa-image"></i> Edge Cases Slide (PNG)
+            </a>
+            <a href="/api/cohort/edge-cases-slide?format=pdf" target="_blank" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition flex items-center gap-1.5 shadow">
+              <i class="fa-solid fa-file-pdf"></i> Slide (PDF)
+            </a>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-2.5 text-xs">
+          <button onclick="filterEdgeCases('nongated_213, nongated_140, nongated_24, nongated_131')" class="text-left bg-rose-950/30 hover:bg-rose-900/40 border border-rose-700/50 rounded-lg p-2.5 transition group">
+            <div class="font-bold text-rose-300 flex items-center justify-between">
+              <span>1. Invisible Risk (CAC = 0)</span>
+              <i class="fa-solid fa-fire text-rose-400 text-[10px]"></i>
+            </div>
+            <div class="text-[10px] text-slate-300 mt-1 font-mono">nongated_213 (-55.8 HU), 140 (-51.1 HU)</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Zero Agatston calcium but severe active CRISP-CT coronaritis (&gt; -70.1 HU).</div>
+          </button>
+          <button onclick="filterEdgeCases('nongated_39, nongated_179, 457')" class="text-left bg-purple-950/30 hover:bg-purple-900/40 border border-purple-700/50 rounded-lg p-2.5 transition group">
+            <div class="font-bold text-purple-300 flex items-center justify-between">
+              <span>2. Effusion &amp; Pneumothorax</span>
+              <i class="fa-solid fa-lungs text-purple-400 text-[10px]"></i>
+            </div>
+            <div class="text-[10px] text-slate-300 mt-1 font-mono">nongated_39 (-53.1 HU), 179 (-47.7 HU)</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">3D VLM flags hemorrhagic pericardial effusion, phantom tumor &amp; hydropneumothorax.</div>
+          </button>
+          <button onclick="filterEdgeCases('125, 303, nongated_159')" class="text-left bg-sky-950/30 hover:bg-sky-900/40 border border-sky-700/50 rounded-lg p-2.5 transition group">
+            <div class="font-bold text-sky-300 flex items-center justify-between">
+              <span>3. Lipomas &amp; Stable Plaque</span>
+              <i class="fa-solid fa-shield-heart text-sky-400 text-[10px]"></i>
+            </div>
+            <div class="text-[10px] text-slate-300 mt-1 font-mono">125 (CAC 635k), 303 (-89.9 HU), 159</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Massive calcified plaque with quiescent PVAT &amp; VLM-detected epicardial lipomas.</div>
+          </button>
+          <button onclick="filterEdgeCases('414, nongated_2, nongated_85, nongated_195')" class="text-left bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-700/50 rounded-lg p-2.5 transition group">
+            <div class="font-bold text-emerald-300 flex items-center justify-between">
+              <span>4. Extremes &amp; Rescued CT</span>
+              <i class="fa-solid fa-screwdriver-wrench text-emerald-400 text-[10px]"></i>
+            </div>
+            <div class="text-[10px] text-slate-300 mt-1 font-mono">414 (327.6 cm³), 85 (0 cm³), 195</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Max visceral obesity, cachectic NaN guardrail &amp; zero-spacing DICOM header rescue.</div>
+          </button>
+          <button onclick="filterEdgeCases('442, 276, nongated_151, nongated_51, 632')" class="text-left bg-amber-950/30 hover:bg-amber-900/40 border border-amber-700/50 rounded-lg p-2.5 transition group">
+            <div class="font-bold text-amber-300 flex items-center justify-between">
+              <span>5. Rare 3D VLM Discoveries</span>
+              <i class="fa-solid fa-microscope text-amber-400 text-[10px]"></i>
+            </div>
+            <div class="text-[10px] text-slate-300 mt-1 font-mono">442, 276, nongated_151, 51, 632</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Vasa vasorum neovascularization, LV scar fat, dual valves/pacemaker &amp; lung masses.</div>
+          </button>
+        </div>
+      </div>
+
       <!-- Search & Filters -->
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3 flex-1 min-w-[280px]">
           <div class="relative flex-1">
             <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
-            <input type="text" id="caseSearchInput" oninput="applyCaseFilters()" placeholder="Search by participant ID..."
+            <input type="text" id="caseSearchInput" oninput="applyCaseFilters()" placeholder="Search by participant ID (or comma-separated IDs e.g. nongated_213, 414)..."
                    class="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-4 py-1.5 text-xs text-white w-full focus:outline-none focus:border-sky-500">
           </div>
         </div>
@@ -3195,14 +3277,24 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       }
     }
 
+    function filterEdgeCases(queryStr) {
+      document.getElementById('caseSearchInput').value = queryStr;
+      document.getElementById('caseTierFilter').value = '';
+      document.getElementById('caseSegOnly').checked = false;
+      document.getElementById('caseInflamOnly').checked = false;
+      applyCaseFilters();
+    }
+
     function applyCaseFilters() {
       const q = document.getElementById('caseSearchInput').value.toLowerCase().trim();
+      const qTokens = q ? q.split(',').map(s => s.trim()).filter(Boolean) : [];
       const tier = document.getElementById('caseTierFilter').value;
       const segOnly = document.getElementById('caseSegOnly').checked;
       const inflamOnly = document.getElementById('caseInflamOnly').checked;
 
       let filtered = rawCases.filter(c => {
-        if (q && !c.participant_id.toLowerCase().includes(q)) return false;
+        if (qTokens.length === 1 && !c.participant_id.toLowerCase().includes(qTokens[0])) return false;
+        if (qTokens.length > 1 && !qTokens.includes(c.participant_id.toLowerCase())) return false;
         if (tier && c.calcium_risk_tier !== tier) return false;
         if (segOnly && !c.has_seg) return false;
         if (inflamOnly && c.crisp_ct_status !== 'Active Vascular Inflammation') return false;

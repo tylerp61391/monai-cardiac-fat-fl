@@ -352,6 +352,14 @@ def test_dashboard_privacy_and_regulatory_routes(test_app):
     assert res_dhf_pdf.status_code == 200
     assert res_dhf_pdf.mimetype == "application/pdf"
 
+    # 5. Edge Cases & NV-Reason-CT Showcase Slide routes
+    res_ec_png = client.get("/api/cohort/edge-cases-slide?format=png")
+    assert res_ec_png.status_code == 200
+    assert res_ec_png.mimetype == "image/png"
+    res_ec_pdf = client.get("/api/cohort/edge-cases-slide?format=pdf")
+    assert res_ec_pdf.status_code == 200
+    assert res_ec_pdf.mimetype == "application/pdf"
+
 
 
 
