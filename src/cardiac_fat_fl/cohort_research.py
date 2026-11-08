@@ -264,14 +264,23 @@ class CohortDataset:
         for seg_candidate in self._bounded_glob("eat_pvat.seg.*", max_depth=4):
             p_folder = seg_candidate.parent
             pid = p_folder.name
-            if pid not in patient_dirs:
+            # Prevent duplicate registration of non-gated or already-tracked patient folders
+            if (
+                pid not in patient_dirs
+                and f"nongated_{pid}" not in patient_dirs
+                and not any(p_folder == ep or p_folder in ep.parents or ep in p_folder.parents for ep in patient_dirs.values())
+            ):
                 patient_dirs[pid] = p_folder
 
         # Also check participant IDs from measurement CSVs
         for pid in root_metrics_by_pid:
-            if pid not in patient_dirs:
+            if (
+                pid not in patient_dirs
+                and f"nongated_{pid}" not in patient_dirs
+                and not any(pid == ep.replace("nongated_", "") for ep in patient_dirs)
+            ):
                 matching = [d for d in self._bounded_glob(pid, max_depth=3) if d.is_dir()]
-                if matching:
+                if matching and not any(matching[0] == ep for ep in patient_dirs.values()):
                     patient_dirs[pid] = matching[0]
 
         # Also inspect direct children of root_dir if they look like participants

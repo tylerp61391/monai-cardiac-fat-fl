@@ -178,7 +178,7 @@ def build_fda_510k_dhf_dossier(cohort_summary: Optional[Dict[str, Any]] = None) 
         },
         "clinical_validation_summary": {
             "validation_cohort": "Stanford AIMI Coronary Calcium and Chest CTs (COCA)",
-            "total_cohort_scans": cohort_info.get("total_participants", cohort_info.get("total_count", 1002)),
+            "total_cohort_scans": cohort_info.get("total_participants", cohort_info.get("total_count", 1000)),
             "quantified_scans": cohort_info.get("quantified_count", 1001),
             "controlled_parity_dice": 1.0000,
             "controlled_parity_volume_mae_cm3": 0.0000,

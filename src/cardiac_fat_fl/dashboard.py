@@ -1578,12 +1578,12 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
               <span class="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/60 text-sky-300 text-[10px] font-mono">996 3D VLM Reports Mined</span>
             </div>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              Click any phenotype card below to filter the Case Explorer to standout clinical edge cases discovered across the 1,001-scan Stanford COCA cohort, or open the 300 DPI presentation slide.
+              Click any phenotype card below to filter the Case Explorer to standout clinical edge cases discovered across the 1,000-scan Stanford COCA cohort, or open the 300 DPI presentation slide.
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button onclick="filterEdgeCases('')" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-600 text-slate-300 text-[11px] font-semibold transition">
-              <i class="fa-solid fa-rotate-left mr-1"></i>Show All (1,001)
+              <i class="fa-solid fa-rotate-left mr-1"></i>Show All (1,000)
             </button>
             <a href="/api/cohort/edge-cases-slide?format=png" target="_blank" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold transition flex items-center gap-1.5 shadow">
               <i class="fa-solid fa-image"></i> Edge Cases Slide (PNG)
@@ -1710,70 +1710,70 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
                 <th class="px-3 py-2.5 w-12 text-slate-500 font-mono text-center border-r border-slate-700/70 bg-slate-900/95">#</th>
 
                 <!-- Participant ID -->
-                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[130px]">
                   <div class="flex items-center justify-between gap-1">
                     <div onclick="sortTableBy('participant_id')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Participant ID">
-                      <span class="text-[11px]">Participant ID</span>
+                      <span class="text-[11px] whitespace-nowrap">Participant ID</span>
                       <i id="sortIcon_participant_id" class="fa-solid fa-arrow-down-1-9 text-sky-400 text-[10px]"></i>
                     </div>
                     <button onclick="openColMenu(event, 'participant_id')" id="colFilterBtn_participant_id" title="Filter &amp; Sort Participant ID"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition shrink-0">
                       <i id="filterIcon_participant_id" class="fa-solid fa-filter text-[10px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- Scan Type -->
-                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[115px]">
                   <div class="flex items-center justify-between gap-1">
                     <div onclick="sortTableBy('scan_type')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Scan Type">
-                      <span class="text-[11px]">Scan Type</span>
+                      <span class="text-[11px] whitespace-nowrap">Scan Type</span>
                       <i id="sortIcon_scan_type" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
                     </div>
                     <button onclick="openColMenu(event, 'scan_type')" id="colFilterBtn_scan_type" title="Filter &amp; Sort Scan Type (Gated CS vs Non-Gated CT)"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition shrink-0">
                       <i id="filterIcon_scan_type" class="fa-solid fa-filter text-[10px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- Agatston CAC -->
-                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                <th class="px-3 py-2 text-left font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[130px]">
                   <div class="flex items-center justify-between gap-1">
                     <div onclick="sortTableBy('calcium_score')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1" title="Sort by Agatston CAC Score">
-                      <span class="text-[11px]">Agatston CAC</span>
+                      <span class="text-[11px] whitespace-nowrap">Agatston CAC</span>
                       <i id="sortIcon_calcium_score" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
                     </div>
                     <button onclick="openColMenu(event, 'calcium_score')" id="colFilterBtn_calcium_score" title="Filter &amp; Sort by Agatston CAC Tiers &amp; Ranges"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition">
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition shrink-0">
                       <i id="filterIcon_calcium_score" class="fa-solid fa-filter text-[10px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- EAT Volume -->
-                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[125px]">
                   <div class="flex items-center justify-between gap-1">
                     <div onclick="sortTableBy('eat_volume_cm3')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1 justify-end" title="Sort by Total EAT Volume">
-                      <span class="text-[11px]">EAT Volume</span>
+                      <span class="text-[11px] whitespace-nowrap">EAT Volume</span>
                       <i id="sortIcon_eat_volume_cm3" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
                     </div>
                     <button onclick="openColMenu(event, 'eat_volume_cm3')" id="colFilterBtn_eat_volume_cm3" title="Filter &amp; Sort EAT Volume"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1">
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1 shrink-0">
                       <i id="filterIcon_eat_volume_cm3" class="fa-solid fa-filter text-[10px]"></i>
                     </button>
                   </div>
                 </th>
 
                 <!-- PVAT Volume -->
-                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95">
+                <th class="px-3 py-2 text-right font-semibold border-r border-slate-700/70 hover:bg-slate-800/90 transition group relative bg-slate-900/95 min-w-[125px]">
                   <div class="flex items-center justify-between gap-1">
                     <div onclick="sortTableBy('pvat_volume_cm3')" class="flex items-center gap-1 cursor-pointer flex-1 truncate py-1 justify-end" title="Sort by Total PVAT Volume">
-                      <span class="text-[11px]">PVAT Volume</span>
+                      <span class="text-[11px] whitespace-nowrap">PVAT Volume</span>
                       <i id="sortIcon_pvat_volume_cm3" class="fa-solid fa-sort text-slate-600 text-[10px]"></i>
                     </div>
                     <button onclick="openColMenu(event, 'pvat_volume_cm3')" id="colFilterBtn_pvat_volume_cm3" title="Filter &amp; Sort PVAT Volume"
-                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1">
+                            class="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/80 transition ml-1 shrink-0">
                       <i id="filterIcon_pvat_volume_cm3" class="fa-solid fa-filter text-[10px]"></i>
                     </button>
                   </div>
@@ -4310,7 +4310,7 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         c.has_report_pdf ? "Yes" : "No",
         c.has_report_html ? "Yes" : "No"
       ]);
-      const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+      const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\\r\\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -5278,10 +5278,12 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
       URL.revokeObjectURL(url);
     }
 
-    // Initial load
-    window.addEventListener('DOMContentLoaded', () => {
+    // Initial load - execute immediately or on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', refreshData);
+    } else {
       refreshData();
-    });
+    }
   </script>
 </body>
 </html>
