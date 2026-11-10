@@ -62,7 +62,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | Directory / File | Description | Responsibility |
 | :--- | :--- | :--- |
 | `docs/README.md` | Master docs index | Top-level table of contents and documentation sitemap. |
-| `docs/case_studies/` | Clinical case studies | 300 DPI publication case studies, vector PDFs, and VLM spotlights (`nongated_51`, `nongated_151`, `442`). |
+| `docs/case_studies/` | Clinical case studies | 300 DPI publication case studies, vector PDFs, and VLM spotlights (`nongated_51`, `nongated_140`, `nongated_151`, `442`). |
 | `docs/regulatory/` | SaMD regulatory dossier | FDA Class II 510(k) DHF specification, IEC 62304 traceability, ISO 14971 FMEA, and vector PDF evidence dossier. |
 | `docs/manuscript/` | Manuscripts & preprints | Academic journal manuscripts (`coca_full_manuscript.md`), conference preprints, and scoping docs. |
 | `docs/figures/` | Primary figures | Organized into `coca/` (Stanford COCA cohort & publication figures) and `project/` (architecture blueprints, SaMD pipeline, and OHIF workstation). |
