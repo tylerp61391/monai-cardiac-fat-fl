@@ -51,7 +51,7 @@ def _load_mpr_from_study(study_dir: Path) -> np.ndarray | None:
 
 def create_edge_cases_showcase_slide(output_png: Path, output_pdf: Path | None = None) -> None:
     fig = plt.figure(figsize=(24, 15), dpi=300, facecolor="#f8fafc")
-    ax = fig.add_axes([0, 0, 1, 1])
+    ax = fig.add_axes((0.0, 0.0, 1.0, 1.0))
     ax.set_facecolor("#f8fafc")
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 100)
@@ -374,7 +374,7 @@ def create_edge_cases_showcase_slide(output_png: Path, output_pdf: Path | None =
         if img_arr is not None:
             ax.imshow(
                 img_arr,
-                extent=[img_x + 0.15, img_x + img_w - 0.15, img_y + 0.15, img_y + img_h - 0.15],
+                extent=(img_x + 0.15, img_x + img_w - 0.15, img_y + 0.15, img_y + img_h - 0.15),
                 aspect="auto",
                 zorder=3.5,
             )

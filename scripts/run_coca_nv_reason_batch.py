@@ -134,7 +134,7 @@ def main() -> int:
     print("=" * 80)
     print(f"Cohort Directory:    {cohort_path}")
     print(f"Model Directory:     {model_path}")
-    print(f"Priority Mode:       BelowNormal (Desktop Smoothness Preserved)")
+    print("Priority Mode:       BelowNormal (Desktop Smoothness Preserved)")
     print(f"Overwrite Mode:      {'Enabled' if args.overwrite else 'Disabled (Resumable)'}")
     if args.limit:
         print(f"Limit:               {args.limit} participants")
@@ -270,15 +270,6 @@ def main() -> int:
                 exam_date = getattr(source_dcm, "StudyDate", None) if source_dcm else None
                 if not exam_date or exam_date == "00010101":
                     exam_date = "2026-10-29"
-
-                mpr_img = None
-                mpr_png = p.study_dir / "mpr_montage.png"
-                if mpr_png.exists():
-                    try:
-                        from PIL import Image
-                        mpr_img = Image.open(mpr_png)
-                    except Exception:
-                        pass
 
                 export_clinical_imaging_report(
                     output_dir=p.study_dir,

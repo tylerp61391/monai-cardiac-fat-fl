@@ -173,17 +173,7 @@ def main() -> int:
             if not exam_date or exam_date == "00010101":
                 exam_date = "2026-10-29"
 
-            # Check if existing mpr_montage.png exists
-            mpr_img = None
-            mpr_png = p.study_dir / "mpr_montage.png"
-            if mpr_png.exists():
-                try:
-                    from PIL import Image
-                    mpr_img = Image.open(mpr_png)
-                except Exception:
-                    pass
-
-            artifacts = export_clinical_imaging_report(
+            export_clinical_imaging_report(
                 output_dir=p.study_dir,
                 metrics=p.metrics,
                 participant_id=pid,

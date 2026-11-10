@@ -24,7 +24,7 @@ def create_big_picture_figure(output_png: Path, output_pdf: Path | None = None) 
     # 16:10 aspect ratio, ultra-high resolution (300 DPI)
     # Clean hospital crisp background
     fig = plt.figure(figsize=(24, 15), dpi=300, facecolor="#f8fafc")
-    ax = fig.add_axes([0, 0, 1, 1])
+    ax = fig.add_axes((0.0, 0.0, 1.0, 1.0))
     ax.set_facecolor("#f8fafc")
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 100)

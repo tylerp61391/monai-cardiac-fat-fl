@@ -20,7 +20,7 @@ t0 = time.time()
 print(f"Loading processor from: {model_path} ...")
 processor = AutoProcessor.from_pretrained(str(model_path), trust_remote_code=True)
 
-print(f"Loading model on CUDA (dtype=bfloat16, attn_implementation=sdpa) ...")
+print("Loading model on CUDA (dtype=bfloat16, attn_implementation=sdpa) ...")
 model = AutoModelForImageTextToText.from_pretrained(
     str(model_path),
     trust_remote_code=True,
