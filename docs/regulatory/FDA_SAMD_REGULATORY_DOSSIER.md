@@ -22,7 +22,7 @@ This document provides the foundational **Design History File (DHF)** architectu
 
 ### Big Picture End-to-End SaMD Architecture
 
-![End-to-End Clinical & Federated SaMD Architecture](../figures/samd_regulatory_pipeline_big_picture.png)
+![End-to-End Clinical & Federated SaMD Architecture](../figures/project/samd_regulatory_pipeline_big_picture.png)
 
 *Figure: Complete FDA SaMD processing pipeline from multi-vendor CT ingestion, dual-mode privacy governance (clinical identified vs. research RSNA V19), multi-model 3D segmentation engine, to dual local EHR/PACS deployment and (World) privacy-preserving federated learning consortium.*
 

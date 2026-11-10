@@ -283,7 +283,9 @@ def generate_fda_510k_dhf_pdf(
         y += row_h
 
     repo_root = Path(__file__).resolve().parent.parent.parent
-    fig_png = repo_root / "docs" / "figures" / "samd_regulatory_pipeline_big_picture.png"
+    fig_png = repo_root / "docs" / "figures" / "project" / "samd_regulatory_pipeline_big_picture.png"
+    if not fig_png.is_file():
+        fig_png = repo_root / "docs" / "figures" / "samd_regulatory_pipeline_big_picture.png"
     total_pages = 3 if fig_png.is_file() else 2
 
     # Footer Page 1

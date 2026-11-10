@@ -69,6 +69,8 @@ docs/*scoping*
 docs/*.pdf
 !docs/Cardiac_Segmentation_Architecture.pdf
 !docs/figures/samd_regulatory_pipeline_big_picture.pdf
+!docs/figures/project/samd_regulatory_pipeline_big_picture.pdf
+!docs/figures/coca/coca_edge_cases_and_nv_reason_showcase.pdf
 docs/architecture_review/*.png
 
 # Local scratch scripts & temporary test outputs

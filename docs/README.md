@@ -15,14 +15,24 @@ docs/
 │   ├── participant_442_coronary_inflammation_case_study.png
 │   └── assets/                        # Supporting high-resolution viewport assets
 │
-├── figures/                           # Global Publication & Architecture Figures
-│   ├── cardiac_fat_fl_architecture_infographic.jpg
-│   ├── samd_regulatory_pipeline_big_picture.png
-│   ├── coca_edge_cases_and_nv_reason_showcase.png
-│   ├── coca_figure1_mpr_orthogonal.png
-│   ├── coca_figure2_5model_concordance.png
-│   ├── coca_figure3_cohort_analytics.png
-│   └── ohif_viewer_snapshot.png
+├── figures/                           # Publication & Architecture Figures
+│   ├── README.md                      # Figure catalog and visual asset index
+│   ├── coca/                          # Stanford AIMI COCA cohort & validation figures
+│   │   ├── coca_figure1_mpr_orthogonal.png
+│   │   ├── coca_figure2_5model_concordance.png
+│   │   ├── coca_figure3_cohort_analytics.png
+│   │   ├── coca_edge_cases_and_nv_reason_showcase.png
+│   │   ├── coca_edge_cases_and_nv_reason_showcase.pdf
+│   │   ├── coca_cac_distribution.png
+│   │   ├── coca_manufacturer_breakdown.png
+│   │   ├── coca_slice_thickness_breakdown.png
+│   │   └── coca_vessel_prevalence.png
+│   │
+│   └── project/                       # Core system, architecture & OHIF platform figures
+│       ├── cardiac_fat_fl_architecture_infographic.jpg
+│       ├── ohif_viewer_snapshot.png
+│       ├── samd_regulatory_pipeline_big_picture.png
+│       └── samd_regulatory_pipeline_big_picture.pdf
 │
 ├── regulatory/                        # Regulatory SaMD, FDA 510(k), and DHF Evidence
 │   ├── FDA_SAMD_REGULATORY_DOSSIER.md # 4-pillar FDA SaMD submission blueprint

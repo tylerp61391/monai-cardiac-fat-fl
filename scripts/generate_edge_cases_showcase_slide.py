@@ -671,8 +671,10 @@ def create_edge_cases_showcase_slide(output_png: Path, output_pdf: Path | None =
 
 if __name__ == "__main__":
     repo = Path(__file__).resolve().parent.parent
-    out_png = repo / "docs" / "figures" / "coca_edge_cases_and_nv_reason_showcase.png"
-    out_pdf = repo / "docs" / "figures" / "coca_edge_cases_and_nv_reason_showcase.pdf"
+    coca_fig_dir = repo / "docs" / "figures" / "coca"
+    coca_fig_dir.mkdir(parents=True, exist_ok=True)
+    out_png = coca_fig_dir / "coca_edge_cases_and_nv_reason_showcase.png"
+    out_pdf = coca_fig_dir / "coca_edge_cases_and_nv_reason_showcase.pdf"
     create_edge_cases_showcase_slide(out_png, out_pdf)
     print(f"Saved PNG: {out_png}")
     print(f"Saved PDF: {out_pdf}")

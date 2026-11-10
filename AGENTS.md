@@ -65,7 +65,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `docs/case_studies/` | Clinical case studies | 300 DPI publication case studies, vector PDFs, and VLM spotlights (`nongated_51`, `nongated_151`, `442`). |
 | `docs/regulatory/` | SaMD regulatory dossier | FDA Class II 510(k) DHF specification, IEC 62304 traceability, ISO 14971 FMEA, and vector PDF evidence dossier. |
 | `docs/manuscript/` | Manuscripts & preprints | Academic journal manuscripts (`coca_full_manuscript.md`), conference preprints, and scoping docs. |
-| `docs/figures/` | Primary figures | Publication figures (`coca_figure1/2/3`), architecture blueprints, and 300 DPI showcase slides. |
+| `docs/figures/` | Primary figures | Organized into `coca/` (Stanford COCA cohort & publication figures) and `project/` (architecture blueprints, SaMD pipeline, and OHIF workstation). |
 | `example_source_dir/` | Reference MGH cohort | $N=3$ benchmark cohort (`0506`, `0909`, `0987`) with clean participant roots and `segmentation_models/` segregations. |
 | `k8s/hospital-clinical-testbed.yaml` | Kubernetes manifests | Provisions `clinical-ai` namespace, Orthanc PACS Deployment/Service (8042/4242), and MAP batch Job. |
 | `k8s/README.md` | Kubernetes deployment guide | Quickstart instructions for deploying, port-forwarding, pushing studies, and tearing down on clusters. |

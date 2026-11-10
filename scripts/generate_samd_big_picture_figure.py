@@ -586,6 +586,8 @@ def create_big_picture_figure(output_png: Path, output_pdf: Path | None = None) 
 
 
 if __name__ == "__main__":
-    out_png = Path("docs/figures/samd_regulatory_pipeline_big_picture.png")
-    out_pdf = Path("docs/figures/samd_regulatory_pipeline_big_picture.pdf")
+    out_dir = Path("docs/figures/project")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_png = out_dir / "samd_regulatory_pipeline_big_picture.png"
+    out_pdf = out_dir / "samd_regulatory_pipeline_big_picture.pdf"
     create_big_picture_figure(out_png, out_pdf)

@@ -1,9 +1,9 @@
 """Publication Figure and Multi-Format Abstract Generator for Stanford COCA Cohort.
 
 Renders:
-1. docs/figures/coca_figure1_mpr_orthogonal.png (Axial, Coronal, Sagittal with 8-compartment overlay)
-2. docs/figures/coca_figure2_5model_concordance.png (5-model side-by-side comparison on same slice)
-3. docs/figures/coca_figure3_cohort_analytics.png (CAC tier distributions and pairwise DICE heatmap)
+1. docs/figures/coca/coca_figure1_mpr_orthogonal.png (Axial, Coronal, Sagittal with 8-compartment overlay)
+2. docs/figures/coca/coca_figure2_5model_concordance.png (5-model side-by-side comparison on same slice)
+3. docs/figures/coca/coca_figure3_cohort_analytics.png (CAC tier distributions and pairwise DICE heatmap)
 4. docs/coca_cohort_abstract.html (Interactive, print-ready HTML manuscript)
 5. docs/coca_cohort_abstract.pdf (Vector-rendered PDF publication preprint via PyMuPDF)
 """
@@ -530,7 +530,7 @@ def generate_html_abstract(output_path: Path):
     <!-- Figure 1: Orthogonal MPR Montage -->
     <div class="space-y-4">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden p-3 shadow-xl">
-        <img src="figures/coca_figure1_mpr_orthogonal.png" alt="Figure 1: Orthogonal 3-View MPR Montage" class="w-full rounded-xl">
+        <img src="figures/coca/coca_figure1_mpr_orthogonal.png" alt="Figure 1: Orthogonal 3-View MPR Montage" class="w-full rounded-xl">
       </div>
       <p class="text-sm text-slate-400 italic leading-relaxed">
         <strong>Figure 1. Orthogonal Multi-Planar Reconstruction (MPR) Montage of Automated 8-Compartment Cardiac Adipose Quantification.</strong>
@@ -541,7 +541,7 @@ def generate_html_abstract(output_path: Path):
     <!-- Figure 2: 5-Model Concordance -->
     <div class="space-y-4">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden p-3 shadow-xl">
-        <img src="figures/coca_figure2_5model_concordance.png" alt="Figure 2: 5-Model Concordance Comparison" class="w-full rounded-xl">
+        <img src="figures/coca/coca_figure2_5model_concordance.png" alt="Figure 2: 5-Model Concordance Comparison" class="w-full rounded-xl">
       </div>
       <p class="text-sm text-slate-400 italic leading-relaxed">
         <strong>Figure 2. Multi-Model Architectural Concordance Across 5 Independent Tracks on Identical Mid-Ventricular CT Slice.</strong>
@@ -586,7 +586,7 @@ def generate_html_abstract(output_path: Path):
     <!-- Figure 3: Cohort Analytics -->
     <div class="space-y-4">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden p-3 shadow-xl">
-        <img src="figures/coca_figure3_cohort_analytics.png" alt="Figure 3: Cohort Analytics and Agatston CAC Stratification" class="w-full rounded-xl">
+        <img src="figures/coca/coca_figure3_cohort_analytics.png" alt="Figure 3: Cohort Analytics and Agatston CAC Stratification" class="w-full rounded-xl">
       </div>
       <p class="text-sm text-slate-400 italic leading-relaxed">
         <strong>Figure 3. Full Cohort Biological Validation and Multi-Model Concordance on Stanford AIMI COCA.</strong>
@@ -756,7 +756,9 @@ def generate_pdf_abstract(output_path: Path):
     )
 
     # Embed Figure 1
-    fig1_path = Path("docs/figures/coca_figure1_mpr_orthogonal.png")
+    fig1_path = Path("docs/figures/coca/coca_figure1_mpr_orthogonal.png")
+    if not fig1_path.exists():
+        fig1_path = Path("docs/figures/coca_figure1_mpr_orthogonal.png")
     if fig1_path.exists():
         page1.insert_image(fitz.Rect(36, 275, 576, 475), filename=str(fig1_path))
         page1.insert_text(
@@ -768,7 +770,9 @@ def generate_pdf_abstract(output_path: Path):
         )
 
     # Embed Figure 2
-    fig2_path = Path("docs/figures/coca_figure2_5model_concordance.png")
+    fig2_path = Path("docs/figures/coca/coca_figure2_5model_concordance.png")
+    if not fig2_path.exists():
+        fig2_path = Path("docs/figures/coca_figure2_5model_concordance.png")
     if fig2_path.exists():
         page1.insert_image(fitz.Rect(36, 505, 576, 750), filename=str(fig2_path))
         page1.insert_text(
@@ -793,7 +797,9 @@ def generate_pdf_abstract(output_path: Path):
     )
 
     # Embed Figure 3
-    fig3_path = Path("docs/figures/coca_figure3_cohort_analytics.png")
+    fig3_path = Path("docs/figures/coca/coca_figure3_cohort_analytics.png")
+    if not fig3_path.exists():
+        fig3_path = Path("docs/figures/coca_figure3_cohort_analytics.png")
     if fig3_path.exists():
         page2.insert_image(fitz.Rect(36, 75, 576, 320), filename=str(fig3_path))
         page2.insert_text(
@@ -869,7 +875,7 @@ def main():
     print("Loading Patient 0 data from Stanford COCA...")
     data = load_patient_zero_data()
 
-    figures_dir = Path("docs/figures")
+    figures_dir = Path("docs/figures/coca")
     figures_dir.mkdir(parents=True, exist_ok=True)
 
     fig1_path = figures_dir / "coca_figure1_mpr_orthogonal.png"

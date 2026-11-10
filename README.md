@@ -37,7 +37,7 @@ This repository modernizes and substantially expands upon the foundational MGH [
 - **Standards-Based Visualization & EHR Interoperability**: Natively exports multi-frame standard DICOM-SEG (`1.2.840.10008.5.1.4.1.1.66.4`), DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`), DICOM Encapsulated PDF (`1.2.840.10008.5.1.4.1.1.104.1`), and HL7 FHIR R4/R5 bundles (Epic US Core Observation/DiagnosticReport + open.epic MCP), rendered natively in an embedded **OHIF v3.13 Medical Workstation** with 3D Slicer 4-up MPR and interactive box plots across CAC tiers.
 - **3D Vision-Language AI Radiologist**: Integrated with **NVIDIA NV-Reason-CT** (3D ViT + Qwen3.5-4B), generating unprompted autoregressive radiologist clinical narratives grounded in computed EAT/PVAT biomarkers.
 
-![Interactive OHIF v3.13 Medical Workstation: 3D Slicer Four-Up 2x2 Layout](docs/figures/ohif_viewer_snapshot.png)
+![Interactive OHIF v3.13 Medical Workstation: 3D Slicer Four-Up 2x2 Layout](docs/figures/project/ohif_viewer_snapshot.png)
 
 *Figure 1: Authentic OHIF v3.13 Medical Workstation displaying 3D Cardiac CT with 3D Slicer Four-Up 2x2 grid (Axial, 3D MPR Volume Reconstruction, Coronal, Sagittal), Smart Scrollbars on every viewport, 2-column square studies browser, and 8-layer DICOM-SEG color overlays.*
 
@@ -45,11 +45,11 @@ This repository modernizes and substantially expands upon the foundational MGH [
 
 ## End-to-End System Architecture
 
-![End-to-End Clinical & Federated SaMD Architecture](docs/figures/samd_regulatory_pipeline_big_picture.png)
+![End-to-End Clinical & Federated SaMD Architecture](docs/figures/project/samd_regulatory_pipeline_big_picture.png)
 
 *Figure 2: Comprehensive SaMD Architecture: Multi-vendor CT ingestion, dual-mode privacy gateway (clinical identified vs. research RSNA V19), multi-model 3D segmentation engine, to local hospital EHR/PACS deployment and (World) privacy-preserving federated learning consortium. An interactive blueprint is available in [`docs/samd_big_picture_infographic.html`](docs/samd_big_picture_infographic.html).*
 
-![End-to-End System Architecture: monai-cardiac-fat-fl](docs/figures/cardiac_fat_fl_architecture_infographic.jpg)
+![End-to-End System Architecture: monai-cardiac-fat-fl](docs/figures/project/cardiac_fat_fl_architecture_infographic.jpg)
 
 *An interactive, publication-grade web blueprint is also available in [`docs/architecture_infographic.html`](docs/architecture_infographic.html).*
 

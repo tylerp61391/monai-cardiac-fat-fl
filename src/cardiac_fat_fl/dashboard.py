@@ -1027,11 +1027,15 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         repo_root = Path(__file__).resolve().parent.parent.parent
         fmt = request.args.get("format", "html").lower()
         if fmt == "pdf":
-            pdf_path = repo_root / "docs" / "figures" / "samd_regulatory_pipeline_big_picture.pdf"
+            pdf_path = repo_root / "docs" / "figures" / "project" / "samd_regulatory_pipeline_big_picture.pdf"
+            if not pdf_path.is_file():
+                pdf_path = repo_root / "docs" / "figures" / "samd_regulatory_pipeline_big_picture.pdf"
             if pdf_path.is_file():
                 return send_file(str(pdf_path), mimetype="application/pdf")
         elif fmt == "png":
-            png_path = repo_root / "docs" / "figures" / "samd_regulatory_pipeline_big_picture.png"
+            png_path = repo_root / "docs" / "figures" / "project" / "samd_regulatory_pipeline_big_picture.png"
+            if not png_path.is_file():
+                png_path = repo_root / "docs" / "figures" / "samd_regulatory_pipeline_big_picture.png"
             if png_path.is_file():
                 return send_file(str(png_path), mimetype="image/png")
         html_path = repo_root / "docs" / "samd_big_picture_infographic.html"
@@ -1072,10 +1076,14 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         repo_root = Path(__file__).resolve().parent.parent.parent
         fmt = request.args.get("format", "png").lower()
         if fmt == "pdf":
-            pdf_path = repo_root / "docs" / "figures" / "coca_edge_cases_and_nv_reason_showcase.pdf"
+            pdf_path = repo_root / "docs" / "figures" / "coca" / "coca_edge_cases_and_nv_reason_showcase.pdf"
+            if not pdf_path.is_file():
+                pdf_path = repo_root / "docs" / "figures" / "coca_edge_cases_and_nv_reason_showcase.pdf"
             if pdf_path.is_file():
                 return send_file(str(pdf_path), mimetype="application/pdf")
-        png_path = repo_root / "docs" / "figures" / "coca_edge_cases_and_nv_reason_showcase.png"
+        png_path = repo_root / "docs" / "figures" / "coca" / "coca_edge_cases_and_nv_reason_showcase.png"
+        if not png_path.is_file():
+            png_path = repo_root / "docs" / "figures" / "coca_edge_cases_and_nv_reason_showcase.png"
         if png_path.is_file():
             return send_file(str(png_path), mimetype="image/png")
         return jsonify({"error": "Edge cases showcase slide not found"}), 404
