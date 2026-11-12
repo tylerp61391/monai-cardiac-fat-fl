@@ -14,7 +14,7 @@ This document provides the foundational **Design History File (DHF)** architectu
 | **FDA Documentation Level** | **Basic Documentation Level** (Non-autonomous quantitative post-processing with clinician review) |
 | **IEC 62304 Safety Class** | **Class B** (Non-serious injury possible if unverified; mitigated by human-in-the-loop DICOM-SEG review) |
 | **Primary Standards** | IEC 62304:2006+A1:2015, ISO 14971:2019, IEC 62366-1:2015, DICOM PS3.3 / PS3.15 / PS3.16 (TID 1500) |
-| **Reference Benchmark** | Harvard / MGH `CardiacFatQuant` & `DeepHeartSeg` ($\Delta = 0.00\,\text{cm}^3$, $\Delta = 0.00\,\text{HU}$, $r = 1.000$) |
+| **Reference Benchmark** | Harvard / MGH `CardiacFatQuant` (circ-ml/CardiacFatQuant, commit `2b21c9b`, cloned 2026-11-01) & `DeepHeartSeg` ($\Delta = 0.00\,\text{cm}^3$, $\Delta = 0.00\,\text{HU}$, $r = 1.000$) |
 
 ### Intended Use Statement (Template for 510(k) Indications for Use)
 

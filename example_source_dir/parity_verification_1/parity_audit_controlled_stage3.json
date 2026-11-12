@@ -2,8 +2,19 @@
   "mode": "controlled_stage3",
   "candidate_name": "monai-cardiac-fat-fl (CardiacFatQuant Parity)",
   "reference_name": "circ-ml/CardiacFatQuant (Stage-3 Reference)",
+  "reference_provenance": {
+    "repository": "https://github.com/circ-ml/CardiacFatQuant.git",
+    "commit": "2b21c9bb5aa475bc89392f7f738f34f13be47c9a",
+    "commit_short": "2b21c9b",
+    "branch": "main",
+    "commit_date": "2026-08-27T21:14:24-04:00",
+    "commit_message": "Align pipeline with manuscript EAT and PVAT outputs",
+    "clone_timestamp_utc": "2026-11-01T19:11:13Z",
+    "clone_epoch": 1793560273,
+    "working_tree_clean": true
+  },
   "participant_count": 1,
-  "elapsed_seconds": 0.24,
+  "elapsed_seconds": 0.23,
   "mean_overall_dice": 1.0,
   "median_overall_dice": 1.0,
   "compartment_summary": {

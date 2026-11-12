@@ -372,3 +372,24 @@ def test_dashboard_privacy_and_regulatory_routes(test_app):
 
 
 
+
+
+def test_dashboard_featured_case_studies(test_app):
+    """Featured clinical case study spotlight renders and serves allow-listed plates only."""
+    client = test_app.test_client()
+
+    html = client.get("/").get_data(as_text=True)
+    assert 'id="featuredCaseStudies"' in html
+    for pid in ("nongated_140", "442", "nongated_51", "nongated_151"):
+        assert f'data-featured-pid="{pid}"' in html
+
+    res_png = client.get("/api/case-study/442?format=png")
+    assert res_png.status_code == 200
+    assert res_png.mimetype == "image/png"
+    res_pdf = client.get("/api/case-study/nongated_140?format=pdf")
+    assert res_pdf.status_code == 200
+    assert res_pdf.mimetype == "application/pdf"
+
+    # Non-featured or path-traversal IDs are rejected
+    assert client.get("/api/case-study/0506").status_code == 404
+    assert client.get("/api/case-study/..%2F..%2FREADME").status_code == 404

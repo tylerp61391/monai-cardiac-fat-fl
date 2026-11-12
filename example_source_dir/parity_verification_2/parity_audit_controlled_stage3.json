@@ -2,8 +2,19 @@
   "mode": "controlled_stage3",
   "candidate_name": "monai-cardiac-fat-fl (CardiacFatQuant Parity)",
   "reference_name": "circ-ml/CardiacFatQuant (Stage-3 Reference)",
+  "reference_provenance": {
+    "repository": "https://github.com/circ-ml/CardiacFatQuant.git",
+    "commit": "2b21c9bb5aa475bc89392f7f738f34f13be47c9a",
+    "commit_short": "2b21c9b",
+    "branch": "main",
+    "commit_date": "2026-08-27T21:14:24-04:00",
+    "commit_message": "Align pipeline with manuscript EAT and PVAT outputs",
+    "clone_timestamp_utc": "2026-11-01T19:11:13Z",
+    "clone_epoch": 1793560273,
+    "working_tree_clean": true
+  },
   "participant_count": 2,
-  "elapsed_seconds": 39.09,
+  "elapsed_seconds": 44.24,
   "mean_overall_dice": 1.0,
   "median_overall_dice": 1.0,
   "compartment_summary": {
@@ -79,7 +90,7 @@
       "mean_abs_volume_diff_cm3": 0.0,
       "mean_relative_volume_error_pct": 0.0
     },
-    "PVAT_Total": {
+    "PVAT Total": {
       "mean_dice": 1.0,
       "std_dice": 0.0,
       "median_dice": 1.0,
@@ -109,11 +120,11 @@
     ],
     "cases_inspected": [
       {
-        "participant_id": "0506",
+        "participant_id": "0909",
         "native_shape": [
           512,
           512,
-          122
+          126
         ],
         "native_spacing_mm": [
           0.68,
@@ -123,7 +134,7 @@
         "curated_shape_xyz": [
           512,
           512,
-          122
+          126
         ],
         "curated_spacing_mm": [
           0.68,
@@ -141,11 +152,11 @@
           128
         ],
         "step2_min_norm": -1.0,
-        "step2_max_norm": 0.1678,
+        "step2_max_norm": 0.2361,
         "step1_bbox_center": [
-          50,
-          209,
-          300
+          43,
+          222,
+          280
         ],
         "affine_aligned": true
       }
@@ -157,10 +168,10 @@
     "mean_cosine_similarity": 1.0,
     "cases_inspected": [
       {
-        "participant_id": "0506",
-        "step1_fg_voxels_gt_0_9": 35859,
-        "step2_fg_voxels_gt_0_5": 92759,
-        "step2_prob_mae": 1.0365462654871038e-10,
+        "participant_id": "0909",
+        "step1_fg_voxels_gt_0_9": 28708,
+        "step2_fg_voxels_gt_0_5": 71609,
+        "step2_prob_mae": 1.0408858497346074e-10,
         "step2_prob_cosine_sim": 1.0
       }
     ]
@@ -242,7 +253,7 @@
         "mean_abs_volume_diff_cm3": 0.0,
         "mean_relative_volume_error_pct": 0.0
       },
-      "PVAT_Total": {
+      "PVAT Total": {
         "mean_dice": 1.0,
         "std_dice": 0.0,
         "median_dice": 1.0,

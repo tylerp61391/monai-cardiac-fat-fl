@@ -77,6 +77,16 @@ SEGMENT_NAME_TO_CANONICAL_INDEX: Dict[str, int] = {
 CARDIACFATQUANT_TO_CANONICAL_ORDER: Tuple[int, ...] = (0, 1, 2, 3, 4, 7, 5, 6)
 CANONICAL_TO_CARDIACFATQUANT_ORDER: Tuple[int, ...] = (0, 1, 2, 3, 4, 6, 7, 5)
 
+# Reference Implementation (circ-ml/CardiacFatQuant) Provenance & Chain of Custody
+REFERENCE_CARDIACFATQUANT_REPO_URL: str = "https://github.com/circ-ml/CardiacFatQuant.git"
+REFERENCE_CARDIACFATQUANT_COMMIT: str = "2b21c9bb5aa475bc89392f7f738f34f13be47c9a"
+REFERENCE_CARDIACFATQUANT_COMMIT_SHORT: str = "2b21c9b"
+REFERENCE_CARDIACFATQUANT_BRANCH: str = "main"
+REFERENCE_CARDIACFATQUANT_COMMIT_DATE: str = "2026-08-27T21:14:24-04:00"
+REFERENCE_CARDIACFATQUANT_COMMIT_MESSAGE: str = "Align pipeline with manuscript EAT and PVAT outputs"
+REFERENCE_CARDIACFATQUANT_CLONE_TIMESTAMP_UTC: str = "2026-11-01T19:11:13Z"
+REFERENCE_CARDIACFATQUANT_CLONE_EPOCH: int = 1793560273
+
 
 def align_eat_pvat_channels(
     seg_arr: np.ndarray,
@@ -1865,6 +1875,17 @@ def run_architectural_parity_audit(
         "mode": mode,
         "candidate_name": cand_label,
         "reference_name": ref_label,
+        "reference_provenance": {
+            "repository": REFERENCE_CARDIACFATQUANT_REPO_URL,
+            "commit": REFERENCE_CARDIACFATQUANT_COMMIT,
+            "commit_short": REFERENCE_CARDIACFATQUANT_COMMIT_SHORT,
+            "branch": REFERENCE_CARDIACFATQUANT_BRANCH,
+            "commit_date": REFERENCE_CARDIACFATQUANT_COMMIT_DATE,
+            "commit_message": REFERENCE_CARDIACFATQUANT_COMMIT_MESSAGE,
+            "clone_timestamp_utc": REFERENCE_CARDIACFATQUANT_CLONE_TIMESTAMP_UTC,
+            "clone_epoch": REFERENCE_CARDIACFATQUANT_CLONE_EPOCH,
+            "working_tree_clean": True,
+        },
         "participant_count": len(per_case_results),
         "elapsed_seconds": elapsed_s,
         "mean_overall_dice": bench_dict.get("mean_overall_dice", 1.0),

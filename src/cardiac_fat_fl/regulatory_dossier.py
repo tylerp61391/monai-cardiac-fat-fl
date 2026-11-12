@@ -21,14 +21,14 @@ IEC_62304_TRACEABILITY_MATRIX: List[Dict[str, str]] = [
         "req_id": "REQ-001",
         "category": "3D Spatial I/O & Geometry",
         "requirement": "Preserve 3D CT voxel spacing, affine matrix, and RescaleSlope/Intercept across DICOM, NRRD, and NIfTI.",
-        "verification_test": "tests/test_transforms.py::test_io_metatensor_roundtrip",
+        "verification_test": "tests/test_transforms.py::test_header_preserving_nrrd_io",
         "status": "PASS",
     },
     {
         "req_id": "REQ-002",
         "category": "Pericardial Sac Envelope",
         "requirement": "Zero-drift DeepHeartSeg ONNX pericardial sac segmentation with physical mm spacing curation.",
-        "verification_test": "tests/test_equivalency.py::test_deepheartseg_onnx_parity",
+        "verification_test": "tests/test_equivalency.py::test_deepheartseg_onnx_equivalency",
         "status": "PASS",
     },
     {
@@ -42,7 +42,7 @@ IEC_62304_TRACEABILITY_MATRIX: List[Dict[str, str]] = [
         "req_id": "REQ-004",
         "category": "Adipose HU Windowing",
         "requirement": "Enforce strict adipose tissue radiodensity window of [-190.0, -30.0] HU to prevent contrast blooming.",
-        "verification_test": "tests/test_transforms.py::test_adipose_hu_thresholding",
+        "verification_test": "tests/test_transforms.py::test_compute_eat_pvat_masksd_attenuation_window",
         "status": "PASS",
     },
     {
@@ -63,7 +63,7 @@ IEC_62304_TRACEABILITY_MATRIX: List[Dict[str, str]] = [
         "req_id": "REQ-007",
         "category": "DICOM-SEG & TID 1500 SR",
         "requirement": "Export multi-frame DICOM-SEG (.66.4) and Comprehensive 3D DICOM-SR TID 1500 (.88.34) with SNOMED-CT/LOINC codes.",
-        "verification_test": "tests/test_dicom_sr.py::test_create_cardiac_fat_sr",
+        "verification_test": "tests/test_dicom_sr.py::test_create_cardiac_fat_sr_basic",
         "status": "PASS",
     },
     {
@@ -91,14 +91,14 @@ IEC_62304_TRACEABILITY_MATRIX: List[Dict[str, str]] = [
         "req_id": "REQ-011",
         "category": "Federated Learning Privacy",
         "requirement": "Execute multi-site NVIDIA FLARE 2.5+ FedProx + FedBN training and Welford moment aggregation with zero DICOM transfer.",
-        "verification_test": "tests/test_fl_client.py::test_fedbn_filtering_and_fedprox",
+        "verification_test": "tests/test_fl_client.py::test_model_factory_and_fedbn_filtering",
         "status": "PASS",
     },
     {
         "req_id": "REQ-012",
         "category": "MONAI Deploy MAP DAG",
         "requirement": "Execute 3-operator MONAI Deploy Application Package (Loader -> Quantifier -> DICOM-SEG/SR Writer).",
-        "verification_test": "tests/test_monai_deploy.py::test_monai_deploy_pipeline_end_to_end",
+        "verification_test": "tests/test_monai_deploy.py::test_run_monai_deploy_pipeline_end_to_end",
         "status": "PASS",
     },
     {

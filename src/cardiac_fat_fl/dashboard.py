@@ -1088,6 +1088,27 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             return send_file(str(png_path), mimetype="image/png")
         return jsonify({"error": "Edge cases showcase slide not found"}), 404
 
+    # Featured published clinical case studies (docs/case_studies/), allow-listed by participant ID
+    featured_case_study_files = {
+        "nongated_140": "nongated_140_zero_cac_invisible_risk_case_study",
+        "442": "participant_442_coronary_inflammation_case_study",
+        "nongated_51": "nongated_51_bilateral_lung_masses_case_study",
+        "nongated_151": "nongated_151_pacemaker_and_valves_case_study",
+    }
+
+    @app.route("/api/case-study/<pid>", methods=["GET"])
+    def serve_featured_case_study(pid: str):
+        stem = featured_case_study_files.get(pid)
+        if stem is None:
+            return jsonify({"error": f"No featured case study for participant '{pid}'"}), 404
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        fmt = request.args.get("format", "png").lower()
+        ext, mimetype = (".pdf", "application/pdf") if fmt == "pdf" else (".png", "image/png")
+        path = repo_root / "docs" / "case_studies" / f"{stem}{ext}"
+        if path.is_file():
+            return send_file(str(path), mimetype=mimetype)
+        return jsonify({"error": f"Case study file not found: {path.name}"}), 404
+
     return app
 
 
@@ -1643,6 +1664,37 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
             <div class="text-xs text-slate-200 mt-1.5 font-mono">442, 276, nongated_151, 51, 632</div>
             <div class="text-[11px] text-slate-300 mt-1 leading-relaxed">Vasa vasorum neovascularization, LV scar fat, dual valves/pacemaker &amp; lung masses.</div>
           </button>
+        </div>
+      </div>
+
+      <!-- Featured Published Clinical Case Studies (docs/case_studies/) -->
+      <div id="featuredCaseStudies" class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow space-y-3">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-star text-amber-300"></i>
+          <h3 class="text-sm font-bold text-white">Featured Clinical Case Studies</h3>
+          <span class="text-[11px] text-slate-400">One click: case deep dive (metrics + NV-Reason-CT), OHIF workstation, or 300 DPI plate.</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+          <div class="bg-rose-950/40 border border-rose-700/60 rounded-xl p-3 space-y-2">
+            <div class="font-bold text-rose-300">Zero-CAC Paradox <span class="font-mono text-slate-300">nongated_140</span></div>
+            <div class="text-[11px] text-slate-300">CAC 0 &bull; EAT 103.3 cm&sup3; &bull; PVAT &minus;51.1 HU (+19.0 HU vs. &minus;70.1 cutoff)</div>
+            <div class="flex flex-wrap gap-1.5" data-featured-pid="nongated_140"></div>
+          </div>
+          <div class="bg-amber-950/40 border border-amber-700/60 rounded-xl p-3 space-y-2">
+            <div class="font-bold text-amber-300">Microvascular Dissociation <span class="font-mono text-slate-300">442</span></div>
+            <div class="text-[11px] text-slate-300">EAT 89.3 cm&sup3; (normal) &bull; LCX &minus;57.1 HU &bull; RCA &minus;64.3 HU</div>
+            <div class="flex flex-wrap gap-1.5" data-featured-pid="442"></div>
+          </div>
+          <div class="bg-emerald-950/40 border border-emerald-700/60 rounded-xl p-3 space-y-2">
+            <div class="font-bold text-emerald-300">Lung Mass Exclusion <span class="font-mono text-slate-300">nongated_51</span></div>
+            <div class="text-[11px] text-slate-300">Bilateral lower-lobe masses abutting pericardium; excluded by envelope</div>
+            <div class="flex flex-wrap gap-1.5" data-featured-pid="nongated_51"></div>
+          </div>
+          <div class="bg-slate-900/60 border border-slate-600 rounded-xl p-3 space-y-2">
+            <div class="font-bold text-slate-200">Hardware Artifacts <span class="font-mono text-slate-300">nongated_151</span></div>
+            <div class="text-[11px] text-slate-300">Pacemaker + prosthetic valves; streaks rejected by [&minus;190, &minus;30] HU window</div>
+            <div class="flex flex-wrap gap-1.5" data-featured-pid="nongated_151"></div>
+          </div>
         </div>
       </div>
 
@@ -4599,6 +4651,20 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
         alert('Could not copy to clipboard.');
       });
     }
+
+    function renderFeaturedCaseStudyButtons() {
+      const btn = 'px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-semibold transition';
+      document.querySelectorAll('[data-featured-pid]').forEach((el) => {
+        const pid = el.getAttribute('data-featured-pid');
+        const enc = encodeURIComponent(pid);
+        el.innerHTML = `
+          <button onclick="openCaseModal('${pid}')" class="${btn} text-sky-300"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i>Deep Dive</button>
+          <a href="/patient/${enc}/" target="_blank" class="${btn} text-emerald-300"><i class="fa-solid fa-cube mr-1"></i>OHIF</a>
+          <a href="/api/case-study/${enc}?format=png" target="_blank" class="${btn} text-amber-300"><i class="fa-solid fa-image mr-1"></i>Plate</a>
+          <a href="/api/case-study/${enc}?format=pdf" target="_blank" class="${btn} text-indigo-300"><i class="fa-solid fa-file-pdf mr-1"></i>PDF</a>`;
+      });
+    }
+    document.addEventListener('DOMContentLoaded', renderFeaturedCaseStudyButtons);
 
     async function openCaseModal(pid) {
       currentModalPid = pid;
