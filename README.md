@@ -285,7 +285,7 @@ cardiac-fat-fl benchmark --cohort-dir "/path/to/cohort" --candidate "eat_pvat.se
 
 To mathematically validate and verify end-to-end architectural parity against the reference Harvard/MGH [`circ-ml/CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant) pipeline, `monai-cardiac-fat-fl` incorporates a dedicated 4-checkpoint verification audit (`cardiac-fat-fl parity-audit`).
 
-This audit directly imports and executes the cloned reference repository's Python routines (`generate_eat_pvat_masks.py` and `generate_measurements.py`) alongside `monai-cardiac-fat-fl`, structured across a rigorous **3-Goal Scientific Parity & Benchmark Framework**:
+This audit directly imports and executes Python routines (`generate_eat_pvat_masks.py` and `generate_measurements.py`) from the cloned reference repository (`circ-ml/CardiacFatQuant`, branch `main`, immutable commit `2b21c9bb5aa475bc89392f7f738f34f13be47c9a` [`2b21c9b`], authored August 27, 2026; cloned November 1, 2026 at 19:11:13 UTC) alongside `monai-cardiac-fat-fl`, structured across a rigorous **3-Goal Scientific Parity & Benchmark Framework**:
 
 ```bash
 # Run 998-case controlled morphological parity audit vs. Harvard circ-ml/CardiacFatQuant
@@ -863,8 +863,9 @@ monai-cardiac-fat-fl/
 ├── docs/                          # Architectural specifications, case studies, regulatory & manuscript
 │   ├── README.md                  # Comprehensive documentation index & sitemap
 │   ├── case_studies/              # 300 DPI publication clinical case studies & VLM spotlights
-│   │   ├── README.md              # Catalog of edge cases (nongated_51, nongated_151, 442)
+│   │   ├── README.md              # Catalog of edge cases (nongated_51, nongated_140, nongated_151, 442)
 │   │   ├── nongated_51_bilateral_lung_masses_case_study.png
+│   │   ├── nongated_140_zero_cac_invisible_risk_case_study.png
 │   │   ├── nongated_151_pacemaker_and_valves_case_study.png
 │   │   └── participant_442_coronary_inflammation_case_study.png
 │   ├── regulatory/
@@ -1112,7 +1113,7 @@ Run all automated unit tests via `pytest`:
 pytest -v
 ```
 
-The test suite validates **118 automated unit and integration tests** across all modules:
+The test suite validates **146 automated unit and integration tests** across all modules:
 
 - **CI/CD & Manifest Contracts**: Automated validation of GitHub Actions workflows (`ci.yml`, `docker-map.yml`, `docker-publish.yml`, `security.yml`), Dockerfile specs, and dependency declarations.
 - **Native open.epic & Cardiac AI MCP Server**: Standard Model Context Protocol (MCP 2024-11-05) JSON-RPC 2.0 handshake, 7 clinical AI tools, discrete observation fetching, diagnostic report filing, document references, and cohort statistics.
@@ -1120,8 +1121,10 @@ The test suite validates **118 automated unit and integration tests** across all
 - **Self-Contained HL7 FHIR R4 Mock Server**: US Core CapabilityStatement metadata, atomic transaction bundle ingestion, reference rewriting, discrete CRUD/search endpoints, and sandbox resetting.
 - **Transform Correctness**: Strict $[-190.0, -30.0]\text{ HU}$ thresholding, Voronoi chamber partitioning, and radial vessel dilation.
 - **Header Coordinate Integrity**: Orientation preservation across NRRD and DICOM formats with multi-series max-slice collision resolution.
-- **Mathematical Equivalency**: $\Delta = 0.00\text{ cm}^3$ and $\Delta = 0.00\text{ HU}$ agreement against reference baseline models.
-- **DICOM-SEG Compliance**: Proper SOP Class UID 1.2.840.10008.5.1.4.1.1.66.4 and 8 segment sequence items.
+- **Mathematical Equivalency & COCA Parity**: $\Delta = 0.00\text{ cm}^3$ and $\Delta = 0.00\text{ HU}$ agreement against reference baseline models, 4-checkpoint architectural parity audit, 7-rule morphology, and XML calcium rasterization.
+- **DICOM-SEG, DICOM-SR & Clinical Reporting**: Proper SOP Class UID `1.2.840.10008.5.1.4.1.1.66.4` (8-segment sequence items), TID 1500 structured reports with SNOMED-CT/LOINC/UCUM and NaN empty-mask handling, and clinical diagnostic imaging reports with 3-view MPR montages.
+- **HIPAA De-Identification & VLM Reporting**: HIPAA Safe Harbor 18-element de-identification, pre-flight PHI leak auditing (`test_anonymizer.py`), and NVIDIA NV-Reason-CT prompt builder and tag sanitization (`test_nv_reason.py`).
+- **PACS Transport, Daemon & MONAI Deploy**: DICOMweb STOW-RS and DIMSE C-STORE association tests, autonomous PACS watchdog daemon workflows, and MONAI Deploy Application Package (MAP) operator DAG contracts.
 - **NVFLARE Client Lifecycle**: Initialization, training steps, evaluation, and FedBN layer isolation.
 - **Research Dashboard & OHIF Workstation**: Dynamic cohort loading, Agatston CAC linking across all 5 tiers, natural numerical sorting, `/viewer/<pid>/` routes, and research correlation statistics.
 - **Publication-Grade Visualizations & 300 DPI Figure Export**: Multi-panel composite figures, omnibus ANOVA & Kruskal-Wallis hypothesis testing, post-hoc pairwise Mann-Whitney U tests with Bonferroni correction, and bivariate linear regression.
@@ -1137,7 +1140,7 @@ Every pull request and merge to `main` undergoes rigorous multi-stage automated 
 | Quality Gate | Workflow File | Target Environment | Scope & Responsibility |
 | :--- | :--- | :--- | :--- |
 | **Documentation & Lint Gate** | `.github/workflows/ci.yml` (`lint`) | `ubuntu-latest`, Node 20, Python 3.11 | Zero markdownlint regressions (`markdownlint-cli`) and static code analysis (`ruff check`). |
-| **Cross-Platform Test Matrix** | `.github/workflows/ci.yml` (`test`) | Ubuntu & Windows, Python 3.11 & 3.12 | All 122 unit and integration tests across operating systems with coverage reporting. |
+| **Cross-Platform Test Matrix** | `.github/workflows/ci.yml` (`test`) | Ubuntu & Windows, Python 3.11 & 3.12 | All 146 unit and integration tests across operating systems with coverage reporting. |
 | **Docker Build Verification** | `.github/workflows/ci.yml` (`docker-verify`) | `ubuntu-latest`, Docker Buildx | Validates clean container builds of both root `Dockerfile` and `deploy/Dockerfile` (MAP) prior to merging. |
 | **MONAI MAP Container Registry** | `.github/workflows/docker-map.yml` | GHCR (`ghcr.io/.../monai-cardiac-fat-map`) | Automated multi-arch build and publishing of the MONAI Deploy Application Package container. |
 | **Workstation Container Registry** | `.github/workflows/docker-publish.yml` | GHCR (`ghcr.io/.../monai-cardiac-fat-fl`) | Automated publishing of the main CLI, API, and OHIF Medical Workstation container. |
@@ -1165,7 +1168,7 @@ The software is provided "as is", without warranty of any kind, express or impli
 
 ## Acknowledgements & Foundation Attribution
 
-This project builds directly upon the pioneering research and engineering of the foundational **[`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant)** and **[`DeepHeartSeg`](https://github.com/AIM-Harvard/DeepHeartSeg)** pipelines developed at the **Cardiovascular Imaging Research Center (CIRC)** at Massachusetts General Hospital / Harvard Medical School, and the **Artificial Intelligence in Medicine (AIM)** Program at Mass General Brigham.
+This project builds directly upon the pioneering research and engineering of the foundational **[`CardiacFatQuant`](https://github.com/circ-ml/CardiacFatQuant)** (pinned `main` baseline commit `2b21c9b`, cloned November 1, 2026) and **[`DeepHeartSeg`](https://github.com/AIM-Harvard/DeepHeartSeg)** pipelines developed at the **Cardiovascular Imaging Research Center (CIRC)** at Massachusetts General Hospital / Harvard Medical School, and the **Artificial Intelligence in Medicine (AIM)** Program at Mass General Brigham.
 
 Special acknowledgement is extended to:
 
