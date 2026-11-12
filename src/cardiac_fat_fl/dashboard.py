@@ -1101,13 +1101,26 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         stem = featured_case_study_files.get(pid)
         if stem is None:
             return jsonify({"error": f"No featured case study for participant '{pid}'"}), 404
-        repo_root = Path(__file__).resolve().parent.parent.parent
+        case_dir = Path(__file__).resolve().parent.parent.parent / "docs" / "case_studies"
         fmt = request.args.get("format", "png").lower()
-        ext, mimetype = (".pdf", "application/pdf") if fmt == "pdf" else (".png", "image/png")
-        path = repo_root / "docs" / "case_studies" / f"{stem}{ext}"
-        if path.is_file():
-            return send_file(str(path), mimetype=mimetype)
-        return jsonify({"error": f"Case study file not found: {path.name}"}), 404
+        if fmt == "pdf":
+            pdf_path = case_dir / f"{stem}.pdf"
+            if pdf_path.is_file():
+                return send_file(str(pdf_path), mimetype="application/pdf")
+            png_path = case_dir / f"{stem}.png"
+            if png_path.is_file():
+                from PIL import Image
+
+                buf = io.BytesIO()
+                with Image.open(png_path) as img:
+                    img.convert("RGB").save(buf, format="PDF", resolution=300.0)
+                buf.seek(0)
+                return send_file(buf, mimetype="application/pdf", download_name=f"{stem}.pdf")
+            return jsonify({"error": f"Case study file not found: {pdf_path.name}"}), 404
+        png_path = case_dir / f"{stem}.png"
+        if png_path.is_file():
+            return send_file(str(png_path), mimetype="image/png")
+        return jsonify({"error": f"Case study file not found: {png_path.name}"}), 404
 
     return app
 
