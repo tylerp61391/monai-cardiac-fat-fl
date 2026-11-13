@@ -490,8 +490,16 @@ class CohortDataset:
         def calc_stats(arr: List[float]) -> Dict[str, float]:
             if not arr:
                 return {}
-            a = np.array(arr)
-            sk = round(float(stats.skew(a)), 2) if len(a) > 2 else 0.0
+            a = np.asarray(arr, dtype=np.float64)
+            mean_val = float(np.mean(a))
+            max_dev = float(np.max(np.abs(a - mean_val)))
+            eps = float(np.finfo(a.dtype).eps) * 10.0
+            # Guard constant or near-constant inputs so SciPy skew avoids NaN / cancellation warnings
+            has_spread = len(a) > 2 and (
+                (mean_val == 0.0 and max_dev > 0.0)
+                or (mean_val != 0.0 and (max_dev / abs(mean_val)) >= eps)
+            )
+            sk = round(float(stats.skew(a)), 2) if has_spread else 0.0
             return {
                 "count": len(a),
                 "mean": round(float(np.mean(a)), 2),

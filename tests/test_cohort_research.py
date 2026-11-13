@@ -175,6 +175,10 @@ def test_publication_figure_generation(tmp_path: Path):
     assert im.size == (1200, 900)
     assert im.mode == "RGB"
 
+    # Constant chamber volumes must produce finite 0.0 skewness without SciPy warnings
+    summary = cohort.compute_summary_analytics()
+    assert summary["chamber_volume_summaries"]["EAT LA"]["skewness"] == 0.0
+
 def test_cohort_dataset_natural_sorting(tmp_path: Path):
     """Verify that participant IDs are sorted naturally (0, 1, 2, ..., 10, 100) not alphabetically."""
     for pid in ["100", "0", "10", "2", "1", "20"]:
