@@ -512,7 +512,7 @@ def create_big_picture_figure(output_png: Path, output_pdf: Path | None = None) 
             [
                 "• Safety Class: Class B (Non-serious injury risk)",
                 "• Traceability Matrix: REQ-001 through REQ-013",
-                "• Verification Suite: 138 automated pytest tests",
+                "• Verification Suite: 146 automated pytest tests",
                 "• Turnkey MAP Application Package (monai_deploy.py)",
                 "• Fail-Closed Execution Architecture",
                 "• Header-Preserving Spatial & Coordinate Integrity",

@@ -80,7 +80,7 @@ flowchart TD
 
 ## 2. IEC 62304 Requirements & Verification Traceability Matrix
 
-Every clinical, mathematical, and cybersecurity requirement is traced directly to its source module and automated verification test in the 89-test `pytest` suite:
+Every clinical, mathematical, and cybersecurity requirement is traced directly to its source module and automated verification test in the 146-test `pytest` suite:
 
 | Req ID | Requirement Description | Source Implementation | Automated Verification Test (`pytest`) | Risk ID |
 | :--- | :--- | :--- | :--- | :--- |
@@ -127,7 +127,7 @@ In accordance with the FDA's finalized guidance on *Marketing Submission Recomme
    - Model training is orchestrated via `CardiacFatClientAlgo` (`src/cardiac_fat_fl/fl_client_algo.py`) using `FedProx` ($\mu > 0$ proximal regularization to prevent catastrophic forgetting) and `FedBN` (local normalization layer isolation).
    - Cohort drift and subgroup coverage are monitored via `CardiacFatStatsExecutor` (`src/cardiac_fat_fl/fl_stats_executor.py`) using exact parallel Welford moments across scanner manufacturers and gating protocols.
 3. **Automated Acceptance & Rollback Gates**:
-   - Candidate global checkpoints must pass all 89 automated regression tests (`pytest`) and achieve:
+   - Candidate global checkpoints must pass all 146 automated regression tests (`pytest`) and achieve:
      - Volumetric Dice similarity coefficient $\ge 0.90$ across all 8 compartments on locked multi-vendor reference cohorts (MGH benchmark + Stanford AIMI COCA).
      - Pearson correlation $r \ge 0.98$ and mean bias within $\pm 2.0\,\text{cm}^3$ / $\pm 1.5\,\text{HU}$ against the frozen reference ONNX baseline (`cardiac-fat-fl compare-models`).
    - Approved checkpoints are assigned a new cryptographic SHA-256 digest in `KNOWN_MODEL_SHA256` and recorded in `models/checksums.sha256`.

@@ -4,7 +4,7 @@ Compiles live technical, statistical, privacy, and cryptographic verification ev
 into a submission-ready regulatory dossier obeying:
   - FDA 21 CFR § 892.2050 (Medical Image Management and Processing System, Product Codes LLZ / QIH)
   - IEC 62304:2006+AMD1:2015 Software Safety Class B (Traceability Matrix REQ-001 to REQ-013)
-  - ISO 14971:2019 Medical Device Risk Management (FMEA Hazard Controls HAZ-001 to HAZ-010)
+  - ISO 14971:2019 Medical Device Risk Management (FMEA Hazard Controls HAZ-001 to HAZ-006)
   - FDA Marketing Submission Recommendations for a Predetermined Change Control Plan (PCCP) for AI/ML
 """
 
@@ -159,6 +159,7 @@ ISO_14971_RISK_CONTROLS: List[Dict[str, str]] = [
 
 def build_fda_510k_dhf_dossier(cohort_summary: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Compile a structured JSON Design History File (DHF) regulatory dossier."""
+    from cardiac_fat_fl import __version__
     from cardiac_fat_fl.cli import KNOWN_MODEL_SHA256
 
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -167,7 +168,7 @@ def build_fda_510k_dhf_dossier(cohort_summary: Optional[Dict[str, Any]] = None) 
     return {
         "dossier_title": "FDA Class II 510(k) Software as a Medical Device (SaMD) Design History File (DHF) Summary",
         "device_name": "monai-cardiac-fat-fl (Automated 3D Cardiac CT EAT & PVAT Quantification System)",
-        "software_version": "2.5.0",
+        "software_version": __version__,
         "generated_at": now_str,
         "regulatory_classification": {
             "regulation_number": "21 CFR § 892.2050",
@@ -179,7 +180,7 @@ def build_fda_510k_dhf_dossier(cohort_summary: Optional[Dict[str, Any]] = None) 
         "clinical_validation_summary": {
             "validation_cohort": "Stanford AIMI Coronary Calcium and Chest CTs (COCA)",
             "total_cohort_scans": cohort_info.get("total_participants", cohort_info.get("total_count", 1000)),
-            "quantified_scans": cohort_info.get("quantified_count", 1001),
+            "quantified_scans": cohort_info.get("quantified_count", 992),
             "controlled_parity_dice": 1.0000,
             "controlled_parity_volume_mae_cm3": 0.0000,
             "controlled_parity_hu_mae": 0.0000,
@@ -236,9 +237,9 @@ def generate_fda_510k_dhf_pdf(
     p1.draw_rect(fitz.Rect(0, 0, 612, 72), color=navy, fill=navy)
     p1.insert_text((28, 26), "FDA CLASS II 510(k) SaMD DESIGN HISTORY FILE (DHF) EVIDENCE DOSSIER", fontsize=11.5, fontname="helv", color=white)
     p1.insert_text((28, 44), f"Device: {dossier['device_name']}", fontsize=8.5, fontname="helv", color=(0.55, 0.82, 0.98))
-    p1.insert_text((28, 58), f"Regulation: 21 CFR § 892.2050 (LLZ / QIH)  |  IEC 62304 Class B  |  ISO 14971 FMEA  |  Generated: {dossier['generated_at']}", fontsize=7.5, fontname="helv", color=(0.75, 0.80, 0.88))
+    p1.insert_text((28, 58), f"Version: v{dossier['software_version']}  |  21 CFR § 892.2050 (LLZ / QIH)  |  IEC 62304 Class B  |  ISO 14971 FMEA  |  Generated: {dossier['generated_at']}", fontsize=7.3, fontname="helv", color=(0.75, 0.80, 0.88))
 
-    y = 88
+    y = 86
 
     # Section 1: Regulatory Profile & Predicate Equivalence
     p1.insert_text((28, y), "1. REGULATORY CLASSIFICATION & SUBSTANTIAL EQUIVALENCE (21 CFR § 892.2050)", fontsize=9.5, fontname="helv", color=navy)
@@ -255,7 +256,7 @@ def generate_fda_510k_dhf_pdf(
         "- Frozen Clinical Invariants: Adipose Window [-190.0, -30.0] HU | 10.0 mm 3D EDT Pericoronary Dilation | CRISP-CT Cutoff -70.1 HU",
     ]
     for idx, line in enumerate(lines_s1):
-        p1.insert_text((36, y + 14 + idx * 13), line, fontsize=7.8, fontname="helv", color=navy)
+        p1.insert_text((36, y + 14 + idx * 13), line, fontsize=7.2, fontname="helv", color=navy)
 
     y += 94
 
@@ -272,14 +273,26 @@ def generate_fda_510k_dhf_pdf(
     y += 18
 
     for idx, req in enumerate(IEC_62304_TRACEABILITY_MATRIX):
-        row_h = 28
+        row_h = 40
         row_bg = white if idx % 2 == 0 else light_bg
         p1.draw_rect(fitz.Rect(28, y, 584, y + row_h), color=border_col, fill=row_bg, width=0.5)
-        p1.insert_text((34, y + 12), req["req_id"], fontsize=7.5, fontname="cour", color=blue)
-        p1.insert_text((82, y + 12), req["category"], fontsize=7.2, fontname="helv", color=navy)
-        p1.insert_text((185, y + 11), req["requirement"][:78], fontsize=7.0, fontname="helv", color=navy)
-        p1.insert_text((185, y + 22), f"Test: {req['verification_test']}", fontsize=6.5, fontname="cour", color=slate)
-        p1.insert_text((548, y + 15), req["status"], fontsize=7.5, fontname="helv", color=teal)
+        p1.insert_text((34, y + 14), req["req_id"], fontsize=7.5, fontname="cour", color=blue)
+        p1.insert_textbox(
+            fitz.Rect(80, y + 6, 180, y + 36),
+            req["category"],
+            fontsize=7.0,
+            fontname="helv",
+            color=navy,
+        )
+        p1.insert_textbox(
+            fitz.Rect(184, y + 4, 538, y + 27),
+            req["requirement"],
+            fontsize=6.9,
+            fontname="helv",
+            color=navy,
+        )
+        p1.insert_text((184, y + 34), f"Test: {req['verification_test']}", fontsize=6.2, fontname="cour", color=slate)
+        p1.insert_text((548, y + 20), req["status"], fontsize=7.5, fontname="helv", color=teal)
         y += row_h
 
     repo_root = Path(__file__).resolve().parent.parent.parent
@@ -299,7 +312,7 @@ def generate_fda_510k_dhf_pdf(
     p2.insert_text((28, 24), "ISO 14971 RISK MANAGEMENT, AI/ML PCCP & CRYPTOGRAPHIC MODEL PROVENANCE", fontsize=11.0, fontname="helv", color=white)
     p2.insert_text((28, 40), "Failure Modes and Effects Analysis (FMEA), Federated Retraining Guardrails & SHA-256 Checksum Registry", fontsize=8.0, fontname="helv", color=(0.75, 0.80, 0.88))
 
-    y = 72
+    y = 70
 
     # Section 3: ISO 14971 Risk Management Table
     p2.insert_text((28, y), "3. ISO 14971:2019 MEDICAL DEVICE RISK MANAGEMENT & HAZARD TRACEABILITY (FMEA)", fontsize=9.5, fontname="helv", color=navy)
@@ -308,28 +321,45 @@ def generate_fda_510k_dhf_pdf(
     p2.draw_rect(fitz.Rect(28, y, 584, y + 18), color=navy, fill=navy)
     p2.insert_text((34, y + 12), "HAZ ID", fontsize=7.5, fontname="helv", color=white)
     p2.insert_text((82, y + 12), "HAZARD & CLINICAL IMPACT", fontsize=7.5, fontname="helv", color=white)
-    p2.insert_text((290, y + 12), "TECHNICAL RISK CONTROL & MITIGATION", fontsize=7.5, fontname="helv", color=white)
+    p2.insert_text((286, y + 12), "TECHNICAL RISK CONTROL & MITIGATION", fontsize=7.5, fontname="helv", color=white)
     p2.insert_text((515, y + 12), "RESIDUAL", fontsize=7.5, fontname="helv", color=white)
     y += 18
 
     for idx, haz in enumerate(ISO_14971_RISK_CONTROLS):
-        row_h = 32
+        row_h = 48
         row_bg = white if idx % 2 == 0 else light_bg
         p2.draw_rect(fitz.Rect(28, y, 584, y + row_h), color=border_col, fill=row_bg, width=0.5)
-        p2.insert_text((34, y + 13), haz["haz_id"], fontsize=7.5, fontname="cour", color=(0.75, 0.25, 0.05))
-        p2.insert_text((82, y + 11), haz["hazard"][:42], fontsize=7.0, fontname="helv", color=navy)
-        p2.insert_text((82, y + 22), haz["clinical_impact"][:46], fontsize=6.4, fontname="helv", color=slate)
-        p2.insert_text((290, y + 11), haz["control_measure"][:52], fontsize=6.8, fontname="helv", color=navy)
-        p2.insert_text((290, y + 22), haz["control_measure"][52:108], fontsize=6.8, fontname="helv", color=navy)
-        p2.insert_text((515, y + 16), "Acceptable", fontsize=7.2, fontname="helv", color=teal)
+        p2.insert_text((34, y + 16), haz["haz_id"], fontsize=7.5, fontname="cour", color=(0.75, 0.25, 0.05))
+        p2.insert_textbox(
+            fitz.Rect(80, y + 3, 280, y + 25),
+            haz["hazard"],
+            fontsize=6.5,
+            fontname="helv",
+            color=navy,
+        )
+        p2.insert_textbox(
+            fitz.Rect(80, y + 25, 280, y + 46),
+            haz["clinical_impact"],
+            fontsize=6.1,
+            fontname="helv",
+            color=slate,
+        )
+        p2.insert_textbox(
+            fitz.Rect(286, y + 4, 508, y + 46),
+            haz["control_measure"],
+            fontsize=6.5,
+            fontname="helv",
+            color=navy,
+        )
+        p2.insert_text((515, y + 20), "Acceptable", fontsize=7.2, fontname="helv", color=teal)
         y += row_h
 
-    y += 18
+    y += 14
 
     # Section 4: FDA AI/ML Predetermined Change Control Plan (PCCP)
     p2.insert_text((28, y), "4. FDA AI/ML PREDETERMINED CHANGE CONTROL PLAN (PCCP) -- FEDERATED LEARNING PROTOCOL", fontsize=9.5, fontname="helv", color=navy)
     y += 8
-    p2.draw_rect(fitz.Rect(28, y, 584, y + 74), color=border_col, fill=light_bg, width=0.8)
+    p2.draw_rect(fitz.Rect(28, y, 584, y + 96), color=border_col, fill=light_bg, width=0.8)
     pccp = dossier["pccp_protocol"]
     pccp_lines = [
         f"- Modification Protocol: {pccp['modification_protocol']}",
@@ -338,9 +368,15 @@ def generate_fda_510k_dhf_pdf(
         f"- Quantitative Acceptance Gate: {pccp['acceptance_criteria']}",
     ]
     for idx, line in enumerate(pccp_lines):
-        p2.insert_text((36, y + 15 + idx * 14), line[:105], fontsize=7.4, fontname="helv", color=navy)
+        p2.insert_textbox(
+            fitz.Rect(36, y + 5 + idx * 22, 576, y + 27 + idx * 22),
+            line,
+            fontsize=7.0,
+            fontname="helv",
+            color=navy,
+        )
 
-    y += 92
+    y += 112
 
     # Section 5: Cryptographic Model Provenance (SHA-256)
     p2.insert_text((28, y), "5. SECTION 524B CYBERSECURITY & CRYPTOGRAPHIC MODEL PROVENANCE (SHA-256 REGISTRY)", fontsize=9.5, fontname="helv", color=navy)
@@ -351,14 +387,15 @@ def generate_fda_510k_dhf_pdf(
     y += 18
 
     for idx, item in enumerate(dossier["cryptographic_model_manifest"]):
-        row_h = 18
+        row_h = 19
         row_bg = white if idx % 2 == 0 else light_bg
         p2.draw_rect(fitz.Rect(28, y, 584, y + row_h), color=border_col, fill=row_bg, width=0.5)
         art_name = item["model_artifact"]
-        if len(art_name) > 48:
-            art_name = "..." + art_name[-45:]
-        p2.insert_text((34, y + 12), art_name, fontsize=6.8, fontname="cour", color=navy)
-        p2.insert_text((295, y + 12), item["sha256_digest"], fontsize=6.5, fontname="cour", color=teal)
+        if len(art_name) > 58:
+            parts = art_name.split("/")
+            art_name = f"{parts[0]}/.../{'/'.join(parts[-2:])}" if len(parts) >= 3 else f"{art_name[:20]}...{art_name[-35:]}"
+        p2.insert_text((34, y + 12), art_name, fontsize=6.4, fontname="cour", color=navy)
+        p2.insert_text((295, y + 12), item["sha256_digest"], fontsize=6.4, fontname="cour", color=teal)
         y += row_h
 
     p2.insert_text((28, 772), "monai-cardiac-fat-fl | FDA 510(k) SaMD Design History File (DHF) Evidence Package", fontsize=7.0, fontname="helv", color=slate)
@@ -369,10 +406,10 @@ def generate_fda_510k_dhf_pdf(
         p3 = doc.new_page(width=792, height=612)  # Landscape Letter for architectural blueprint
         p3.draw_rect(fitz.Rect(0, 0, 792, 42), color=navy, fill=navy)
         p3.insert_text((28, 25), "APPENDIX A: END-TO-END CLINICAL & FEDERATED SaMD SYSTEM ARCHITECTURE BLUEPRINT", fontsize=10.5, fontname="helv", color=white)
-        p3.insert_image(fitz.Rect(20, 50, 772, 580), filename=str(fig_png))
+        p3.insert_image(fitz.Rect(20, 50, 772, 580), filename=str(fig_png), keep_proportion=True)
         p3.insert_text((28, 598), "monai-cardiac-fat-fl | FDA 510(k) SaMD Design History File (DHF) Evidence Package", fontsize=7.0, fontname="helv", color=slate)
         p3.insert_text((720, 598), "Page 3 of 3", fontsize=7.0, fontname="helv", color=slate)
 
-    doc.save(str(out_path))
+    doc.save(str(out_path), deflate=True, garbage=4, clean=True)
     doc.close()
     return out_path
