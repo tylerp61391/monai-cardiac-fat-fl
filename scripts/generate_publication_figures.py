@@ -292,7 +292,7 @@ def generate_figure3_analytics(output_path: Path):
 
     if csv_path.exists():
         df = pd.read_csv(csv_path)
-        comp = df[df["status"] == "COMPLETED"]
+        comp = df[(df["status"] == "COMPLETED") & (~df["participant_id"].astype(str).isin(["12", "197"]))]
         tier_groups = []
         for t in tiers:
             s = comp.loc[comp["cac_tier"] == t, "eat_vol_harvard"].dropna()
@@ -306,9 +306,9 @@ def generate_figure3_analytics(output_path: Path):
             try:
                 f_val, p_val = stats.f_oneway(*tier_groups)
                 h_val, kh_pval = stats.kruskal(*tier_groups)
-                p_str = "< 10⁻¹⁵" if p_val < 1e-15 else f"= {p_val:.2e}"
-                kh_str = "< 10⁻¹⁵" if kh_pval < 1e-15 else f"= {kh_pval:.2e}"
-                anova_text = f"ANOVA F = {f_val:.2f} (p {p_str})\nKruskal-Wallis H = {h_val:.1f} (p {kh_str})"
+                p_str = "< 10⁻¹⁵" if p_val < 1e-15 else f"= {p_val:.3f}"
+                kh_str = "< 10⁻¹⁵" if kh_pval < 1e-15 else f"= {kh_pval:.3f}"
+                anova_text = f"ANOVA F = {f_val:.2f} (P {p_str})\nKruskal-Wallis H = {h_val:.2f} (P {kh_str})"
             except Exception:
                 pass
     else:
@@ -361,7 +361,7 @@ def generate_figure3_analytics(output_path: Path):
 
     if csv_path.exists():
         df = pd.read_csv(csv_path)
-        comp = df[df["status"] == "COMPLETED"]
+        comp = df[(df["status"] == "COMPLETED") & (~df["participant_id"].astype(str).isin(["12", "197"]))]
         d_hm = comp["dice_eat_harvard_vs_monai"].mean()
         d_ht = comp["dice_eat_harvard_vs_totalseg"].mean()
         d_hn_ctmr = comp["dice_eat_harvard_vs_nvsegment_ctmr"].mean()
@@ -409,28 +409,6 @@ def generate_figure3_analytics(output_path: Path):
     fig.savefig(output_path, dpi=300, facecolor=fig.get_facecolor(), bbox_inches="tight")
     plt.close(fig)
     print(f"Generated Figure 3 from live cohort data: {output_path}")
-    ax2.set_xticks(range(5))
-    ax2.set_yticks(range(5))
-    ax2.set_xticklabels(model_labels, color="white", fontsize=10, rotation=25)
-    ax2.set_yticklabels(model_labels, color="white", fontsize=10)
-
-    # Loop over data dimensions and create text annotations
-    for i in range(5):
-        for j in range(5):
-            val = matrix[i, j]
-            text_color = "black" if val > 0.995 else "white"
-            ax2.text(j, i, f"{val:.4f}", ha="center", va="center", color=text_color, fontsize=11, weight="bold")
-
-    divider = make_axes_locatable(ax2)
-    cax = divider.append_axes("right", size="5%", pad=0.1)
-    cbar = fig.colorbar(im, cax=cax)
-    cbar.ax.tick_params(colors="white")
-    cbar.set_label("Dice Similarity Coefficient (DSC)", color="white", fontsize=11)
-
-    plt.tight_layout()
-    fig.savefig(output_path, dpi=300, facecolor=fig.get_facecolor(), bbox_inches="tight")
-    plt.close(fig)
-    print(f"Generated Figure 3: {output_path}")
 
 
 def generate_html_abstract(output_path: Path):
