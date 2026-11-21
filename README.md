@@ -27,7 +27,7 @@ This repository modernizes and substantially expands upon the foundational MGH [
 - **Cohort-Scale Clinical Validation ($N=1,000$ Patients)**: Extensively validated across the full 1,000-patient Stanford AIMI COCA cohort, spanning both ECG-gated calcium scoring CT and non-gated routine chest CT across all 5 Agatston CAC risk tiers ($0$ to $>400$, and massive plaque up to $635,000+$).
 - **Exact Mathematical & Parity Guarantee**: Demonstrates **100.0% exact bitwise mathematical and clinical equivalence on identical anatomical inputs** ($\Delta = 0.00\text{ cm}^3, \Delta = 0.00\text{ HU}$, intraclass correlation $\text{ICC} = 1.0000$, and CRISP-CT vascular inflammation risk agreement $\kappa = 1.0000$ across all 8 compartments) verified through a 4-checkpoint architectural parity engine.
 - **FDA Class II 510(k) SaMD Regulatory Traceability**: Built from the ground up to follow FDA Software as a Medical Device (SaMD) guidance:
-  - **IEC 62304 Class B Software Lifecycle**: Bi-directional requirement-to-test traceability matrix (`REQ-001` through `REQ-007` $\rightarrow$ architecture $\rightarrow$ verification tests $\rightarrow$ clinical endpoints).
+  - **IEC 62304 Class B Software Lifecycle**: Bi-directional requirement-to-test traceability matrix (`REQ-001` through `REQ-013` $\rightarrow$ architecture $\rightarrow$ verification tests $\rightarrow$ clinical endpoints).
   - **ISO 14971 Risk Management**: Exhaustive Failure Mode and Effects Analysis (FMEA) with safety mitigations (e.g. NaN guardrails, zero-spacing DICOM header rescues, HU window clipping).
   - **Predetermined Change Control Plan (PCCP)**: Bounded acceptance criteria ($|\Delta \text{DSC}| \le 0.03$, $|\Delta \text{HU}| \le 1.5\,\text{HU}$) governing federated learning model distillation and consensus updates.
   - **Automated DHF Evidence Dossier**: 1-click CLI and dashboard export of a formal vector PDF and JSON Design History File dossier (`cardiac-fat-fl regulatory-export`).
@@ -120,7 +120,7 @@ Outputs:
 
 1. **Per-Participant Masks**: Written to each participant subfolder (`/path/to/cohort/<participant_id>/eat_pvat.seg.nrrd`).
 2. **Cohort Summary Table**: Written to the `--output-dir` (defaults to cohort root) as `cardiac_fat_measurements.csv` conforming to the exact 19-column clinical schema.
-3. **Chamber Backend Option**: `--chamber-backend monai|totalsegmentator` (default: `monai`). Allows toggling between the 1.5mm NGC `monai_wholebody_ct_segmentation` SegResNet and `TotalSegmentator` (`heartchambers_highres` nnU-Net) for 4-chamber cardiac derivation.
+3. **Chamber Backend Option**: `--chamber-backend monai|totalsegmentator|nvsegment|nvsegment_ct` (default: `monai`). Allows toggling between the 1.5mm NGC `monai_wholebody_ct_segmentation` SegResNet, `TotalSegmentator` (`Task253` / `heartchambers_highres` nnU-Net), and NVIDIA-MedTech VISTA-3D foundation models (`NV-Segment-CTMR` / `NV-Segment-CT`) for cardiac chamber derivation.
 
 ### 3. Institutional PACS Archive Integration (DICOMweb STOW-RS & DIMSE C-STORE)
 
@@ -239,10 +239,10 @@ cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
 ```
 
 - **Cohort Research Analytics**:
-  - Six clinical KPI cards: Total Cohort $N$, Segmented $N$ and % coverage, Agatston CAC scored $N$, Cohort Median EAT Volume ($ ext{cm}^3$), Mean PVAT HU, and CRISP-CT Active Vascular Inflammation prevalence.
+  - Six clinical KPI cards: Total Cohort $N$, Segmented $N$ and % coverage, Agatston CAC scored $N$, Cohort Median EAT Volume ($\text{cm}^3$), Mean PVAT HU, and CRISP-CT Active Vascular Inflammation prevalence.
   - Interactive Chart.js visualizations:
     1. *EAT Total Volume vs. Agatston Calcium Score* (scatter plot with clinical risk stratification).
-    2. *PVAT Mean Attenuation vs. Agatston CAC Score* (scatter plot with CRISP-CT $-70.1 ext{ HU}$ threshold line).
+    2. *PVAT Mean Attenuation vs. Agatston CAC Score* (scatter plot with CRISP-CT $-70.1\text{ HU}$ threshold line).
     3. *Adipose Volume Distribution by Compartment* (EAT LA, LV, RA, RV, PVAT LAD, LCX, RCA with canonical synchronized palette).
     4. *Agatston CAC Risk Tier Breakdown* (Zero, Minimal, Mild, Moderate, Severe).
 - **Embedded OHIF v3.13 Medical Workstation Integration**:
@@ -353,7 +353,7 @@ Modernizing the legacy Python 2.7 / TensorFlow 1.14 CPU pipeline into Python 3.1
 
 For the complete technical derivation, ablation analysis (including the legacy Voronoi ablation drift, $\text{Dice} = 0.2965$), and audit specifications, refer to [`docs/PARITY_BENCHMARK_ROADMAP.md`](docs/PARITY_BENCHMARK_ROADMAP.md).
 
-### 6. DICOM De-Identification, PHI Compliance & Dual-Mode Execution (Clinical vs. Research)
+### 8. DICOM De-Identification, PHI Compliance & Dual-Mode Execution (Clinical vs. Research)
 
 For hospital ingestion, multi-center research, and batch processing 1,000s of cardiac CT studies, `monai-cardiac-fat-fl` implements a strict **Dual-Mode Operational Boundary** compliant with **HIPAA Safe Harbor (45 CFR § 164.514(b)(2))** and **DICOM PS 3.15 Annex E Basic Application Level Confidentiality Profile**:
 
@@ -551,7 +551,7 @@ The pipeline modernizes foundational Python 2.7 / TensorFlow 1.14 subprocess scr
 
    ```bash
    # Downloads NV-Reason-CT from Hugging Face
-   cardiac-fat-fl download-models --include-nvreason --nvreason-dir "E:\models\NV-Reason-CT"
+   cardiac-fat-fl download-models --include-nvreason --nvreason-dir "/path/to/models/NV-Reason-CT"
    ```
 
 5. **Turnkey Multi-Model Download**:
@@ -748,6 +748,12 @@ To ensure autonomous MCP agents and clinical researchers can run `cardiac-fat-fl
 | `map-run` | `cardiac-fat-fl map-run -i <study_dir> -o <dest>` | Executes the MONAI Deploy Application Package (MAP) DAG emitting DICOM-SEG, DICOM-SR, and metrics. |
 | `daemon` | `cardiac-fat-fl daemon <inbox_dir> [--outbox ...] [--pacs-url ...] [--mode research\|clinical] [--dry-run]` | Autonomous background watchdog: monitors incoming CT scans, executes MAP DAG, and auto-routes DICOM-SEG/SR to PACS. |
 | `report` | `cardiac-fat-fl report <study_dir> [-o dest] [--mode research\|clinical]` | Generates SOTA clinical diagnostic report with 3-view orthogonal MPR montage (HTML, vector PDF, and DICOM Encapsulated PDF `.104.1`). |
+| `dashboard` | `cardiac-fat-fl dashboard [--cohort-dir <dir>] [--port 8050]` | Launches interactive research dashboard with 5-tier CAC analytics, FL monitor, and embedded OHIF v3.13 workstation. |
+| `benchmark` | `cardiac-fat-fl benchmark --cohort-dir <dir> --candidate <seg> --reference <gt>` | Evaluates multi-compartment DICE, IoU, RVE%, MASD, and HD95 across candidate vs. reference segmentations. |
+| `fhir-export` | `cardiac-fat-fl fhir-export <study_dir> [-o bundle.json]` | Exports HL7 FHIR R4 Bundle (US Core DiagnosticReport, DocumentReference, LOINC 84245-0 EAT, RadLex PVAT). |
+| `fhir-server` | `cardiac-fat-fl fhir-server [--port 8080] [--storage-dir <dir>]` | Runs standalone self-contained HL7 FHIR R4 mock server & sandbox with atomic transaction bundle support. |
+| `mcp-server` | `cardiac-fat-fl mcp-server [--fhir-url <url>] [--token <tok>]` | Launches native Model Context Protocol (MCP) JSON-RPC 2.0 stdio server exposing 7 clinical FHIR & AI tools. |
+| `parity-audit` | `cardiac-fat-fl parity-audit <cohort_dir> [--mode controlled_stage3] [--limit N]` | Runs 4-checkpoint architectural parity audit comparing `monai-cardiac-fat-fl` against Harvard/MGH `CardiacFatQuant`. |
 | `deid-audit` | `cardiac-fat-fl deid-audit <path> [--mode research\|clinical] [--sanitize] [-o report.json]` | Audits DICOM cohorts for HIPAA Safe Harbor 18 PHI identifiers and verifies de-identification integrity. |
 | `anonymize` | `cardiac-fat-fl anonymize <input_dir> -o <dest_dir> [--mode research\|clinical]` | High-throughput batch de-identification engine preserving 3D spatial geometry and HU calibration. |
 | `regulatory-export` | `cardiac-fat-fl regulatory-export [-o dossier.pdf] [-j dossier.json]` | Generates an FDA Class II 510(k) / SaMD Design History File (DHF) Evidence Dossier (IEC 62304 traceability, ISO 14971 FMEA, PCCP, and architecture blueprint). |
@@ -838,6 +844,8 @@ monai-cardiac-fat-fl/
 ├── README.md                      # Technical specifications, architecture, and clinical usage guide
 ├── AGENTS.md                      # Autonomous agent codebase map, clinical invariants, and task recipes
 ├── SECURITY.md                    # Healthcare compliance (HIPAA/GDPR), RUO disclaimer, vulnerability disclosure & SSDLC
+├── LICENSE                        # Open-source software license
+├── MODEL_RELEASE_INSTRUCTIONS.md  # Checklist & commands for publishing model weight release assets
 ├── Dockerfile                     # Base OCI container definition for CLI & research workflows
 ├── docker-compose.yml             # Local single-node development stack
 ├── .github/
@@ -857,33 +865,31 @@ monai-cardiac-fat-fl/
 │       └── config_fed_client.json # MonaiAlgo + CardiacFatQuant local analytics executor
 ├── jobs/                          # NVIDIA FLARE 2.5+ multi-hospital simulation job specifications
 │   └── cardiac_fat_fl/
+│       ├── meta.json              # NVFLARE job metadata contract
 │       └── app/
-│           ├── config/            # Client and server execution configs (FedProx, FedBN)
-│           └── meta.json          # NVFLARE job metadata contract
-├── docs/                          # Architectural specifications, case studies, regulatory & manuscript
+│           └── config/            # Client and server execution configs (FedProx, FedBN)
+├── docs/                          # Architectural specifications, case studies, regulatory & benchmarks
 │   ├── README.md                  # Comprehensive documentation index & sitemap
 │   ├── case_studies/              # 300 DPI publication clinical case studies & VLM spotlights
 │   │   ├── README.md              # Catalog of edge cases (nongated_51, nongated_140, nongated_151, 442)
-│   │   ├── nongated_51_bilateral_lung_masses_case_study.png
-│   │   ├── nongated_140_zero_cac_invisible_risk_case_study.png
-│   │   ├── nongated_151_pacemaker_and_valves_case_study.png
-│   │   └── participant_442_coronary_inflammation_case_study.png
+│   │   ├── nongated_51_bilateral_lung_masses_case_study.{png,pdf}
+│   │   ├── nongated_140_zero_cac_invisible_risk_case_study.{png,pdf}
+│   │   ├── nongated_151_pacemaker_and_valves_case_study.{png,pdf}
+│   │   └── participant_442_coronary_inflammation_case_study.{png,pdf}
 │   ├── regulatory/
 │   │   ├── FDA_SAMD_REGULATORY_DOSSIER.md # FDA 510(k) SaMD dossier, IEC 62304 matrix, ISO 14971 FMEA & PCCP
-│   │   └── FDA_510k_SaMD_DHF_Evidence_Dossier.pdf # Generated vector DHF evidence dossier
-│   ├── manuscript/                # Full academic manuscripts, preprints & scoping docs
-│   │   ├── coca_full_manuscript.md
-│   │   ├── coca_cohort_abstract.md
-│   │   └── coca_cohort_abstract.html
+│   │   └── FDA_510k_SaMD_DHF_Evidence_Dossier.pdf # Generated via regulatory-export (gitignored)
 │   ├── figures/                   # Global publication figures & architecture blueprints
 │   ├── benchmarks/                # Parity audit CSVs & stratified pilot metrics
 │   ├── architecture_review/       # Visual architecture walkthrough & slide gallery (15 slides)
+│   ├── DICOM_DEIDENTIFICATION_RSNA_V19_GUIDE.md # Dual-mode HIPAA Safe Harbor & RSNA V19 de-identification guide
 │   ├── EPIC_FHIR_MCP_INTEGRATION.md # Epic on FHIR, SMART on FHIR backend services, and open.epic MCP guide
 │   ├── RESEARCH_DASHBOARD_AND_OHIF_WORKSTATION.md # Research Dashboard, 5-tier CAC analytics & embedded OHIF Workstation
 │   ├── MONAI_DEPLOY_AND_FLARE_INTEGRATION.md # Closed-loop federated clinical architecture & AI flywheel
 │   ├── Cardiac_Segmentation_Architecture.pdf
 │   ├── ARCHITECTURE_CODE_REVIEW.md
 │   ├── architecture_infographic.html
+│   ├── samd_big_picture_infographic.html # Interactive FDA 510(k) SaMD & federated pipeline infographic
 │   ├── presentation_deck.html
 │   └── PARITY_BENCHMARK_ROADMAP.md # 100-case Stanford COCA architectural parity audit & benchmark roadmap
 ├── k8s/                           # Institutional hospital Kubernetes cluster manifests
@@ -892,9 +898,9 @@ monai-cardiac-fat-fl/
 ├── models/                        # Pretrained ONNX & NGC SegResNet weights directory (with README & download guide)
 │   ├── README.md
 │   ├── checksums.sha256           # Cryptographic SHA-256 verification hashes for all weight files
-│   ├── deepheartseg_heart.onnx
-│   ├── deepheartseg_loc.onnx
-│   └── wholeBody_ct_segmentation/ # 104-class 1.5mm SegResNet (NVIDIA NGC / MONAI Model Zoo)
+│   ├── deepheartseg_heart.onnx    # Pericardial sac boundary model (downloaded via download-models)
+│   ├── deepheartseg_loc.onnx      # Heart localization model (downloaded via download-models)
+│   └── wholeBody_ct_segmentation/ # 104-class 1.5mm SegResNet (downloaded via download-models)
 ├── example_source_dir/            # Official MGH benchmark cohort (0506, 0909, 0987) with clean participant roots & segmentation_models/
 │   ├── README.md                  # Detailed layout guide for benchmark data
 │   ├── 0506/                      # Clean root (scan, primary 8-ch seg, reports, OHIF) + segmentation_models/
@@ -905,6 +911,7 @@ monai-cardiac-fat-fl/
 │   ├── app.yaml                   # MONAI Deploy App SDK v0.6+ declarative manifest
 │   ├── Dockerfile                 # Production OCI container image for Kubernetes deployment
 │   └── docker-compose.monai-deploy.yml # Clinical testbed (Orthanc PACS + optional MIG + MAP worker)
+├── scripts/                       # Benchmark, case-study, figure generation, VLM, and release automation scripts
 ├── src/
 │   └── cardiac_fat_fl/
 │       ├── __init__.py            # Package root exports

@@ -22,7 +22,7 @@ This document is automatically loaded into agent context. It provides the codeba
 
 ## 2. Codebase Map & Token Efficiency Guide
 
-To minimize token usage, **do not read `README.md` (800+ lines) or full large files** unless explicitly editing them. Jump directly to the relevant module and line range below:
+To minimize token usage, **do not read `README.md` (1,100+ lines) or full large files** unless explicitly editing them. Jump directly to the relevant module and line range below:
 
 ### Source Modules (`src/cardiac_fat_fl/`)
 
@@ -40,20 +40,20 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `pacs_client.py` | 349 | `find_dicom_instances_to_push`, `push_to_dicomweb_stow`, `push_to_dimse_cstore` | PACS archive push via DICOMweb STOW-RS (multipart/related) and DIMSE C-STORE (`pynetdicom`). |
 | `pacs_daemon.py` | 407 | `DaemonConfig`, `PACSWatchdogDaemon`, `is_study_settled`, `find_pending_studies`, `process_study` | Automated clinical PACS watchdog and auto-router daemon (zero-click processing, file settling check, dry-run mode, and fault-tolerant error quarantine). |
 | `anonymizer.py` | 466 | `audit_study_anonymization`, `anonymize_dicom_series`, `generate_rsna_v19_project_config` | DICOM PS 3.15 Annex E & HIPAA Safe Harbor de-identification engine, dual-mode (clinical vs. research), pre-flight PHI auditor, and RSNA Anonymizer V19 profile generator. |
-| `regulatory_dossier.py` | 378 | `IEC_62304_TRACEABILITY_MATRIX`, `ISO_14971_RISK_CONTROLS`, `build_fda_510k_dhf_dossier`, `generate_fda_510k_dhf_pdf` | Automated FDA Class II 510(k) / SaMD Design History File (DHF) evidence generator (IEC 62304 traceability, ISO 14971 FMEA risk controls, PCCP bounds, and 3-page vector PDF dossier). |
+| `regulatory_dossier.py` | 415 | `IEC_62304_TRACEABILITY_MATRIX`, `ISO_14971_RISK_CONTROLS`, `build_fda_510k_dhf_dossier`, `generate_fda_510k_dhf_pdf` | Automated FDA Class II 510(k) / SaMD Design History File (DHF) evidence generator (IEC 62304 traceability, ISO 14971 FMEA risk controls, PCCP bounds, and 3-page vector PDF dossier). |
 | `ohif_exporter.py` | 2697 | **L1–602**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L603–2379**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2380–2697**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
-| `ohif_viewer.py` | 245 | `launch_ohif_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
+| `ohif_viewer.py` | 245 | `launch_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
 | `cohort_research.py` | 794 | `CohortDataset`, `CohortParticipant`, `categorize_calcium_score`, `CAC_TIER_ORDER`, `compute_tier_group_comparisons`, `compute_bivariate_regression` | Smart cohort discovery (flat, nested, COCA gated/non-gated with natural numerical sorting), Agatston CAC linking across all 5 tiers, ANOVA / Kruskal-Wallis omnibus testing, pairwise post-hoc tests, and bivariate regression modeling. |
 | `publication_figure.py` | 631 | `generate_publication_figure` | 300 DPI publication-grade multi-panel composite figure generator formatted for peer-reviewed cardiovascular imaging journals (*JACC*, *Radiology*, *Circulation*). |
-| `dashboard.py` | 5710 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard & embedded OHIF workstation server (Flask, Chart.js, KPI scorecards, interactive SVG box plots across 5 CAC tiers with ANOVA/Kruskal scorecards, bivariate regression model, 300 DPI publication figure export endpoint `/api/cohort/publication-figure`, case explorer, `/viewer/<pid>/` launcher, DICE benchmark runner, Privacy Gate & Regulatory SaMD tab `/api/regulatory/dhf`). |
+| `dashboard.py` | 5714 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard & embedded OHIF workstation server (Flask, Chart.js, KPI scorecards, interactive SVG box plots across 5 CAC tiers with ANOVA/Kruskal scorecards, bivariate regression model, 300 DPI publication figure export endpoint `/api/cohort/publication-figure`, case explorer, `/viewer/<pid>/` launcher, DICE benchmark runner, Privacy Gate & Regulatory SaMD tab `/api/regulatory/dhf`). |
 | `segmentation_evaluator.py` | 489 | `SegmentationBenchmarkEngine`, `CohortBenchmarkReport`, `compute_compartment_dice`, `compute_volume_metrics`, `compute_surface_distance_metrics` | Extensible multi-compartment segmentation evaluation, DICE metrics, IoU, RVE, MASD/HD95. |
 | `cli.py` | 2141 | **L54**: `_process_one_participant`; **L194**: `quantify`; **L445**: `federated-train`; **L483**: `federated-stats`; **L502**: `federated-simulate`; **L574**: `compare-models`; **L657**: `view`; **L680**: `export-ohif`; **L702**: `hardware`; **L733**: `download-models`; **L988**: `push`; **L1178**: `map-run`; **L1232**: `daemon`; **L1415**: `report`; **L1648**: `dashboard`; **L1671**: `benchmark`; **L1763**: `fhir-export`; **L1808**: `fhir-server`; **L1845**: `mcp-server`; **L1876**: `parity-audit`; **L1949**: `deid-audit`; **L2008**: `anonymize`; **L2054**: `ci-check`; **L2094**: `regulatory-export` | Typer CLI entrypoints (`cardiac-fat-fl`). |
-| `coca_parity.py` | 2001 | `run_architectural_parity_audit`, `compute_cardiacfatquant_eat_pvat_masks`, `rasterize_coca_calcium_xml`, `align_eat_pvat_channels_from_cardiacfatquant_header`, `HARVARD_7_RULES` | 4-checkpoint end-to-end architectural parity engine and direct execution bridge for Harvard/MGH `circ-ml/CardiacFatQuant` vs. `monai-cardiac-fat-fl` on Stanford COCA. |
+| `coca_parity.py` | 2002 | `run_architectural_parity_audit`, `compute_cardiacfatquant_eat_pvat_masks`, `rasterize_coca_calcium_xml`, `align_eat_pvat_channels` | 4-checkpoint end-to-end architectural parity engine and direct execution bridge for Harvard/MGH `circ-ml/CardiacFatQuant` vs. `monai-cardiac-fat-fl` on Stanford COCA. |
 | `nv_reason_reporter.py` | 229 | `is_nv_reason_available`, `clean_vlm_narrative`, `build_clinical_prompt`, `generate_nv_reason_narrative` | NVIDIA NV-Reason-CT 3D Vision-Language AI Radiologist (3D ViT + Qwen3.5-4B), BF16 / SDPA, ML tag sanitization (`KEY FINDINGS:`), and structured narrative report generator. |
 | `federated_simulator.py` | 261 | `run_federated_simulation`, `ensure_nvflare_windows_compatibility` | Turnkey SOTA NVIDIA FLARE 2.5+ multi-hospital simulation runner with automated Windows OS compatibility patching. |
 | `fl_client_algo.py` | 530 | `CardiacFatClientAlgo`, `CardiacFatTrainer` | NVFLARE client training/evaluation executor and Model Trainer bridging DXO weights to MONAI (FedProx + FedBN). |
-| `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_site_moments` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
-| `model.py` | 128 | `create_eat_pvat_segresnet`, `filter_fedbn_state_dict` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
+| `fl_stats_executor.py` | 203 | `CardiacFatStatsExecutor`, `aggregate_federated_statistics` | NVFLARE federated Welford statistical moments ($N, \sum x, \sum x^2, \min, \max$). |
+| `model.py` | 128 | `create_cardiac_fat_model`, `filter_weights_for_fedbn` | MONAI 3D SegResNet architecture and FedBN normalization layer filtering. |
 | `hardware.py` | 219 | `detect_hardware`, `validate_worker_concurrency` | Host CPU/RAM/GPU profiler and OOM-safe worker concurrency throttling. |
 | `monai_deploy.py` | 412 | `CardiacCTStudyLoaderOp`, `CardiacFatQuantifierOp`, `DicomSegAndSrWriterOp`, `CardiacFatQuantApplication` | MONAI Deploy Application Package (MAP) DAG for clinical Holoscan / Informatics Gateway deployment. |
 
@@ -64,7 +64,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 | `docs/README.md` | Master docs index | Top-level table of contents and documentation sitemap. |
 | `docs/case_studies/` | Clinical case studies | 300 DPI publication case studies, vector PDFs, and VLM spotlights (`nongated_51`, `nongated_140`, `nongated_151`, `442`). |
 | `docs/regulatory/` | SaMD regulatory dossier | FDA Class II 510(k) DHF specification, IEC 62304 traceability, ISO 14971 FMEA, and vector PDF evidence dossier. |
-| `docs/manuscript/` | Manuscripts & preprints | Academic journal manuscripts (`coca_full_manuscript.md`), conference preprints, and scoping docs. |
+| `docs/manuscript/` | Manuscripts & preprints | Academic journal manuscripts (`coca_full_manuscript.md`), conference preprints, and scoping docs (private / gitignored until publication). |
 | `docs/figures/` | Primary figures | Organized into `coca/` (Stanford COCA cohort & publication figures) and `project/` (architecture blueprints, SaMD pipeline, and OHIF workstation). |
 | `example_source_dir/` | Reference MGH cohort | $N=3$ benchmark cohort (`0506`, `0909`, `0987`) with clean participant roots and `segmentation_models/` segregations. |
 | `k8s/hospital-clinical-testbed.yaml` | Kubernetes manifests | Provisions `clinical-ai` namespace, Orthanc PACS Deployment/Service (8042/4242), and MAP batch Job. |
@@ -75,7 +75,7 @@ To minimize token usage, **do not read `README.md` (800+ lines) or full large fi
 ### Test Suite (`tests/`)
 
 - `conftest.py` (224L): Synthetic 3D cardiac CT phantom fixtures (`synthetic_ct_fixture`, `synthetic_nrrd_scan`, `synthetic_cohort_dir`).
-- Unit/Integration tests (146 tests): `test_clinical_report.py` (299L), `test_transforms.py` (274L), `test_fl_client.py` (239L), `test_pacs_client.py` (182L), `test_pacs_daemon.py` (207L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (249L), `test_fhir_server.py` (270L), `test_epic_mcp.py` (361L), `test_cli.py` (178L), `test_monai_deploy.py` (236L), `test_ohif.py` (112L), `test_equivalency.py` (85L), `test_hardware.py` (60L), `test_benchmark.py` (146L), `test_cohort_research.py` (191L), `test_dashboard.py` (395L), `test_ci_workflows.py` (102L), `test_coca_parity.py` (172L), `test_anonymizer.py` (225L), `test_nv_reason.py` (128L).
+- Unit/Integration tests (146 tests): `test_clinical_report.py` (299L), `test_transforms.py` (274L), `test_fl_client.py` (239L), `test_pacs_client.py` (182L), `test_pacs_daemon.py` (207L), `test_dicom_sr.py` (119L), `test_fhir_client.py` (249L), `test_fhir_server.py` (270L), `test_epic_mcp.py` (361L), `test_cli.py` (178L), `test_monai_deploy.py` (236L), `test_ohif.py` (112L), `test_equivalency.py` (85L), `test_hardware.py` (60L), `test_benchmark.py` (146L), `test_cohort_research.py` (191L), `test_dashboard.py` (395L), `test_ci_workflows.py` (102L), `test_coca_parity.py` (178L), `test_anonymizer.py` (225L), `test_nv_reason.py` (128L).
 
 ---
 
@@ -394,7 +394,7 @@ To verify end-to-end mathematical, anatomical, and raw CT pipeline parity betwee
      - *Algorithmic Drift*: Legacy Voronoi radial dilation method yielded `0.2965 Mean Dice` (~30%), $+54.71\text{ cm}^3$ volume bias, and completely missed the anterior interventricular groove (PVAT LAD Dice = 0.0430).
      - *Boundary Contour Sensitivity*: Single 1-voxel ($1.5\text{ mm}$) myocardial contour shifts result in $5.9\%$ to $8.8\%$ PVAT volume shifts, explaining the observed compound ~20–30% raw CT variation between nnU-Net and SegResNet backends.
    - **Goal 3 (Full Drop-in Pipeline Equivalence on Raw CT)**:
-     - End-to-end raw CT execution comparing Tyler's platform configured with `--chamber-backend totalsegmentator` vs Harvard's `circ-ml/CardiacFatQuant` repository achieves `Mean Dice = 1.000000` across all 8 compartments and $0.0000\text{ cm}^3$ metric discrepancy on raw CT scans.
+     - End-to-end raw CT execution comparing `monai-cardiac-fat-fl` configured with `--chamber-backend totalsegmentator` vs Harvard's `circ-ml/CardiacFatQuant` repository achieves `Mean Dice = 1.000000` across all 8 compartments and $0.0000\text{ cm}^3$ metric discrepancy on raw CT scans.
      - Verified TotalSegmentator v1 manuscript checkpoint (`Task253`, SHA-256 `6fcd6e71...`) in `models/totalseg_v1_cardiac`.
 3. **Automated Verification Deliverables** (`parity_verification_998/` / `parity_verification_100/`):
    - `repo_to_repo_parity_controlled_stage3.csv`: Per-patient 8-compartment DICE scores, absolute volume differences, and mean attenuation differences.
@@ -418,7 +418,7 @@ To download and cryptographically verify model checkpoints across all tracks (De
    - NVIDIA NGC WholeBody SegResNet: `cardiac-fat-fl download-models --include-wholebody`
    - NVIDIA-MedTech VISTA-3D Foundation Models (`NV-Segment-CT` & `NV-Segment-CTMR`): `cardiac-fat-fl download-models --include-nvsegment`
    - TotalSegmentator v1 Task253 Checkpoint: `cardiac-fat-fl download-models --include-totalseg`
-   - NVIDIA NV-Reason-CT 3D VLM: `cardiac-fat-fl download-models --include-nvreason --nvreason-dir "E:\models\NV-Reason-CT"` (or `python scripts/download_nv_reason_ct.py`)
+   - NVIDIA NV-Reason-CT 3D VLM: `cardiac-fat-fl download-models --include-nvreason --nvreason-dir "/path/to/models/NV-Reason-CT"` (or `python scripts/download_nv_reason_ct.py`)
 3. **Cryptographic Verification**:
    All files are validated against official SHA-256 digests in [`models/checksums.sha256`](models/checksums.sha256) and `KNOWN_MODEL_SHA256` in `cli.py`. Full details in [`MODEL_RELEASE_INSTRUCTIONS.md`](MODEL_RELEASE_INSTRUCTIONS.md).
 

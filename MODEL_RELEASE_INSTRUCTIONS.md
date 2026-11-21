@@ -61,7 +61,7 @@ cardiac-fat-fl download-models --include-totalseg
 
 ```bash
 # Downloads 3D ViT + Qwen3.5-4B generative report model from Hugging Face (nvidia/NV-Reason-CT)
-cardiac-fat-fl download-models --include-nvreason --nvreason-dir "E:\models\NV-Reason-CT"
+cardiac-fat-fl download-models --include-nvreason --nvreason-dir "/path/to/models/NV-Reason-CT"
 
 # Or execute the standalone Python script (CPU/disk I/O only, 0 MB VRAM):
 python scripts/download_nv_reason_ct.py
@@ -90,7 +90,7 @@ NGC WholeBody low-res model verified: models/wholeBody_ct_segmentation/models/mo
 NV-Segment-CT model verified: models/nv_segment_ct/vista3d_pretrained_model/model.pt (SHA-256 valid)
 NV-Segment-CTMR model verified: models/nv_segment_ctmr/vista3d_pretrained_model/model.pt (SHA-256 valid)
 TotalSegmentator Task253 cardiac model verified: models/totalseg_v1_cardiac/.../model_final_checkpoint.model (SHA-256 valid)
-NVIDIA NV-Reason-CT model present: E:\models\NV-Reason-CT\model.safetensors (10.64 GB)
+NVIDIA NV-Reason-CT model present: /path/to/models/NV-Reason-CT/model.safetensors (10.64 GB)
 Federated consensus global model verified: models/federated/FL_global_model.pt (SHA-256 valid)
 ```
 
@@ -123,6 +123,9 @@ Get-FileHash models/deepheartseg_*.onnx, models/wholeBody_ct_segmentation/models
 ## 4. Publishing Release Assets to GitHub
 
 When creating a new official GitHub release tag (e.g. `v1.0.0`), attach the binary assets and checksum manifest:
+
+> [!NOTE]
+> Verify that the release tag (e.g., `v1.0.0`) points to the target commit on `main` before creating or updating the release. You can also attach `docs/regulatory/FDA_510k_SaMD_DHF_Evidence_Dossier.pdf` (generated via `cardiac-fat-fl regulatory-export`) alongside the ONNX weights and checksum manifest.
 
 ### Method A: Automated via GitHub CLI (`gh`)
 
