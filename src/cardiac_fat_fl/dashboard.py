@@ -759,6 +759,8 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         limit = int(data.get("limit", 10))
         seed = int(data.get("seed", 42))
         compute_surf = bool(data.get("compute_surface_distances", True))
+        use_cache = bool(data.get("use_cache", True))
+        save_outputs = bool(data.get("save_parity_outputs_to_disk", True))
 
         try:
             from cardiac_fat_fl.coca_parity import run_architectural_parity_audit
@@ -769,6 +771,8 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
                 limit=limit,
                 seed=seed,
                 compute_surface_distances=compute_surf,
+                use_cache=use_cache,
+                save_parity_outputs_to_disk=save_outputs,
             )
             return jsonify(sanitize_nans(result))
         except Exception as e:

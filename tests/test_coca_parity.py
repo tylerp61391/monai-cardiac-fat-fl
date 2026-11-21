@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import plistlib
 from pathlib import Path
 
@@ -145,6 +146,8 @@ def test_run_architectural_parity_audit_and_dashboard_endpoint() -> None:
         mode="controlled_stage3",
         limit=2,
         compute_surface_distances=False,
+        use_cache=False,
+        save_parity_outputs_to_disk=False,
     )
     assert report["participant_count"] >= 1
     assert math.isclose(report["mean_overall_dice"], 1.0, abs_tol=1e-5)
@@ -160,13 +163,16 @@ def test_run_architectural_parity_audit_and_dashboard_endpoint() -> None:
     client = app.test_client()
     res = client.post(
         "/api/parity/run",
-        json={"mode": "controlled_stage3", "limit": 1, "compute_surface_distances": False},
+        json={
+            "mode": "controlled_stage3",
+            "limit": 1,
+            "compute_surface_distances": False,
+            "use_cache": False,
+            "save_parity_outputs_to_disk": False,
+        },
     )
     assert res.status_code == 200
     data = res.get_json()
     assert data["mean_overall_dice"] == 1.0
     assert "checkpoint_d" in data
-
-
-import math
 

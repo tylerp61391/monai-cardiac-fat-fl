@@ -1940,7 +1940,8 @@ def run_architectural_parity_audit(
     }
     try:
         if len(per_case_results) > 0:
-            cache_file.write_text(json.dumps(result_payload, indent=2), encoding="utf-8")
+            if use_cache or save_parity_outputs_to_disk:
+                cache_file.write_text(json.dumps(result_payload, indent=2), encoding="utf-8")
             if save_parity_outputs_to_disk:
                 from cardiac_fat_fl.measurement_schema import generate_measurement_columns
 
