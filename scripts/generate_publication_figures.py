@@ -226,7 +226,7 @@ def generate_figure2_concordance(data, output_path: Path):
     vmin = wl - ww / 2.0
     vmax = wl + ww / 2.0
 
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12), dpi=300, facecolor="#0f172a")
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12.6), dpi=300, facecolor="#0f172a")
 
     models = [
         ("Panel A: Native Non-Contrast Cardiac CT", None, None),
@@ -253,16 +253,17 @@ def generate_figure2_concordance(data, output_path: Path):
             overlay = create_color_overlay_rgb(ax_seg, (ct.shape[1], ct.shape[2]), alpha_val=0.7)
             ax.imshow(overlay)
 
-        ax.set_title(title, color="white", fontsize=12, weight="bold", pad=8)
+        ax.set_title(title, color="white", fontsize=12, weight="bold", pad=10)
         if subtitle:
             ax.text(
                 0.5,
-                -0.06,
+                -0.045,
                 subtitle,
                 color="#38bdf8" if "1.0000" in subtitle else "#fbbf24",
                 fontsize=11,
                 weight="bold",
                 ha="center",
+                va="top",
                 transform=ax.transAxes,
             )
 
@@ -270,7 +271,7 @@ def generate_figure2_concordance(data, output_path: Path):
         ax.set_ylim(410, 140)
         ax.axis("off")
 
-    plt.tight_layout()
+    plt.tight_layout(h_pad=3.0, w_pad=1.2)
     fig.savefig(output_path, dpi=300, facecolor=fig.get_facecolor(), bbox_inches="tight")
     plt.close(fig)
     print(f"Generated Figure 2: {output_path}")

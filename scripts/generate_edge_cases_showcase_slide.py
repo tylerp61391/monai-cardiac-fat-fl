@@ -168,11 +168,11 @@ def create_edge_cases_showcase_slide(output_png: Path, output_pdf: Path | None =
     ax.text(
         2.8,
         95.1,
-        "Deep Cohort Mining Across N = 1,001 Quantified Stanford COCA CTs & N = 996 NV-Reason-CT-4B 3D Radiologist Narratives",
+        "Deep Cohort Evaluation Across N = 1,000 Unique Stanford COCA CTs (992 Quantified) & 997 / 998 NV-Reason-CT Narratives",
         ha="left",
         va="top",
         color="#ffffff",
-        fontsize=15.0,
+        fontsize=14.4,
         fontweight="bold",
         fontfamily="sans-serif",
         zorder=3,
@@ -190,8 +190,8 @@ def create_edge_cases_showcase_slide(output_png: Path, output_pdf: Path | None =
     )
 
     badges = [
-        ("1,001 / 1,002 (99.9%) Quantified", "#0284c7", "#e0f2fe", 65.5, 95.6),
-        ("996 3D NV-Reason-CT Narratives", "#059669", "#d1fae5", 77.2, 95.6),
+        ("992 / 1,000 (99.2%) Quantified", "#0284c7", "#e0f2fe", 65.5, 95.6),
+        ("997 / 998 (99.9%) VLM Reports", "#059669", "#d1fae5", 77.2, 95.6),
         ("CRISP-CT Cutoff: > -70.1 HU", "#e11d48", "#ffe4e6", 88.8, 95.6),
         ("Zero-Spacing DICOM Recovery", "#7c3aed", "#ede9fe", 65.5, 92.4),
         ("100 Implanted Devices Flagged", "#d97706", "#fef3c7", 77.2, 92.4),
@@ -457,21 +457,21 @@ def create_edge_cases_showcase_slide(output_png: Path, output_pdf: Path | None =
         74.8,
         bg="#ffffff",
         border="#0f172a",
-        title="5. AUTONOMOUS 3D VLM DISCOVERY SPECTRUM (N = 996 CTs)",
+        title="5. STRUCTURED 3D VLM DISCOVERY SPECTRUM (N = 997 / 998 CTs)",
         title_color="#0f172a",
-        title_size=11.0,
-        subtitle="NVIDIA NV-Reason-CT-4B (3D ViT + Qwen3.5-4B) Structured Findings",
+        title_size=10.4,
+        subtitle="NVIDIA NV-Reason-CT (3D ViT + Qwen3.5-4B) Batch Findings",
         subtitle_color="#475569",
         border_width=1.8,
         header_strip="#e2e8f0",
     )
 
     findings_bars = [
-        ("Coronary Artery Wall Calcification", 761, 76.4, "#0284c7", "761 (76.4%)"),
-        ("Cardiomegaly / Chamber Enlargement", 411, 41.3, "#0369a1", "411 (41.3%)"),
+        ("Coronary Artery Wall Calcification", 761, 76.3, "#0284c7", "761 (76.3%)"),
+        ("Cardiomegaly / Chamber Enlargement", 411, 41.2, "#0369a1", "411 (41.2%)"),
         ("Basilar / Dependent Atelectasis", 168, 16.9, "#0d9488", "168 (16.9%)"),
-        ("Pulmonary Fibrotic Sequelae / Scarring", 149, 15.0, "#059669", "149 (15.0%)"),
-        ("Incidental Pulmonary Nodule(s)", 141, 14.2, "#d97706", "141 (14.2%)"),
+        ("Pulmonary Fibrotic Sequelae / Scarring", 149, 14.9, "#059669", "149 (14.9%)"),
+        ("Incidental Pulmonary Nodule(s)", 141, 14.1, "#d97706", "141 (14.1%)"),
         ("Thoracic Aortic Wall Calcification", 116, 11.6, "#2563eb", "116 (11.6%)"),
         ("Implanted Devices / Sternotomy / Valves", 100, 10.0, "#7c3aed", "100 (10.0%)"),
         ("Ascending Aorta / Main PA Dilation", 76, 7.6, "#4f46e5", "76 (7.6%)"),
