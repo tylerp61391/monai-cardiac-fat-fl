@@ -189,3 +189,53 @@ def test_cohort_dataset_natural_sorting(tmp_path: Path):
     cohort = CohortDataset(tmp_path)
     assert list(cohort.participants.keys()) == ["0", "1", "2", "10", "20", "100"]
 
+
+def test_cohort_dataset_temp_cache_roundtrip_and_invalidation(tmp_path: Path):
+    """Verify temp JSON index cache speeds reloads without touching cohort_dir and invalidates cleanly."""
+    for i in range(1, 23):
+        pid = f"PAT_{i:03d}"
+        cdir = tmp_path / pid
+        cdir.mkdir()
+        (cdir / "scan.nrrd").write_text("dummy")
+        (cdir / "eat_pvat.seg.nrrd").write_text("dummy")
+        if i == 1:
+            (cdir / "nv_reason_narrative.txt").write_text("Normal heart size.")
+
+    pd.DataFrame(
+        [{"PatientId": "PAT_001", "TotalScore": 150.0}]
+    ).to_csv(tmp_path / "scores_gated.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "participant_id": "PAT_001",
+                "EAT Total Volume (cm3)": 92.5,
+                "PVAT Total Mean Attenuation (HU)": -68.4,
+            }
+        ]
+    ).to_csv(tmp_path / "cardiac_fat_measurements.csv", index=False)
+
+    cohort1 = CohortDataset(tmp_path)
+    cache_file = cohort1._cache_file_path()
+    assert cache_file.is_file()
+    assert tmp_path not in cache_file.parents
+    assert cohort1.total_count == 22
+    assert cohort1.participants["PAT_001"].calcium_score == 150.0
+    assert cohort1.participants["PAT_001"].has_nv_reason is True
+
+    # Warm reload from user-temp cache
+    cohort2 = CohortDataset(tmp_path)
+    assert cohort2.total_count == 22
+    assert cohort2.participants["PAT_001"].calcium_score == 150.0
+    assert cohort2.participants["PAT_001"].metrics["EAT Total Volume (cm3)"] == 92.5
+    assert cohort2.participants["PAT_001"].has_nv_reason is True
+
+    # Adding a new participant folder must invalidate the cache automatically
+    new_dir = tmp_path / "PAT_023"
+    new_dir.mkdir()
+    (new_dir / "scan.nrrd").write_text("dummy")
+
+    cohort3 = CohortDataset(tmp_path)
+    assert cohort3.total_count == 23
+    assert "PAT_023" in cohort3.participants
+
+

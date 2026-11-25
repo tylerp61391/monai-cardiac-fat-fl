@@ -16,19 +16,18 @@ Provides:
 from __future__ import annotations
 
 import csv
+import fnmatch
+import hashlib
 import json
 import math
 import os
 import re
+import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-import numpy as np
-import pandas as pd
-from scipy import stats
-
-from cardiac_fat_fl.io_metatensor import _find_dicom_series_dir, discover_participants
+from cardiac_fat_fl.discovery import _find_dicom_series_dir, discover_participants
 from cardiac_fat_fl.measurement_schema import (
     ADIPOSE_HU_MAX,
     ADIPOSE_HU_MIN,
@@ -38,6 +37,9 @@ from cardiac_fat_fl.measurement_schema import (
     SegmentationCompartment,
     calculate_volume_cm3,
 )
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 def categorize_calcium_score(score: Optional[float]) -> str:
@@ -83,6 +85,7 @@ class CohortParticipant:
     metrics: Dict[str, float] = field(default_factory=dict)
     crisp_ct_status: str = "Unknown"
     scan_type: str = "CT"
+    has_nv_reason: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert participant record to dictionary with JSON-safe values."""
@@ -100,7 +103,7 @@ class CohortParticipant:
         has_pdf = (self.report_pdf is not None and self.report_pdf.is_file()) or (self.study_dir / "cardiac_fat_report.pdf").is_file() or (self.study_dir / "report" / "cardiac_fat_report.pdf").is_file()
         has_html = (self.report_html is not None and self.report_html.is_file()) or (self.study_dir / "cardiac_fat_report.html").is_file() or (self.study_dir / "report" / "cardiac_fat_report.html").is_file()
         has_dcm = (self.report_dcm is not None and self.report_dcm.is_file()) or (self.study_dir / "eat_pvat_report.dcm").is_file() or (self.study_dir / "report" / "eat_pvat_report.dcm").is_file()
-        has_vlm = (self.study_dir / "nv_reason_narrative.txt").is_file() or (self.study_dir / "nv_reason_clinical_narrative.txt").is_file()
+        has_vlm = self.has_nv_reason or (self.study_dir / "nv_reason_narrative.txt").is_file() or (self.study_dir / "nv_reason_clinical_narrative.txt").is_file() or (self.study_dir / "report" / "nv_reason_narrative.txt").is_file()
 
         return {
             "participant_id": self.participant_id,
@@ -123,29 +126,263 @@ class CohortParticipant:
         }
 
 
+def _read_csv_dicts(csv_path: Path) -> List[Dict[str, str]]:
+    """Read a CSV file via stdlib ``csv.DictReader`` with stripped column headers."""
+    rows: List[Dict[str, str]] = []
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames is None:
+            return rows
+        clean_fields = [c.strip() if c is not None else "" for c in reader.fieldnames]
+        for raw_row in reader:
+            row: Dict[str, str] = {}
+            for raw_k, clean_k in zip(reader.fieldnames, clean_fields):
+                if clean_k and clean_k not in row:
+                    val = raw_row.get(raw_k)
+                    row[clean_k] = val if val is not None else ""
+            rows.append(row)
+    return rows
+
+
+def _safe_float(raw: Any) -> float:
+    """Parse float value from CSV cell, returning NaN for blank or non-numeric entries."""
+    if raw is None:
+        return float("nan")
+    s = str(raw).strip()
+    if not s:
+        return float("nan")
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return float("nan")
+
+
 class CohortDataset:
     """Cohort research manager and statistical aggregator."""
 
-    def __init__(self, root_dir: Union[str, Path]) -> None:
+    _CACHE_VERSION = 2
+    _CACHE_THRESHOLD = 20
+
+    def __init__(self, root_dir: Union[str, Path], *, use_cache: bool = True) -> None:
         self.root_dir = Path(root_dir).resolve()
         if not self.root_dir.exists():
             raise FileNotFoundError(f"Cohort directory does not exist: {self.root_dir}")
 
         self.calcium_scores: Dict[str, float] = {}
         self.participants: Dict[str, CohortParticipant] = {}
+        if use_cache and self._try_load_cache():
+            return
         self._load_cohort()
+        if use_cache and len(self.participants) >= self._CACHE_THRESHOLD:
+            self._save_cache()
+
+    @staticmethod
+    def _cache_dir() -> Path:
+        return Path(tempfile.gettempdir()) / "cardiac_fat_fl_cohort_cache"
+
+    def _cache_file_path(self) -> Path:
+        key_hash = hashlib.sha256(str(self.root_dir).encode("utf-8")).hexdigest()[:20]
+        return self._cache_dir() / f"cohort_{key_hash}.json"
+
+    def _compute_fingerprint(self) -> str:
+        """Compute a fast directory + CSV mtime fingerprint for safe cache invalidation."""
+        parts: List[str] = [f"v{self._CACHE_VERSION}", str(self.root_dir)]
+        candidate_roots = [
+            self.root_dir,
+            self.root_dir / "cocacoronarycalciumandchestcts-2",
+        ]
+        probe_dirs: List[Path] = []
+        for base in candidate_roots:
+            if not base.is_dir():
+                continue
+            probe_dirs.extend([
+                base,
+                base / "Gated_release_final",
+                base / "Gated_release_final" / "calcium_xml",
+                base / "Gated_release_final" / "patient",
+                base / "deidentified_nongated",
+            ])
+
+        seen_dirs: set[Path] = set()
+        for d in probe_dirs:
+            if d in seen_dirs or not d.is_dir():
+                continue
+            seen_dirs.add(d)
+            try:
+                st = d.stat()
+                child_names: List[str] = []
+                with os.scandir(d) as it:
+                    for entry in it:
+                        child_names.append(entry.name)
+                        lname = entry.name.lower()
+                        if d in candidate_roots and lname.endswith(".csv") and entry.is_file():
+                            est = entry.stat()
+                            parts.append(f"csv:{d.name}/{entry.name}:{est.st_mtime_ns}:{est.st_size}")
+                parts.append(f"dir:{d}:{st.st_mtime_ns}:{len(child_names)}")
+            except OSError:
+                continue
+
+        return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+
+    def _try_load_cache(self) -> bool:
+        """Load cached participant index from user temp directory if valid."""
+        cache_file = self._cache_file_path()
+        if not cache_file.is_file():
+            return False
+        try:
+            payload = json.loads(cache_file.read_text(encoding="utf-8"))
+            if payload.get("version") != self._CACHE_VERSION:
+                return False
+            if payload.get("root_dir") != str(self.root_dir):
+                return False
+            records = payload.get("participants")
+            if not isinstance(records, list) or len(records) < self._CACHE_THRESHOLD:
+                return False
+            if payload.get("fingerprint") != self._compute_fingerprint():
+                return False
+
+            self.calcium_scores = {
+                str(k): float(v)
+                for k, v in (payload.get("calcium_scores") or {}).items()
+                if v is not None
+            }
+            participants: Dict[str, CohortParticipant] = {}
+            for rec in records:
+                pid = str(rec["participant_id"])
+                participants[pid] = CohortParticipant(
+                    participant_id=pid,
+                    study_dir=Path(rec["study_dir"]),
+                    scan_path=Path(rec["scan_path"]) if rec.get("scan_path") else None,
+                    seg_path=Path(rec["seg_path"]) if rec.get("seg_path") else None,
+                    available_segmentations={
+                        k: Path(v) for k, v in (rec.get("available_segmentations") or {}).items()
+                    },
+                    measurements_csv=Path(rec["measurements_csv"]) if rec.get("measurements_csv") else None,
+                    report_pdf=Path(rec["report_pdf"]) if rec.get("report_pdf") else None,
+                    report_html=Path(rec["report_html"]) if rec.get("report_html") else None,
+                    report_dcm=Path(rec["report_dcm"]) if rec.get("report_dcm") else None,
+                    ohif_export_dir=Path(rec["ohif_export_dir"]) if rec.get("ohif_export_dir") else None,
+                    calcium_score=float(rec["calcium_score"]) if rec.get("calcium_score") is not None else None,
+                    calcium_risk_tier=str(rec.get("calcium_risk_tier", "Unknown")),
+                    metrics={
+                        k: (float("nan") if v is None else float(v))
+                        for k, v in (rec.get("metrics") or {}).items()
+                    },
+                    crisp_ct_status=str(rec.get("crisp_ct_status", "Unknown")),
+                    scan_type=str(rec.get("scan_type", "CT")),
+                    has_nv_reason=bool(rec.get("has_nv_reason", False)),
+                )
+            self.participants = participants
+            return True
+        except Exception:
+            return False
+
+    def _save_cache(self) -> None:
+        """Persist participant index to user temp directory (never inside cohort directory)."""
+        try:
+            cache_dir = self._cache_dir()
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_file = self._cache_file_path()
+            records = []
+            for p in self.participants.values():
+                clean_metrics = {
+                    k: (None if (isinstance(v, float) and (math.isnan(v) or math.isinf(v))) else v)
+                    for k, v in p.metrics.items()
+                }
+                cac_val = p.calcium_score
+                if isinstance(cac_val, float) and (math.isnan(cac_val) or math.isinf(cac_val)):
+                    cac_val = None
+                records.append({
+                    "participant_id": p.participant_id,
+                    "study_dir": str(p.study_dir),
+                    "scan_path": str(p.scan_path) if p.scan_path else None,
+                    "seg_path": str(p.seg_path) if p.seg_path else None,
+                    "available_segmentations": {k: str(v) for k, v in p.available_segmentations.items()},
+                    "measurements_csv": str(p.measurements_csv) if p.measurements_csv else None,
+                    "report_pdf": str(p.report_pdf) if p.report_pdf else None,
+                    "report_html": str(p.report_html) if p.report_html else None,
+                    "report_dcm": str(p.report_dcm) if p.report_dcm else None,
+                    "ohif_export_dir": str(p.ohif_export_dir) if p.ohif_export_dir else None,
+                    "calcium_score": cac_val,
+                    "calcium_risk_tier": p.calcium_risk_tier,
+                    "metrics": clean_metrics,
+                    "crisp_ct_status": p.crisp_ct_status,
+                    "scan_type": p.scan_type,
+                    "has_nv_reason": p.has_nv_reason,
+                })
+            payload = {
+                "version": self._CACHE_VERSION,
+                "root_dir": str(self.root_dir),
+                "fingerprint": self._compute_fingerprint(),
+                "calcium_scores": {
+                    k: v
+                    for k, v in self.calcium_scores.items()
+                    if not (isinstance(v, float) and (math.isnan(v) or math.isinf(v)))
+                },
+                "participants": records,
+            }
+            cache_file.write_text(json.dumps(payload), encoding="utf-8")
+        except Exception:
+            pass
 
     def _bounded_glob(self, pattern: str, max_depth: int = 4) -> List[Path]:
-        """Glob up to `max_depth` directory levels without descending into deep DICOM slice folders."""
+        """Fast bounded ``os.scandir`` search up to *max_depth* skipping leaf DICOM stacks."""
         results: List[Path] = []
         seen: set[Path] = set()
-        for depth in range(max_depth + 1):
-            prefix = "/".join(["*"] * depth)
-            full_pat = f"{prefix}/{pattern}" if prefix else pattern
-            for p in self.root_dir.glob(full_pat):
-                if p not in seen:
-                    seen.add(p)
-                    results.append(p)
+        pat_lower = pattern.lower()
+        has_slash = "/" in pat_lower
+        skip_dirs = {".git", ".venv", "__pycache__", "ohif_export"}
+        want_dcm = ".dcm" in pat_lower
+
+        def _walk(cur_dir: Path, rel_prefix: str, depth: int) -> None:
+            if depth > max_depth:
+                return
+            try:
+                with os.scandir(cur_dir) as it:
+                    entries = list(it)
+            except OSError:
+                return
+
+            has_dcm_file = False
+            subdirs: List[Tuple[str, Path]] = []
+            for entry in entries:
+                ename = entry.name
+                ename_l = ename.lower()
+                rel_p = f"{rel_prefix}/{ename_l}" if rel_prefix else ename_l
+                full_p = Path(entry.path)
+                is_dir = False
+                try:
+                    is_dir = entry.is_dir()
+                except OSError:
+                    continue
+
+                if is_dir:
+                    if ename_l in skip_dirs or ename_l.startswith("."):
+                        continue
+                    if not has_slash and fnmatch.fnmatch(ename_l, pat_lower):
+                        if full_p not in seen:
+                            seen.add(full_p)
+                            results.append(full_p)
+                    subdirs.append((rel_p, full_p))
+                else:
+                    if ename_l.endswith(".dcm"):
+                        has_dcm_file = True
+                    matched = (
+                        fnmatch.fnmatch(rel_p, pat_lower) or fnmatch.fnmatch(rel_p, f"*/{pat_lower}")
+                        if has_slash
+                        else fnmatch.fnmatch(ename_l, pat_lower)
+                    )
+                    if matched and full_p not in seen:
+                        seen.add(full_p)
+                        results.append(full_p)
+
+            if has_dcm_file and not want_dcm:
+                return
+            if depth < max_depth:
+                for sub_rel, sub_path in subdirs:
+                    _walk(sub_path, sub_rel, depth + 1)
+
+        _walk(self.root_dir, "", 0)
         return results
 
     def _discover_calcium_scores(self) -> None:
@@ -154,14 +391,17 @@ class CohortDataset:
         score_candidates = self._bounded_glob("scores*.csv", max_depth=3)
         for sc in score_candidates:
             try:
-                df = pd.read_csv(sc)
-                cols_lower = {c.strip().lower(): c for c in df.columns}
+                rows = _read_csv_dicts(sc)
+                if not rows:
+                    continue
+                cols = list(rows[0].keys())
+                cols_lower = {c.strip().lower(): c for c in cols}
                 id_col = (
                     cols_lower.get("patientid")
                     or cols_lower.get("patient_id")
                     or cols_lower.get("filename")
                     or cols_lower.get("id")
-                    or df.columns[0]
+                    or cols[0]
                 )
                 score_col = (
                     cols_lower.get("totalscore")
@@ -169,64 +409,68 @@ class CohortDataset:
                     or cols_lower.get("total")
                     or cols_lower.get("score")
                     or cols_lower.get("cac")
-                    or (df.columns[1] if len(df.columns) > 1 else None)
+                    or (cols[1] if len(cols) > 1 else None)
                 )
 
                 is_nongated = "nongated" in sc.name.lower()
                 if score_col:
-                    for _, row in df.iterrows():
-                        pid = str(row[id_col]).strip()
-                        try:
-                            score_val = float(row[score_col])
-                            if is_nongated or pid.endswith(("A", "a")):
-                                clean_id = pid.rstrip("Aa").strip()
-                                if clean_id:
-                                    self.calcium_scores[f"nongated_{clean_id}"] = score_val
-                                    self.calcium_scores[f"{clean_id}A"] = score_val
-                            else:
-                                self.calcium_scores[pid] = score_val
-                        except (ValueError, TypeError):
+                    for row in rows:
+                        pid = str(row.get(id_col, "")).strip()
+                        score_val = _safe_float(row.get(score_col))
+                        if math.isnan(score_val):
                             continue
+                        if is_nongated or pid.endswith(("A", "a")):
+                            clean_id = pid.rstrip("Aa").strip()
+                            if clean_id:
+                                self.calcium_scores[f"nongated_{clean_id}"] = score_val
+                                self.calcium_scores[f"{clean_id}A"] = score_val
+                        else:
+                            self.calcium_scores[pid] = score_val
             except Exception:
                 pass
 
         # 2. Check for XML score files (e.g. Stanford COCA calcium_xml/<pid>.xml)
         xml_files = self._bounded_glob("calcium_xml/*.xml", max_depth=3)
-        for xf in xml_files:
-            pid = xf.stem
-            if pid not in self.calcium_scores:
-                # Basic parse if needed
-                try:
-                    import xml.etree.ElementTree as ET  # nosec B405
-                    tree = ET.parse(xf)  # nosec B314
-                    root = tree.getroot()
-                    score_elem = root.find(".//TotalScore") or root.find(".//Score")
-                    if score_elem is not None and score_elem.text:
-                        self.calcium_scores[pid] = float(score_elem.text)
-                except Exception:
-                    pass
+        if xml_files:
+            import xml.etree.ElementTree as ET  # nosec B405
+
+            for xf in xml_files:
+                pid = xf.stem
+                if pid not in self.calcium_scores:
+                    try:
+                        tree = ET.parse(xf)  # nosec B314
+                        root = tree.getroot()
+                        score_elem = root.find(".//TotalScore") or root.find(".//Score")
+                        if score_elem is not None and score_elem.text:
+                            self.calcium_scores[pid] = float(score_elem.text)
+                    except Exception:
+                        pass
 
     def _load_cohort(self) -> None:
         """Scan cohort directory and assemble participant records."""
         self._discover_calcium_scores()
 
-        # Check for root or nested measurement CSV
-        root_csvs = list(self.root_dir.glob("cardiac_fat_measurements*.csv"))
+        # Check for root measurement CSVs
         root_metrics_by_pid: Dict[str, Dict[str, float]] = {}
+        try:
+            with os.scandir(self.root_dir) as it:
+                root_csvs = sorted(
+                    Path(e.path)
+                    for e in it
+                    if e.is_file() and fnmatch.fnmatch(e.name.lower(), "cardiac_fat_measurements*.csv")
+                )
+        except OSError:
+            root_csvs = []
+
         for rcsv in root_csvs:
             try:
-                df = pd.read_csv(rcsv)
-                if "participant_id" in df.columns:
-                    for _, row in df.iterrows():
+                for row in _read_csv_dicts(rcsv):
+                    if "participant_id" in row:
                         pid = str(row["participant_id"]).strip()
                         m_dict: Dict[str, float] = {}
-                        for c in df.columns:
+                        for c, raw_v in row.items():
                             if c != "participant_id":
-                                try:
-                                    val = float(row[c])
-                                    m_dict[c] = val
-                                except (ValueError, TypeError):
-                                    m_dict[c] = float("nan")
+                                m_dict[c] = _safe_float(raw_v)
                         root_metrics_by_pid[pid] = m_dict
             except Exception:
                 pass
@@ -253,35 +497,56 @@ class CohortDataset:
 
         # Candidate patient folders (either directory containing scans or subfolders)
         patient_dirs: Dict[str, Path] = {}
+        seen_dirs: set[Path] = set()
         for pid, scan_p in scan_dict.items():
             if scan_p.is_dir():
-                # If scan_p is a nested DICOM series folder (e.g. patient_id/series_name/), use parent
-                patient_dirs[pid] = scan_p.parent if scan_p.parent.name == pid else scan_p
+                p_dir = scan_p.parent if scan_p.parent.name == pid else scan_p
             else:
-                patient_dirs[pid] = scan_p.parent
+                p_dir = scan_p.parent
+            patient_dirs[pid] = p_dir
+            seen_dirs.add(p_dir)
+
+        def _overlaps_existing(candidate: Path) -> bool:
+            if candidate in seen_dirs:
+                return True
+            if any(par in seen_dirs for par in candidate.parents):
+                return True
+            return False
 
         # Also discover participant folders containing eat_pvat segmentation masks
         for seg_candidate in self._bounded_glob("eat_pvat.seg.*", max_depth=4):
             p_folder = seg_candidate.parent
             pid = p_folder.name
-            # Prevent duplicate registration of non-gated or already-tracked patient folders
             if (
                 pid not in patient_dirs
                 and f"nongated_{pid}" not in patient_dirs
-                and not any(p_folder == ep or p_folder in ep.parents or ep in p_folder.parents for ep in patient_dirs.values())
+                and not _overlaps_existing(p_folder)
+                and not any(p_folder in ep.parents for ep in seen_dirs)
             ):
                 patient_dirs[pid] = p_folder
+                seen_dirs.add(p_folder)
 
-        # Also check participant IDs from measurement CSVs
-        for pid in root_metrics_by_pid:
+        # Also check participant IDs from measurement CSVs without O(N^2) tree walks
+        missing_csv_pids = [
+            pid
+            for pid in root_metrics_by_pid
             if (
                 pid not in patient_dirs
                 and f"nongated_{pid}" not in patient_dirs
                 and not any(pid == ep.replace("nongated_", "") for ep in patient_dirs)
-            ):
-                matching = [d for d in self._bounded_glob(pid, max_depth=3) if d.is_dir()]
-                if matching and not any(matching[0] == ep for ep in patient_dirs.values()):
-                    patient_dirs[pid] = matching[0]
+            )
+        ]
+        if missing_csv_pids:
+            missing_set = set(missing_csv_pids)
+            dir_index: Dict[str, Path] = {}
+            for d in self._bounded_glob("*", max_depth=3):
+                if d.name in missing_set and d.is_dir() and d.name not in dir_index:
+                    dir_index[d.name] = d
+            for pid in missing_csv_pids:
+                matched_d = dir_index.get(pid)
+                if matched_d is not None and matched_d not in seen_dirs:
+                    patient_dirs[pid] = matched_d
+                    seen_dirs.add(matched_d)
 
         # Also inspect direct children of root_dir if they look like participants
         ignored_root_dirs = {
@@ -294,6 +559,10 @@ class CohortDataset:
             "report",
             "reports",
         }
+        ancestor_dirs: set[Path] = set()
+        for p_folder in seen_dirs:
+            ancestor_dirs.update(p_folder.parents)
+
         for entry in self.root_dir.iterdir():
             if (
                 entry.is_dir()
@@ -301,77 +570,103 @@ class CohortDataset:
                 and entry.name not in ignored_root_dirs
                 and not entry.name.startswith("parity_verification")
             ):
-                if entry.name not in patient_dirs:
-                    if not any(entry in p_folder.parents for p_folder in patient_dirs.values()):
-                        # Only add if it actually contains a scan or segmentation
-                        if (
-                            _find_dicom_series_dir(entry) is not None
-                            or any(entry.glob("*.nrrd"))
-                            or any(entry.glob("*.nii*"))
-                        ):
-                            patient_dirs[entry.name] = entry
+                if entry.name not in patient_dirs and entry not in seen_dirs and entry not in ancestor_dirs:
+                    if (
+                        _find_dicom_series_dir(entry) is not None
+                        or any(entry.glob("*.nrrd"))
+                        or any(entry.glob("*.nii*"))
+                    ):
+                        patient_dirs[entry.name] = entry
+                        seen_dirs.add(entry)
 
-        # Build records
+        vlm_filenames = (
+            "nv_reason_narrative.txt",
+            "nv_reason_clinical_narrative.txt",
+            "nv_reason_ct_cardiac_specialized_report.txt",
+            "nv_reason_ct_generated_report.txt",
+        )
+        gt_filenames = (
+            "ground_truth.seg.nrrd",
+            "gt.seg.nrrd",
+            "reference.seg.nrrd",
+            "deepheartseg.seg.nrrd",
+            "heart.seg.nrrd",
+        )
+
+        # Build records using single os.scandir pass per participant directory
         for pid, p_dir in patient_dirs.items():
             scan_path = scan_dict.get(pid)
             if scan_path is None:
                 dcm_dir = _find_dicom_series_dir(p_dir)
                 scan_path = dcm_dir if dcm_dir else None
 
+            dir_files: Dict[str, Path] = {}
+            dir_subdirs: set[str] = set()
+            try:
+                with os.scandir(p_dir) as it:
+                    for e in it:
+                        ep = Path(e.path)
+                        if e.is_dir():
+                            dir_subdirs.add(e.name)
+                        elif e.is_file():
+                            dir_files[e.name] = ep
+            except OSError:
+                pass
+
             # Primary segmentation mask
-            seg_candidates = [
-                p_dir / "eat_pvat.seg.nrrd",
-                p_dir / "eat_pvat.seg.nii.gz",
-                p_dir / "eat_pvat.seg.nii",
-            ]
-            if p_dir.parent != self.root_dir:
-                seg_candidates.extend([
-                    p_dir.parent / "eat_pvat.seg.nrrd",
-                    p_dir.parent / "eat_pvat.seg.nii.gz",
-                ])
-            seg_path = next((f for f in seg_candidates if f.is_file()), None)
+            seg_path: Optional[Path] = None
+            for cand_name in ("eat_pvat.seg.nrrd", "eat_pvat.seg.nii.gz", "eat_pvat.seg.nii"):
+                if cand_name in dir_files:
+                    seg_path = dir_files[cand_name]
+                    break
+            if seg_path is None and p_dir.parent != self.root_dir:
+                for cand_name in ("eat_pvat.seg.nrrd", "eat_pvat.seg.nii.gz"):
+                    par_cand = p_dir.parent / cand_name
+                    if par_cand.is_file():
+                        seg_path = par_cand
+                        break
 
             # Discover all other segmentation masks for comparison
             available_segs: Dict[str, Path] = {}
             if seg_path:
                 available_segs["eat_pvat"] = seg_path
+            for fname, fpath in dir_files.items():
+                if ".seg." in fname:
+                    seg_label = fname.split(".seg.")[0]
+                    available_segs[seg_label] = fpath
+            for gt_name in gt_filenames:
+                if gt_name in dir_files:
+                    available_segs[gt_name.split(".")[0]] = dir_files[gt_name]
 
-            for seg_file in p_dir.glob("*.seg.*"):
-                seg_label = seg_file.name.split(".seg.")[0]
-                available_segs[seg_label] = seg_file
+            # Reports & VLM narrative status
+            report_pdf = dir_files.get("cardiac_fat_report.pdf")
+            report_html = dir_files.get("cardiac_fat_report.html")
+            report_dcm = dir_files.get("eat_pvat_report.dcm")
+            has_vlm = any(vf in dir_files for vf in vlm_filenames)
+            if "report" in dir_subdirs:
+                report_sub = p_dir / "report"
+                if report_pdf is None and (report_sub / "cardiac_fat_report.pdf").is_file():
+                    report_pdf = report_sub / "cardiac_fat_report.pdf"
+                if report_html is None and (report_sub / "cardiac_fat_report.html").is_file():
+                    report_html = report_sub / "cardiac_fat_report.html"
+                if report_dcm is None and (report_sub / "eat_pvat_report.dcm").is_file():
+                    report_dcm = report_sub / "eat_pvat_report.dcm"
+                if not has_vlm and (report_sub / "nv_reason_narrative.txt").is_file():
+                    has_vlm = True
 
-            # Check for ground truth or comparator masks
-            gt_candidates = [
-                p_dir / "ground_truth.seg.nrrd",
-                p_dir / "gt.seg.nrrd",
-                p_dir / "reference.seg.nrrd",
-                p_dir / "deepheartseg.seg.nrrd",
-                p_dir / "heart.seg.nrrd",
-            ]
-            for gtc in gt_candidates:
-                if gtc.is_file():
-                    available_segs[gtc.stem.split(".")[0]] = gtc
-
-            # Reports
-            report_pdf = p_dir / "cardiac_fat_report.pdf"
-            report_html = p_dir / "cardiac_fat_report.html"
-            report_dcm = p_dir / "eat_pvat_report.dcm"
-            ohif_dir = p_dir / "ohif_export"
+            ohif_dir = (p_dir / "ohif_export") if "ohif_export" in dir_subdirs else None
 
             # Measurements
-            local_csv = p_dir / "cardiac_fat_measurements.csv"
+            local_csv = dir_files.get("cardiac_fat_measurements.csv")
             metrics = dict(root_metrics_by_pid.get(pid, {}))
-            if local_csv.is_file():
+            if local_csv is not None:
                 try:
-                    df_loc = pd.read_csv(local_csv)
-                    if len(df_loc) > 0:
-                        row = df_loc.iloc[0]
-                        for c in df_loc.columns:
+                    local_rows = _read_csv_dicts(local_csv)
+                    if local_rows:
+                        row = local_rows[0]
+                        for c, raw_v in row.items():
                             if c != "participant_id":
-                                try:
-                                    metrics[c] = float(row[c])
-                                except (ValueError, TypeError):
-                                    metrics[c] = float("nan")
+                                metrics[c] = _safe_float(raw_v)
                 except Exception:
                     pass
 
@@ -398,16 +693,17 @@ class CohortDataset:
                 scan_path=scan_path,
                 seg_path=seg_path,
                 available_segmentations=available_segs,
-                measurements_csv=local_csv if local_csv.is_file() else None,
-                report_pdf=report_pdf if report_pdf.is_file() else None,
-                report_html=report_html if report_html.is_file() else None,
-                report_dcm=report_dcm if report_dcm.is_file() else None,
-                ohif_export_dir=ohif_dir if ohif_dir.is_dir() else None,
+                measurements_csv=local_csv,
+                report_pdf=report_pdf,
+                report_html=report_html,
+                report_dcm=report_dcm,
+                ohif_export_dir=ohif_dir,
                 calcium_score=cac,
                 calcium_risk_tier=tier,
                 metrics=metrics,
                 crisp_ct_status=crisp_status,
                 scan_type=scan_type,
+                has_nv_reason=has_vlm,
             )
 
         # Ensure participants are sorted in natural human numerical order (0, 1, 2, ..., 10, 11, ..., 100)
@@ -436,6 +732,9 @@ class CohortDataset:
 
     def compute_summary_analytics(self) -> Dict[str, Any]:
         """Compute comprehensive cohort research analytics."""
+        import numpy as np
+        from scipy import stats
+
         p_list = list(self.participants.values())
         total_n = len(p_list)
         if total_n == 0:
@@ -598,6 +897,8 @@ class CohortDataset:
 
     def compute_bivariate_regression(self) -> Dict[str, Any]:
         """Compute bivariate linear regression and correlation for EAT Volume vs PVAT HU."""
+        from scipy import stats
+
         paired: List[Tuple[float, float]] = []
         for p in self.participants.values():
             vol = p.metrics.get("EAT Total Volume (cm3)")
@@ -645,6 +946,9 @@ class CohortDataset:
 
     def compute_tier_group_comparisons(self) -> Dict[str, Any]:
         """Compute comprehensive distribution metrics and hypothesis testing across 5 CAC tiers."""
+        import numpy as np
+        from scipy import stats
+
         results: Dict[str, Any] = {"CAC_TIERS": CAC_TIER_ORDER}
 
         targets = [

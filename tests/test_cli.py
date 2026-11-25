@@ -176,3 +176,20 @@ def test_cli_download_models_help_and_options() -> None:
     assert "--include-nvreason" in clean_out
     assert "--include-all" in clean_out
 
+
+def test_package_lazy_exports_skip_heavy_ml_on_import() -> None:
+    """Importing package root and dashboard must not eagerly load torch or monai."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sys, cardiac_fat_fl, cardiac_fat_fl.dashboard; "
+        "assert 'torch' not in sys.modules, 'torch eagerly imported'; "
+        "assert 'monai' not in sys.modules, 'monai eagerly imported'; "
+        "assert 'CohortDataset' in dir(cardiac_fat_fl); "
+        "assert callable(cardiac_fat_fl.calculate_volume_cm3)"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
+    assert proc.returncode == 0, f"Lazy import check failed:\n{proc.stderr}"
+
+

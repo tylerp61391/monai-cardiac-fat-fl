@@ -9,36 +9,20 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
-import numpy as np
-import pandas as pd
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from cardiac_fat_fl.anatomy_segmenter import UnifiedAnatomySegmenter
-from cardiac_fat_fl.fl_client_algo import CardiacFatClientAlgo
-from cardiac_fat_fl.fl_stats_executor import CardiacFatStatsExecutor
-from cardiac_fat_fl.hardware import (
-    detect_hardware,
-    display_hardware_summary,
-    validate_worker_concurrency,
-)
-from cardiac_fat_fl.io_metatensor import (
-    discover_participants,
-    read_nrrd_as_metatensor,
-    write_eat_pvat_seg_nrrd,
-    write_totalsegmentator_seg_nrrd,
-    write_monai_wholebody_ct_segmentation_seg_nrrd,
-    write_coronary_sulci_seg_nrrd,
-)
 from cardiac_fat_fl.measurement_schema import (
     DEFAULT_PVAT_RADIAL_DISTANCE_MM,
     MEASUREMENT_CSV_COLUMNS,
     validate_measurement_dataframe,
 )
-from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 app = typer.Typer(
     name="cardiac-fat-fl",
@@ -53,6 +37,16 @@ _WORKER_CACHE: dict = {}
 
 def _process_one_participant(task: Tuple[Any, ...], preloaded_ct=None) -> dict:
     """Worker function to process a single participant scan."""
+    import numpy as np
+    from cardiac_fat_fl.anatomy_segmenter import UnifiedAnatomySegmenter
+    from cardiac_fat_fl.io_metatensor import (
+        read_nrrd_as_metatensor,
+        write_coronary_sulci_seg_nrrd,
+        write_eat_pvat_seg_nrrd,
+        write_monai_wholebody_ct_segmentation_seg_nrrd,
+    )
+    from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
+
     pid, scan_path, save_seg, save_intermediate, pvat_radius, model_path, source_dir, *extra = task
     chamber_backend = str(extra[0]) if extra else "monai"
     try:
@@ -146,7 +140,6 @@ def _process_one_participant(task: Tuple[Any, ...], preloaded_ct=None) -> dict:
             )
 
             # 3. Optional coronary_sulci.seg.nrrd (derived geometric sulci seeds)
-            from cardiac_fat_fl.io_metatensor import write_coronary_sulci_seg_nrrd
             sulci_seg = np.zeros_like(anatomy.pericardium, dtype=np.uint16)
             if anatomy.lad is not None:
                 sulci_seg[anatomy.lad] = 1
@@ -264,6 +257,17 @@ def quantify(
     ),
 ) -> None:
     """Execute end-to-end quantification across participants in source_dir."""
+    import pandas as pd
+    from cardiac_fat_fl.anatomy_segmenter import UnifiedAnatomySegmenter
+    from cardiac_fat_fl.discovery import discover_participants
+    from cardiac_fat_fl.hardware import (
+        detect_hardware,
+        display_hardware_summary,
+        validate_worker_concurrency,
+    )
+    from cardiac_fat_fl.io_metatensor import read_nrrd_as_metatensor
+    from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
+
     console.print(f"[bold cyan]Scanning directory:[/bold cyan] {source_dir}")
 
     # Step 0: Dynamic hardware inspection and safe concurrency sizing
@@ -456,6 +460,8 @@ def federated_train(
     fed_bn: bool = typer.Option(True, "--fed-bn/--no-fed-bn", help="Enable FedBN local norm retention."),
 ) -> None:
     """Run a local federated client training simulation."""
+    from cardiac_fat_fl.fl_client_algo import CardiacFatClientAlgo
+
     console.print(f"[bold cyan]Initializing CardiacFatClientAlgo on:[/bold cyan] {data_dir}")
     client = CardiacFatClientAlgo(
         data_dir=data_dir,
@@ -490,6 +496,8 @@ def federated_stats(
     )
 ) -> None:
     """Execute federated statistics extraction across local measurements CSV."""
+    from cardiac_fat_fl.fl_stats_executor import CardiacFatStatsExecutor
+
     executor = CardiacFatStatsExecutor(csv_path=csv_path)
     res = executor.compute_local_stats()
     console.print(f"[bold green]Federated Cohort Statistics (N={res['participant_count']}):[/bold green]")
@@ -591,7 +599,10 @@ def compare_models(
 ) -> None:
     """Run side-by-side comparison between Modernized pipeline and frozen foundational DeepHeartSeg ONNX model."""
     import numpy as np
+    from cardiac_fat_fl.anatomy_segmenter import UnifiedAnatomySegmenter
+    from cardiac_fat_fl.io_metatensor import read_nrrd_as_metatensor
     from cardiac_fat_fl.measurement_schema import REPORTED_REGIONS
+    from cardiac_fat_fl.transforms import ComputeEatPvatMasksd, QuantifyAdiposeMetricsd
 
     console.print(f"[bold cyan]Running Equivalency Comparison on:[/bold cyan] {scan_path.name}")
 
@@ -701,6 +712,8 @@ def export_ohif_cmd(
 @app.command("hardware")
 def hardware_info() -> None:
     """Inspect host CPUs, RAM, and CUDA GPUs to display safe concurrency recommendations."""
+    from cardiac_fat_fl.hardware import detect_hardware, display_hardware_summary
+
     profile = detect_hardware()
     display_hardware_summary(profile, console=console)
 
@@ -1469,6 +1482,7 @@ def report_cmd(
     """
     import json
     import webbrowser
+    import numpy as np
     import pandas as pd
     from cardiac_fat_fl.clinical_report import export_clinical_imaging_report
     from cardiac_fat_fl.io_metatensor import read_medical_image_as_metatensor, read_nrrd_as_metatensor
@@ -1684,6 +1698,7 @@ def benchmark(
 ) -> None:
     """Execute multi-compartment segmentation benchmarking and DICE evaluation across a cohort."""
     from cardiac_fat_fl.cohort_research import CohortDataset
+    from cardiac_fat_fl.io_metatensor import read_nrrd_as_metatensor
     from cardiac_fat_fl.segmentation_evaluator import SegmentationBenchmarkEngine
 
     console.print(f"[bold cyan]Initializing Segmentation Benchmark Engine on:[/bold cyan] {cohort_dir}")

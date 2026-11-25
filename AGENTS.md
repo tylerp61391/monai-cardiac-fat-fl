@@ -31,7 +31,8 @@ To minimize token usage, **do not read `README.md` (1,100+ lines) or full large 
 | `measurement_schema.py` | 151 | `ADIPOSE_HU_MIN/MAX`, `SegmentationCompartment`, `ReportedRegion`, `MEASUREMENT_CSV_COLUMNS`, `calculate_volume_cm3` | **Read first** for data contracts, enums, and 19-column CSV validation. |
 | `anatomy_segmenter.py` | 1031 | `AnatomyMasks`, `UnifiedAnatomySegmenter` | 3D anatomy engine: NGC `monai_wholebody_ct_segmentation` (1.5mm SegResNet), DeepHeartSeg ONNX pericardium, and geometric coronary sulci derivation. |
 | `transforms.py` | 466 | `ComputeEatPvatMasksd`, `QuantifyAdiposeMetricsd` | MONAI dictionary transforms for 8-compartment fat masking, 10mm anisotropic EDT radial dilation, and volume/HU calculation. |
-| `io_metatensor.py` | 621 | `discover_participants`, `read_dicom_series_as_metatensor`, `read_nrrd_as_metatensor`, `write_eat_pvat_seg_nrrd` | Header-preserving 3D I/O for NRRD, NIfTI, and DICOM series with natural sorting and multi-series max-slice collision resolution. |
+| `discovery.py` | 184 | `_find_dicom_series_dir`, `discover_participants` | Zero-dependency CT participant & DICOM series discovery for flat, nested, and Stanford COCA layouts. |
+| `io_metatensor.py` | 478 | `discover_participants`, `read_dicom_series_as_metatensor`, `read_nrrd_as_metatensor`, `write_eat_pvat_seg_nrrd` | Header-preserving 3D I/O for NRRD, NIfTI, and DICOM series with natural sorting and multi-series max-slice collision resolution. |
 | `clinical_report.py` | 923 | `evaluate_clinical_risk`, `generate_mpr_snapshot`, `generate_clinical_report_html`, `generate_clinical_report_pdf`, `encapsulate_pdf_to_dicom`, `export_clinical_imaging_report` | SOTA Cleerly/HeartFlow-style clinical imaging report (risk stratification, 3-view orthogonal MPR snapshots with 8-compartment overlays, vector PDF, and DICOM Encapsulated PDF SOP `.104.1`). |
 | `dicom_sr.py` | 345 | `create_cardiac_fat_sr`, `export_cardiac_fat_sr` | DICOM-SR TID 1500 (`1.2.840.10008.5.1.4.1.1.88.34`) structured report builder using SNOMED-CT / LOINC / UCUM codes. |
 | `fhir_client.py` | 714 | `build_eat_volume_observation`, `build_pvat_attenuation_observation`, `build_cardiac_fat_diagnostic_report`, `build_cardiac_fat_document_reference`, `build_cardiac_fat_fhir_bundle`, `push_to_fhir_server`, `export_fhir_bundle`, `create_bundle_for_study` | HL7 FHIR R4 interoperability client and bundle generator (Epic US Core DiagnosticReport, DocumentReference, LOINC 84245-0 discrete EAT observation, RadLex RID49533 PVAT attenuation, open.epic MCP compatibility). |
@@ -43,11 +44,11 @@ To minimize token usage, **do not read `README.md` (1,100+ lines) or full large 
 | `regulatory_dossier.py` | 415 | `IEC_62304_TRACEABILITY_MATRIX`, `ISO_14971_RISK_CONTROLS`, `build_fda_510k_dhf_dossier`, `generate_fda_510k_dhf_pdf` | Automated FDA Class II 510(k) / SaMD Design History File (DHF) evidence generator (IEC 62304 traceability, ISO 14971 FMEA risk controls, PCCP bounds, and 3-page vector PDF dossier). |
 | `ohif_exporter.py` | 2697 | **L1–602**: `export_ct_to_dicom_series`, `export_segmentation_to_dicom_seg`, `generate_ohif_dicom_json`; **L603–2379**: *Embedded HTML/CSS/JS templates (SKIP unless editing UI)*; **L2380–2697**: `export_sample_to_ohif` | Exports CT slices, multi-frame DICOM-SEG, DICOM-SR, `studies.json`, and standalone OHIF v3.13 workstation assets. |
 | `ohif_viewer.py` | 245 | `launch_viewer` | Local multi-threaded HTTP server (`127.0.0.1:8000`) serving OHIF studies. |
-| `cohort_research.py` | 794 | `CohortDataset`, `CohortParticipant`, `categorize_calcium_score`, `CAC_TIER_ORDER`, `compute_tier_group_comparisons`, `compute_bivariate_regression` | Smart cohort discovery (flat, nested, COCA gated/non-gated with natural numerical sorting), Agatston CAC linking across all 5 tiers, ANOVA / Kruskal-Wallis omnibus testing, pairwise post-hoc tests, and bivariate regression modeling. |
+| `cohort_research.py` | 1098 | `CohortDataset`, `CohortParticipant`, `categorize_calcium_score`, `CAC_TIER_ORDER`, `compute_tier_group_comparisons`, `compute_bivariate_regression` | Smart cohort discovery (flat, nested, COCA gated/non-gated with temp JSON index cache & natural sorting), Agatston CAC linking across all 5 tiers, ANOVA / Kruskal-Wallis omnibus testing, pairwise post-hoc tests, and bivariate regression modeling. |
 | `publication_figure.py` | 631 | `generate_publication_figure` | 300 DPI publication-grade multi-panel composite figure generator formatted for peer-reviewed cardiovascular imaging journals (*JACC*, *Radiology*, *Circulation*). |
-| `dashboard.py` | 5714 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard & embedded OHIF workstation server (Flask, Chart.js, KPI scorecards, interactive SVG box plots across 5 CAC tiers with ANOVA/Kruskal scorecards, bivariate regression model, 300 DPI publication figure export endpoint `/api/cohort/publication-figure`, case explorer, `/viewer/<pid>/` launcher, DICE benchmark runner, Privacy Gate & Regulatory SaMD tab `/api/regulatory/dhf`). |
+| `dashboard.py` | 5792 | `create_dashboard_app`, `launch_dashboard` | Interactive research dashboard & embedded OHIF workstation server (Flask, Chart.js, KPI scorecards, interactive SVG box plots across 5 CAC tiers with ANOVA/Kruskal scorecards, bivariate regression model, 300 DPI publication figure export endpoint `/api/cohort/publication-figure`, case explorer, `/viewer/<pid>/` launcher, DICE benchmark runner, Privacy Gate & Regulatory SaMD tab `/api/regulatory/dhf`). |
 | `segmentation_evaluator.py` | 489 | `SegmentationBenchmarkEngine`, `CohortBenchmarkReport`, `compute_compartment_dice`, `compute_volume_metrics`, `compute_surface_distance_metrics` | Extensible multi-compartment segmentation evaluation, DICE metrics, IoU, RVE, MASD/HD95. |
-| `cli.py` | 2141 | **L54**: `_process_one_participant`; **L194**: `quantify`; **L445**: `federated-train`; **L483**: `federated-stats`; **L502**: `federated-simulate`; **L574**: `compare-models`; **L657**: `view`; **L680**: `export-ohif`; **L702**: `hardware`; **L733**: `download-models`; **L988**: `push`; **L1178**: `map-run`; **L1232**: `daemon`; **L1415**: `report`; **L1648**: `dashboard`; **L1671**: `benchmark`; **L1763**: `fhir-export`; **L1808**: `fhir-server`; **L1845**: `mcp-server`; **L1876**: `parity-audit`; **L1949**: `deid-audit`; **L2008**: `anonymize`; **L2054**: `ci-check`; **L2094**: `regulatory-export` | Typer CLI entrypoints (`cardiac-fat-fl`). |
+| `cli.py` | 2156 | **L54**: `_process_one_participant`; **L205**: `quantify`; `federated-train`; `federated-stats`; `federated-simulate`; `compare-models`; `view`; `export-ohif`; `hardware`; `download-models`; `push`; `map-run`; `daemon`; `report`; `dashboard`; `benchmark`; `fhir-export`; `fhir-server`; `mcp-server`; `parity-audit`; `deid-audit`; `anonymize`; `ci-check`; `regulatory-export` | Lazy-loading Typer CLI entrypoints (`cardiac-fat-fl`). |
 | `coca_parity.py` | 2002 | `run_architectural_parity_audit`, `compute_cardiacfatquant_eat_pvat_masks`, `rasterize_coca_calcium_xml`, `align_eat_pvat_channels` | 4-checkpoint end-to-end architectural parity engine and direct execution bridge for Harvard/MGH `circ-ml/CardiacFatQuant` vs. `monai-cardiac-fat-fl` on Stanford COCA. |
 | `nv_reason_reporter.py` | 229 | `is_nv_reason_available`, `clean_vlm_narrative`, `build_clinical_prompt`, `generate_nv_reason_narrative` | NVIDIA NV-Reason-CT 3D Vision-Language AI Radiologist (3D ViT + Qwen3.5-4B), BF16 / SDPA, ML tag sanitization (`KEY FINDINGS:`), and structured narrative report generator. |
 | `federated_simulator.py` | 261 | `run_federated_simulation`, `ensure_nvflare_windows_compatibility` | Turnkey SOTA NVIDIA FLARE 2.5+ multi-hospital simulation runner with automated Windows OS compatibility patching. |
@@ -71,6 +72,7 @@ To minimize token usage, **do not read `README.md` (1,100+ lines) or full large 
 | `k8s/README.md` | Kubernetes deployment guide | Quickstart instructions for deploying, port-forwarding, pushing studies, and tearing down on clusters. |
 | `deploy/docker-compose.monai-deploy.yml` | Turnkey Docker testbed | Spins up local Orthanc PACS on `:8042` and `:4242` for DICOMweb/DIMSE testing. |
 | `deploy/app.yaml` | MAP container manifest | OCI image specification obeying MONAI Deploy / NVIDIA Holoscan SDK resource contracts. |
+| `.agents/skills/dashboard/SKILL.md` | `/dashboard` agent skill | Zero-exploration 1-turn skill for fast dashboard launch on `http://127.0.0.1:8050/`. |
 
 ### Test Suite (`tests/`)
 
@@ -244,14 +246,27 @@ To generate a Cleerly/HeartFlow-style clinical diagnostic report with 3-view ort
 
 To launch the web dashboard for exploring cohorts, clinical metrics, Agatston CAC scores, and correlation analytics:
 
-1. **CLI Execution**:
+1. **1-Turn Agent Fast-Path (`/dashboard` skill)**:
+   - Do **not** read `cli.py`, `dashboard.py`, or `cohort_research.py`, and do **not** launch the `browser` subagent (unless explicitly asked to automate UI clicks in Chrome).
+   - Call `manage_task(Action="list")` first; if the `:8050` dashboard daemon is already `RUNNING`, reply with `http://127.0.0.1:8050/`.
+   - Otherwise start the lightweight `cardiac_fat_fl.dashboard` entrypoint directly as a daemon (`IsDaemon: true`, `WaitMsBeforeAsync: 5000`) without `--no-browser` so Python's `webbrowser.open()` opens the OS browser automatically. Omit `--cohort-dir` unless requested—`get_default_cohort_dir()` checks `CARDIAC_COHORT_DIR` (env or gitignored `.env`) and falls back to `example_source_dir/`:
 
    ```bash
+   # Windows: .venv\Scripts\python.exe -m cardiac_fat_fl.dashboard --port 8050
+   # Linux/macOS: .venv/bin/python -m cardiac_fat_fl.dashboard --port 8050
+   python -m cardiac_fat_fl.dashboard --port 8050
+   ```
+
+2. **CLI Execution (Standard & Custom Env)**:
+
+   ```bash
+   python -m cardiac_fat_fl.dashboard --cohort-dir "/path/to/cohort" --port 8050
+   # Or via unified CLI (lazy-loaded):
    cardiac-fat-fl dashboard --cohort-dir "/path/to/cohort" --port 8050
    ```
 
-   *(Or set environment variable `CARDIAC_COHORT_DIR=/path/to/cohort`)*.
-2. **Dashboard Features**:
+   *(Or set `CARDIAC_COHORT_DIR=/path/to/cohort` in your environment or gitignored local `.env` file; defaults to `example_source_dir/` when unset.)*
+3. **Dashboard Features**:
    - **Embedded OHIF v3.13 Medical Workstation**: Direct routes `/viewer/<pid>/` and `/patient/<pid>/` serving full zero-footprint workstation.
    - **1-Click Launchers**: Clickable `Segmented` badge pill in the Case Explorer table, `View OHIF` button in Actions column, and `Open in OHIF` in Deep Dive modal.
    - **On-the-Fly Export**: Automatically generates multi-frame DICOM-SEG and slice instances if not already pre-exported.

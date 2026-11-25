@@ -23,14 +23,13 @@ import threading
 import urllib.parse
 import webbrowser
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import numpy as np
 from flask import Flask, Response, jsonify, redirect, render_template_string, request, send_file, send_from_directory
 
 from cardiac_fat_fl import __version__
 from cardiac_fat_fl.cohort_research import CohortDataset, CohortParticipant
-from cardiac_fat_fl.io_metatensor import read_nrrd_as_metatensor
 from cardiac_fat_fl.measurement_schema import (
     ADIPOSE_HU_MAX,
     ADIPOSE_HU_MIN,
@@ -38,10 +37,9 @@ from cardiac_fat_fl.measurement_schema import (
     REPORTED_REGIONS,
     SEGMENTATION_COMPARTMENTS,
 )
-from cardiac_fat_fl.segmentation_evaluator import (
-    CohortBenchmarkReport,
-    SegmentationBenchmarkEngine,
-)
+
+if TYPE_CHECKING:
+    from cardiac_fat_fl.segmentation_evaluator import CohortBenchmarkReport
 
 # Global holder for active cohort and benchmark report
 _ACTIVE_COHORT: Optional[CohortDataset] = None
@@ -273,11 +271,53 @@ def _execute_fl_simulation(config: Dict[str, Any]) -> None:
 
 
 
-def get_default_cohort_dir() -> Path:
-    """Resolve default cohort directory from env var, or fallback to example_source_dir."""
+def _read_dotenv_var(key: str, dotenv_path: Optional[Path] = None) -> Optional[str]:
+    """Read *key* from a local `.env` file without requiring python-dotenv."""
+    candidates: List[Path]
+    if dotenv_path is not None:
+        candidates = [dotenv_path]
+    elif "PYTEST_CURRENT_TEST" in os.environ:
+        return None
+    else:
+        repo_env = Path(__file__).resolve().parent.parent.parent / ".env"
+        cwd_env = Path(".env").resolve()
+        candidates = [cwd_env] if cwd_env == repo_env else [cwd_env, repo_env]
+
+    for env_file in candidates:
+        if not env_file.is_file():
+            continue
+        try:
+            for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                if line.startswith("export "):
+                    line = line[7:].strip()
+                k, v = line.split("=", 1)
+                if k.strip() == key:
+                    val = v.strip()
+                    if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+                        val = val[1:-1]
+                    if val:
+                        return val
+        except OSError:
+            continue
+    return None
+
+
+def get_default_cohort_dir(dotenv_path: Optional[Path] = None) -> Path:
+    """Resolve cohort directory from CARDIAC_COHORT_DIR env, local .env, or example_source_dir."""
     env_dir = os.environ.get("CARDIAC_COHORT_DIR")
-    if env_dir and Path(env_dir).exists():
-        return Path(env_dir).resolve()
+    if env_dir:
+        p = Path(env_dir).expanduser()
+        if p.exists():
+            return p.resolve()
+
+    dotenv_dir = _read_dotenv_var("CARDIAC_COHORT_DIR", dotenv_path=dotenv_path)
+    if dotenv_dir:
+        p = Path(dotenv_dir).expanduser()
+        if p.exists():
+            return p.resolve()
 
     example_dir = Path("example_source_dir").resolve()
     if example_dir.exists():
@@ -374,6 +414,7 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         inflam_only = request.args.get("inflam_only", "").lower() in ["true", "1"]
 
         cases = []
+        fast_mode = len(_ACTIVE_COHORT.participants) > 50
         for p in _ACTIVE_COHORT.participants.values():
             if search_q and search_q not in p.participant_id.lower():
                 continue
@@ -384,10 +425,16 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             if inflam_only and p.crisp_ct_status != "Active Vascular Inflammation":
                 continue
 
-            has_pdf = (p.report_pdf is not None and p.report_pdf.is_file()) or (p.study_dir / "cardiac_fat_report.pdf").is_file() or (p.study_dir / "report" / "cardiac_fat_report.pdf").is_file()
-            has_html = (p.report_html is not None and p.report_html.is_file()) or (p.study_dir / "cardiac_fat_report.html").is_file() or (p.study_dir / "report" / "cardiac_fat_report.html").is_file()
-            has_dcm = (p.report_dcm is not None and p.report_dcm.is_file()) or (p.study_dir / "eat_pvat_report.dcm").is_file() or (p.study_dir / "report" / "eat_pvat_report.dcm").is_file()
-            has_vlm = (p.study_dir / "nv_reason_narrative.txt").is_file() or (p.study_dir / "nv_reason_clinical_narrative.txt").is_file()
+            if fast_mode:
+                has_pdf = p.report_pdf is not None
+                has_html = p.report_html is not None
+                has_dcm = p.report_dcm is not None
+                has_vlm = p.has_nv_reason
+            else:
+                has_pdf = (p.report_pdf is not None and p.report_pdf.is_file()) or (p.study_dir / "cardiac_fat_report.pdf").is_file() or (p.study_dir / "report" / "cardiac_fat_report.pdf").is_file()
+                has_html = (p.report_html is not None and p.report_html.is_file()) or (p.study_dir / "cardiac_fat_report.html").is_file() or (p.study_dir / "report" / "cardiac_fat_report.html").is_file()
+                has_dcm = (p.report_dcm is not None and p.report_dcm.is_file()) or (p.study_dir / "eat_pvat_report.dcm").is_file() or (p.study_dir / "report" / "eat_pvat_report.dcm").is_file()
+                has_vlm = p.has_nv_reason or (p.study_dir / "nv_reason_narrative.txt").is_file() or (p.study_dir / "nv_reason_clinical_narrative.txt").is_file()
 
             cases.append({
                 "participant_id": p.participant_id,
@@ -738,7 +785,7 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
             return jsonify({"error": f"Directory not found: {target}"}), 404
 
         try:
-            _ACTIVE_COHORT = CohortDataset(target)
+            _ACTIVE_COHORT = CohortDataset(target, use_cache=not bool(data.get("refresh", False)))
             return jsonify({
                 "success": True,
                 "root_dir": str(target),
@@ -789,6 +836,9 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
         reference_name = data.get("reference_seg", "ground_truth.seg.nrrd")
         limit = int(data.get("limit", 50))
         compute_surf = bool(data.get("compute_surface_distances", False))
+
+        from cardiac_fat_fl.io_metatensor import read_nrrd_as_metatensor
+        from cardiac_fat_fl.segmentation_evaluator import SegmentationBenchmarkEngine
 
         engine = SegmentationBenchmarkEngine(
             candidate_name=candidate_name,
@@ -859,6 +909,8 @@ def create_dashboard_app(cohort_dir: Optional[Union[str, Path]] = None) -> Flask
 
         # CSV format
         import tempfile
+        from cardiac_fat_fl.segmentation_evaluator import SegmentationBenchmarkEngine
+
         tmp = Path(tempfile.gettempdir()) / "cardiac_segmentation_benchmark.csv"
         SegmentationBenchmarkEngine.export_summary_csv(_LATEST_BENCHMARK, tmp)
         return send_file(
@@ -1139,9 +1191,12 @@ def launch_dashboard(
     """Launch the interactive Cardiac Research Dashboard server."""
     app = create_dashboard_app(cohort_dir=cohort_dir)
     url = f"http://{host}:{port}/"
+    active_root = str(_ACTIVE_COHORT.root_dir) if _ACTIVE_COHORT is not None else "None"
+    active_count = _ACTIVE_COHORT.total_count if _ACTIVE_COHORT is not None else 0
     print("\n========================================================")
     print("  Cardiac Research Dashboard (MONAI / FLARE / OHIF)")
     print(f"  Server URL: {url}")
+    print(f"  Active Cohort: {active_root} ({active_count} cases)")
     print("========================================================\n")
 
     if auto_open:
@@ -5711,4 +5766,27 @@ DASHBOARD_HTML_TEMPLATE = """<!DOCTYPE html>
 
 # Dynamically inject software version into dashboard template
 DASHBOARD_HTML_TEMPLATE = DASHBOARD_HTML_TEMPLATE.replace("__SOFTWARE_VERSION__", __version__)
+
+
+def _parse_and_launch() -> None:
+    """Fast CLI entrypoint (`python -m cardiac_fat_fl.dashboard`) skipping heavy ML imports."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Launch the interactive Cardiac Research Dashboard.")
+    parser.add_argument("-c", "--cohort-dir", type=Path, default=None, help="Path to cohort directory.")
+    parser.add_argument("--host", default="127.0.0.1", help="Host address to bind.")
+    parser.add_argument("-p", "--port", type=int, default=8050, help="Port to bind dashboard server.")
+    parser.add_argument("--no-browser", action="store_true", help="Don't open browser automatically.")
+    args = parser.parse_args()
+    launch_dashboard(
+        cohort_dir=args.cohort_dir,
+        host=args.host,
+        port=args.port,
+        auto_open=not args.no_browser,
+    )
+
+
+if __name__ == "__main__":
+    _parse_and_launch()
+
 

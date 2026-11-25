@@ -393,3 +393,37 @@ def test_dashboard_featured_case_studies(test_app):
     # Non-featured or path-traversal IDs are rejected
     assert client.get("/api/case-study/0506").status_code == 404
     assert client.get("/api/case-study/..%2F..%2FREADME").status_code == 404
+
+
+def test_get_default_cohort_dir_env_and_dotenv(tmp_path: Path, monkeypatch):
+    """Verify CARDIAC_COHORT_DIR resolution via env, .env file, and fallback to example_source_dir."""
+    from cardiac_fat_fl.dashboard import get_default_cohort_dir
+
+    env_cohort = tmp_path / "env_cohort"
+    env_cohort.mkdir()
+    dotenv_cohort = tmp_path / "dotenv_cohort"
+    dotenv_cohort.mkdir()
+    dotenv_file = tmp_path / ".env"
+    dotenv_file.write_text(
+        f'# local comment\nCARDIAC_COHORT_DIR="{dotenv_cohort}"\n',
+        encoding="utf-8",
+    )
+
+    # 1. Explicit environment variable wins over .env
+    monkeypatch.setenv("CARDIAC_COHORT_DIR", str(env_cohort))
+    assert get_default_cohort_dir(dotenv_path=dotenv_file) == env_cohort.resolve()
+
+    # 2. Unset env -> reads .env path
+    monkeypatch.delenv("CARDIAC_COHORT_DIR", raising=False)
+    assert get_default_cohort_dir(dotenv_path=dotenv_file) == dotenv_cohort.resolve()
+
+    # 3. Non-existent .env path -> gracefully falls back to example_source_dir
+    dotenv_file.write_text('CARDIAC_COHORT_DIR="Z:/nonexistent_cohort_xyz"\n', encoding="utf-8")
+    assert get_default_cohort_dir(dotenv_path=dotenv_file) == Path("example_source_dir").resolve()
+
+    # 4. Public docs/skills contain no hardcoded developer drive paths
+    for doc_path in (Path("AGENTS.md"), Path(".agents/skills/dashboard/SKILL.md")):
+        content = doc_path.read_text(encoding="utf-8")
+        assert "E:\\CT" not in content
+        assert "C:\\Users" not in content
+
